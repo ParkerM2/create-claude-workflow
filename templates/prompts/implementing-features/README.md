@@ -243,50 +243,88 @@ Parallel-safe tasks (can run simultaneously if they touch different files):
 
 ---
 
-## 6. Agent Initialization Protocol
+## 6. Agent Enforcement Protocol
 
-### Mandatory Initialization for EVERY Agent
+### The Problem
 
-When spawning any agent, the prompt MUST include:
+Agents tend to:
+1. Receive their prompt and immediately start coding (skipping planning)
+2. Hit an error and chase it down rabbit holes, forgetting their original task
+3. Run out of context and lose track of rules and guidelines
+4. Produce work that doesn't follow project conventions because they never internalized them
 
-```
-## Initialization (MANDATORY — do these BEFORE any code)
+### The Solution: Mandatory Phased Workflow
 
-1. Read `{{PROJECT_RULES_FILE}}` — project rules
-2. Read `{{ARCHITECTURE_FILE}}` — system architecture
-3. Read your agent definition at `.claude/agents/<your-role>.md`
-4. Read `.claude/prompts/implementing-features/README.md` — this playbook
-```
-
-### Providing Task Context
-
-Every agent spawn MUST include:
+Every agent — coding, QA, and Guardian — operates under a **mandatory phased workflow** with blocking gates between phases. This is enforced through the spawn templates in [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md).
 
 ```
-## Task
-<clear description of what to build/modify>
-
-## Acceptance Criteria
-- [ ] <specific, testable criterion>
-- [ ] <specific, testable criterion>
-- [ ] Automated checks pass (lint, typecheck, test, build)
-
-## Files to Create
-- <exact path>
-
-## Files to Modify
-- <exact path> (describe what changes)
-
-## Files to Read for Context
-- <paths to existing code the agent needs to understand>
-
-## Dependencies
-- Blocked by: Task #X (<what must exist before this agent starts>)
-- Blocks: Task #Y (<what depends on this agent's output>)
-
-## QA Checklist
-<include the filled-out QA-CHECKLIST-TEMPLATE.md>
+PHASE 0: LOAD RULES     ← Read all required files. Do not skim.
+         │                 [BLOCKING — cannot proceed until complete]
+         ▼
+PHASE 1: WRITE PLAN      ← Produce a written plan that cites specific rules.
+         │                 [BLOCKING — no code until plan is complete]
+         ▼
+PHASE 2: EXECUTE PLAN    ← Follow the plan step by step.
+         │                 State each step before executing.
+         │                 On error → ERROR RECOVERY PROTOCOL
+         ▼
+PHASE 3: SELF-REVIEW     ← Verify work against Phase 1 plan.
+         │                 Re-read plan. Check every criterion.
+         ▼
+PHASE 4: SPAWN QA        ← Include Phase 1 plan so QA can verify
+                           the agent followed it.
 ```
+
+### Why Written Plans Work
+
+1. **Forces rule internalization** — agents must cite specific rules by name, proving they read and understood them
+2. **Creates a context anchor** — when agents drift, they re-read their own plan to snap back
+3. **Makes QA verifiable** — QA can compare the agent's work against their stated plan
+4. **Survives context loss** — the plan is output as text early, so it remains visible even as context fills up
+
+### Error Recovery Protocol
+
+Every agent has an embedded Error Recovery Protocol that fires when ANY error occurs:
+
+```
+1. STOP — do not continue fixing blindly
+2. RE-READ Phase 1 plan — this is the context anchor
+3. CLASSIFY — is this error in my scope?
+   - In scope, my file → fix (max 2 attempts)
+   - In scope, not my file → report to Team Leader
+   - Out of scope → ignore, continue plan
+4. NEVER:
+   - Modify files outside scope
+   - Refactor unrelated code
+   - Abandon plan for tangential investigation
+   - Spend more than 2 attempts on one error
+```
+
+This prevents the "adventure" behavior where agents see an error and spend 20 minutes chasing it through unrelated files.
+
+### Spawning Agents — ALWAYS Use Full Templates
+
+The Team Leader MUST use the complete spawn templates from [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md). These templates embed the phased workflow and error recovery directly into the agent's prompt.
+
+**NEVER** spawn an agent with a minimal prompt like:
+```
+"Implement the auth service in src/services/auth.ts"
+```
+
+**ALWAYS** use the full template which includes:
+- All 4 phases with blocking gates
+- Error Recovery Protocol
+- Task context (description, acceptance criteria, file scope)
+- QA checklist
+- Instructions for spawning QA
+
+### What Each Agent Type Plans
+
+| Agent Type | Phase 1 Plan Includes |
+|---|---|
+| **Coding Agent** | Task summary, applicable rules (cited by section), files to create/modify/avoid, step-by-step implementation order, acceptance criteria mapping, risk assessment |
+| **QA Reviewer** | What to review, specific rules to enforce (cited by section), review order per file, automated checks to run, coding agent's plan (for verification) |
+| **Codebase Guardian** | Feature scope (all changed files), structural rules to enforce (cited by section), check mapping (which files for each of the 7 checks) |
 
 ### Full spawn templates: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
 
