@@ -13,15 +13,16 @@ npx create-claude-workflow init
 One command kicks off a fully orchestrated, multi-agent development pipeline. Here is the flow from start to finish:
 
 ```mermaid
+%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
 flowchart TD
-    A["You run: /implement-feature 'Add user settings page'"] --> B["Team Leader — Reads playbook, decomposes tasks, spawns agents"]
-    B --> C["Schema Designer"]
-    B --> D["Service Engineer"]
-    B --> E["Component Engineer"]
+    A["You run:<br>/implement-feature 'Add user settings page'"] --> B["Team Leader<br>Reads playbook, decomposes tasks,<br>spawns agents"]
+    B --> C["Schema<br>Designer"]
+    B --> D["Service<br>Engineer"]
+    B --> E["Component<br>Engineer"]
     C --> F["QA Review"]
     D --> G["QA Review"]
     E --> H["QA Review"]
-    F --> I["Codebase Guardian — Final integrity check"]
+    F --> I["Codebase Guardian<br>Final integrity check"]
     G --> I
     H --> I
 
@@ -40,6 +41,7 @@ Each coding agent gets its own QA reviewer on the same branch. Only after all ag
 Every task is isolated on its own branch -- no file conflicts, clean merges.
 
 ```mermaid
+%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
 flowchart LR
     M["main"] --> F["feature/user-settings"]
     F --> W1["work/.../schema-design"]
@@ -83,6 +85,10 @@ At a glance, here is what you get out of the box:
 | :link: Skills.sh integration | Agents auto-bundle relevant skills from the skills.sh marketplace |
 | :zap: Superpowers enforcement | Agents must use thinking/planning/debugging skills -- no cowboy coding |
 | :inbox_tray: Superpowers auto-install | Detects if plugin is missing, prompts to install, handles CLI restart notice |
+| :gear: Workflow modes | Three modes (strict/standard/fast) control QA rounds, Guardian, pre-flight, and wave fences |
+| :clipboard: QA auto-fill | Agent roles auto-select relevant QA checklist sections -- less boilerplate |
+| :bar_chart: Performance tracking | QA logs agent performance per task -- data-driven agent improvement |
+| :compass: Context budget | Estimates context usage before spawning -- prevents "ran out of context" failures |
 
 ---
 
@@ -92,19 +98,28 @@ At a glance, here is what you get out of the box:
 |---|---|
 | `/discover-agents` | Indexes codebase --> detects tech stack --> recommends agents --> you pick --> generates tailored agent definitions with skills |
 | `/implement-feature` | Runs the full orchestration workflow: branch --> plan --> spawn --> QA --> merge --> PR |
+| `/resume-feature` | Scans progress files, shows in-progress features, resumes from where the last session left off |
+| `/status` | Displays a formatted summary of the active feature's progress (tasks, QA, branches, blockers) |
+| `/hotfix` | Streamlined single-agent urgent fix: branch --> one agent --> 1 QA round --> PR |
+| `/review-pr <number>` | Checks out a PR, spawns QA + Guardian, posts combined results as a PR comment |
+| `/generate-tests` | Identifies test targets, spawns test-engineer, QA verifies coverage quality |
+| `/refactor` | Pre-flight baseline --> analyze --> plan --> execute waves --> verify no regressions |
+| `/scaffold-agent` | Interactive Q&A to generate a new `.claude/agents/<role>.md` with full phased workflow |
+| `/audit-agents` | Scans agent definitions, compares scopes against project structure, flags issues |
 
 ### /discover-agents Flow
 
 The agent discovery process walks through six phases automatically:
 
 ```mermaid
+%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
 flowchart TD
-    A["/discover-agents"] --> B["Phase 1: Index — Languages, frameworks, patterns, structure, plugins"]
-    B --> C["Phase 2: Map — Detections to agent roles, subtract existing agents"]
-    C --> D["Phase 3: Present — Core + detected agents, user selects"]
-    D --> E["Phase 4: Generate — Writes .claude/agents/*.md with bundled skills"]
+    A["/discover-agents"] --> B["Phase 1: Index<br>Languages, frameworks,<br>patterns, structure, plugins"]
+    B --> C["Phase 2: Map<br>Detections to agent roles,<br>subtract existing agents"]
+    C --> D["Phase 3: Present<br>Core + detected agents,<br>user selects"]
+    D --> E["Phase 4: Generate<br>Writes .claude/agents/*.md<br>with bundled skills"]
     E --> F["Phase 5: Summary"]
-    F --> G["Phase 6: Superpowers — Check if installed, prompt if missing"]
+    F --> G["Phase 6: Superpowers<br>Check if installed,<br>prompt if missing"]
 
     style A fill:#4a90d9,color:#fff
     style D fill:#f5a623,color:#fff
@@ -135,8 +150,16 @@ Everything lives under `.claude/` -- nothing is loaded into context until invoke
 your-project/
 ├── .claude/
 │   ├── commands/
-│   │   ├── implement-feature.md          <- loaded on /implement-feature
-│   │   └── discover-agents.md            <- loaded on /discover-agents
+│   │   ├── implement-feature.md          <- full orchestration workflow
+│   │   ├── discover-agents.md            <- auto-detect stack, generate agents
+│   │   ├── resume-feature.md             <- resume crashed/paused features
+│   │   ├── status.md                     <- show feature progress summary
+│   │   ├── hotfix.md                     <- streamlined single-agent fix
+│   │   ├── review-pr.md                  <- QA + Guardian on a pull request
+│   │   ├── generate-tests.md             <- focused test generation
+│   │   ├── refactor.md                   <- safe restructuring with baseline
+│   │   ├── scaffold-agent.md             <- interactive agent creator
+│   │   └── audit-agents.md              <- check agent scopes vs codebase
 │   ├── agents/                           <- loaded per agent spawn (zero cost when idle)
 │   │   ├── team-leader.md
 │   │   ├── component-engineer.md
@@ -148,10 +171,27 @@ your-project/
 │           ├── README.md                 <- master playbook (read by team-leader)
 │           ├── QA-CHECKLIST-TEMPLATE.md
 │           ├── PROGRESS-FILE-TEMPLATE.md
-│           └── AGENT-SPAWN-TEMPLATES.md
-└── docs/
-    └── progress/                         <- runtime progress files (one per feature)
+│           ├── AGENT-SPAWN-TEMPLATES.md
+│           ├── WORKFLOW-MODES.md         <- strict/standard/fast mode definitions
+│           ├── WAVE-FENCE-PROTOCOL.md    <- inter-wave synchronization
+│           ├── PRE-FLIGHT-CHECKS.md      <- baseline verification before agents
+│           ├── CONTEXT-BUDGET-GUIDE.md   <- context estimation and splitting
+│           ├── QA-CHECKLIST-AUTO-FILL-RULES.md  <- role-based QA section mapping
+│           └── AGENT-PERFORMANCE-LOG-TEMPLATE.md <- QA performance tracking
+├── docs/
+│   ├── progress/                         <- runtime progress files (one per feature)
+│   ├── CUSTOMIZING-THE-WORKFLOW.md       <- guide: adjusting phases, branching, QA
+│   └── CREATING-AGENTS.md               <- guide: agent anatomy, creation, scoping
 ```
+
+### Documentation
+
+User-facing guides are installed to `docs/`:
+
+| Guide | What It Covers |
+|---|---|
+| `CUSTOMIZING-THE-WORKFLOW.md` | Adjusting phases, branching, progress tracking, merge protocol, QA checks, workflow modes, template variables |
+| `CREATING-AGENTS.md` | Agent anatomy, creating new agents, updating existing ones, scoping, naming, skills integration, testing |
 
 ### Context Cost
 
