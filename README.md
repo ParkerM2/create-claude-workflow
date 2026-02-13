@@ -14,14 +14,14 @@ One command kicks off a fully orchestrated, multi-agent development pipeline. He
 
 ```mermaid
 flowchart TD
-    A["You run: /implement-feature\n'Add user settings page'"] --> B["Team Leader\nReads playbook, decomposes tasks, spawns agents"]
+    A["You run: /implement-feature 'Add user settings page'"] --> B["Team Leader — Reads playbook, decomposes tasks, spawns agents"]
     B --> C["Schema Designer"]
     B --> D["Service Engineer"]
     B --> E["Component Engineer"]
     C --> F["QA Review"]
     D --> G["QA Review"]
     E --> H["QA Review"]
-    F --> I["Codebase Guardian\nFinal integrity check"]
+    F --> I["Codebase Guardian — Final integrity check"]
     G --> I
     H --> I
 
@@ -40,25 +40,20 @@ Each coding agent gets its own QA reviewer on the same branch. Only after all ag
 Every task is isolated on its own branch -- no file conflicts, clean merges.
 
 ```mermaid
-gitgraph
-    commit id: "main"
-    branch feature/user-settings
-    commit id: "create feature branch"
-    branch work/user-settings/schema-design
-    commit id: "schema work"
-    commit id: "schema QA pass"
-    checkout feature/user-settings
-    merge work/user-settings/schema-design id: "merge schema"
-    branch work/user-settings/api-service
-    commit id: "service work"
-    commit id: "service QA pass"
-    checkout feature/user-settings
-    merge work/user-settings/api-service id: "merge service"
-    branch work/user-settings/ui-components
-    commit id: "UI work"
-    commit id: "UI QA pass"
-    checkout feature/user-settings
-    merge work/user-settings/ui-components id: "merge UI"
+flowchart LR
+    M["main"] --> F["feature/user-settings"]
+    F --> W1["work/.../schema-design"]
+    W1 -->|"QA pass"| F
+    F --> W2["work/.../api-service"]
+    W2 -->|"QA pass"| F
+    F --> W3["work/.../ui-components"]
+    W3 -->|"QA pass"| F
+
+    style M fill:#6c757d,color:#fff
+    style F fill:#f5a623,color:#fff
+    style W1 fill:#4a90d9,color:#fff
+    style W2 fill:#4a90d9,color:#fff
+    style W3 fill:#4a90d9,color:#fff
 ```
 
 **Per-task lifecycle:**
@@ -104,12 +99,12 @@ The agent discovery process walks through six phases automatically:
 
 ```mermaid
 flowchart TD
-    A["/discover-agents"] --> B["Phase 1: Index\nLanguages, package.json, tsconfig, go.mod\nFrameworks, Patterns, Structure, MCP/Skills\nSuperpowers installed?"]
-    B --> C["Phase 2: Map detections to agent roles\nReact + Tailwind --> component-engineer\nPrisma + SQL --> database-engineer\nVitest --> test-engineer\nElectron IPC --> ipc-handler-engineer\n(subtract already-existing agents)"]
-    C --> D["Phase 3: Present options\nCore agents always recommended\nDetected agents shown with rationale"]
-    D --> E["Phase 4: Generate agents\nWrites .claude/agents/*.md\nBundles matched skills.sh skills"]
+    A["/discover-agents"] --> B["Phase 1: Index — Languages, frameworks, patterns, structure, plugins"]
+    B --> C["Phase 2: Map — Detections to agent roles, subtract existing agents"]
+    C --> D["Phase 3: Present — Core + detected agents, user selects"]
+    D --> E["Phase 4: Generate — Writes .claude/agents/*.md with bundled skills"]
     E --> F["Phase 5: Summary"]
-    F --> G["Phase 6: Superpowers check\nAlready installed? --> skip\nNot installed? --> prompt to install\nRestart required after install"]
+    F --> G["Phase 6: Superpowers — Check if installed, prompt if missing"]
 
     style A fill:#4a90d9,color:#fff
     style D fill:#f5a623,color:#fff
