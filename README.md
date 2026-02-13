@@ -68,6 +68,9 @@ Mandatory doc updates        Final gate ensures architecture
 
 Superpowers enforcement      Agents must use thinking/planning/
                              debugging skills — no cowboy coding
+
+Superpowers auto-install     Detects if plugin is missing, prompts
+                             to install, handles CLI restart notice
 ```
 
 ## Commands
