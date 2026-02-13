@@ -16,10 +16,20 @@
 8. [Merge Protocol](#8-merge-protocol)
 9. [Codebase Guardian — Final Gate](#9-codebase-guardian--final-gate)
 10. [Crash Recovery](#10-crash-recovery)
+11. [Workflow Modes](#11-workflow-modes)
+12. [Wave Fence Protocol](#12-wave-fence-protocol)
+13. [Pre-Flight Checks](#13-pre-flight-checks)
+14. [Context Budget Management](#14-context-budget-management)
 
 For the QA Checklist Template, see: [`QA-CHECKLIST-TEMPLATE.md`](./QA-CHECKLIST-TEMPLATE.md)
 For the Progress File Template, see: [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md)
 For Agent Spawn Templates, see: [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
+For Workflow Modes, see: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
+For Wave Fence Protocol, see: [`WAVE-FENCE-PROTOCOL.md`](./WAVE-FENCE-PROTOCOL.md)
+For Pre-Flight Checks, see: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
+For Context Budget Guide, see: [`CONTEXT-BUDGET-GUIDE.md`](./CONTEXT-BUDGET-GUIDE.md)
+For QA Auto-Fill Rules, see: [`QA-CHECKLIST-AUTO-FILL-RULES.md`](./QA-CHECKLIST-AUTO-FILL-RULES.md)
+For Performance Logging, see: [`AGENT-PERFORMANCE-LOG-TEMPLATE.md`](./AGENT-PERFORMANCE-LOG-TEMPLATE.md)
 
 ---
 
@@ -539,4 +549,82 @@ Each wave:
 2. Agents work + commit on workbranches
 3. Agents spawn QA → QA reviews → QA updates docs → QA approves
 4. Team Leader rebases workbranch on `feature/` → merges → deletes branch
-5. Next wave starts from updated `feature/` HEAD
+5. **Wave fence check** — verify the feature branch is stable before proceeding
+6. Next wave starts from updated `feature/` HEAD
+
+---
+
+## 11. Workflow Modes
+
+The workflow supports three modes that control ceremony level. The Team Leader reads the mode and adjusts behavior; other agents do not need to know the mode.
+
+| Mode | QA Rounds | Guardian | Pre-Flight | Wave Fence |
+|------|-----------|----------|------------|------------|
+| **strict** (default) | 3 | Yes | Yes | Full verify |
+| **standard** | 2 | Yes (auto-fix trivial) | No | Lint only |
+| **fast** | 1 | No | No | Skip |
+
+**Mode resolution priority**: per-invocation override → `{{PROJECT_RULES_FILE}}` → default (strict).
+
+Record the mode in the progress file for crash recovery.
+
+Full details: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
+
+---
+
+## 12. Wave Fence Protocol
+
+The wave fence is a synchronization point between waves. Agents within a wave run in parallel; the fence blocks until all tasks are complete, merged, and verified.
+
+### Wave Status Table
+
+Maintain in the progress file:
+
+```markdown
+| Wave | Tasks | Agents Spawned | QA Complete | Merged | Fence Check | Status |
+|------|-------|---------------|-------------|--------|-------------|--------|
+| 1 | #1, #2 | 2 | 2/2 | 2/2 | PASS | COMPLETE |
+| 2 | #3, #4 | 2 | 1/2 | 1/2 | — | IN_PROGRESS |
+| 3 | #5 | 0 | 0/1 | 0/1 | — | BLOCKED |
+```
+
+### Fence Check by Mode
+
+- **Strict**: lint + typecheck + test + build must all pass
+- **Standard**: lint only
+- **Fast**: skip fence entirely
+
+If the fence fails, investigate and fix on the feature branch before starting the next wave.
+
+Full details: [`WAVE-FENCE-PROTOCOL.md`](./WAVE-FENCE-PROTOCOL.md)
+
+---
+
+## 13. Pre-Flight Checks
+
+In `strict` mode, run pre-flight checks before spawning any agents to verify the codebase baseline is healthy.
+
+1. Run lint, typecheck, test, and build on the base branch
+2. If all pass: record the baseline in the progress file
+3. If any fail: warn the user — do not spawn agents on a broken codebase
+
+Pre-flight is **mandatory for `/refactor`** regardless of mode.
+
+Full details: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
+
+---
+
+## 14. Context Budget Management
+
+Before spawning each agent, estimate context window usage. If a task is too large, split it.
+
+**Quick estimate**: `8,000 base + (files × 1,000) + 3,000 margin`
+
+| Task Size | Files | Action |
+|-----------|-------|--------|
+| Small (1–3) | ~12K tokens | No concerns |
+| Medium (4–7) | ~18K tokens | Monitor |
+| Large (8–12) | ~25K tokens | Consider splitting |
+| Too Large (13+) | ~30K+ tokens | Must split |
+
+Full details: [`CONTEXT-BUDGET-GUIDE.md`](./CONTEXT-BUDGET-GUIDE.md)

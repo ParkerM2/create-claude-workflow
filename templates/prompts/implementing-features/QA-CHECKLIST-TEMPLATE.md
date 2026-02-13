@@ -1,6 +1,8 @@
 # QA Verification Checklist — Template
 
 > Copy this template into every task assignment. The Team Leader fills in task-specific sections. The coding agent fills in results. The QA Review agent validates every item.
+>
+> **Auto-fill**: Section headers include `<!-- AUTO-FILL: roles -->` markers. The Team Leader uses these with [`QA-CHECKLIST-AUTO-FILL-RULES.md`](./QA-CHECKLIST-AUTO-FILL-RULES.md) to pre-select which sections to include based on the agent role. Include a section if the assigned agent's role appears in its marker. Remove sections whose markers don't match the role.
 
 ---
 
@@ -17,7 +19,7 @@ Files Modified:   ___
 
 ---
 
-## Automated Checks (QA Agent runs these)
+## Automated Checks (QA Agent runs these) <!-- AUTO-FILL: all -->
 
 Adapt to the project's actual toolchain:
 
@@ -30,14 +32,14 @@ Adapt to the project's actual toolchain:
 
 ## Code Quality Checks
 
-### Type Safety
+### Type Safety <!-- AUTO-FILL: schema, service, api, state, hook, component, router, database -->
 - [ ] No unsafe type usage (`any`, unvalidated casts, etc.)
 - [ ] No non-null assertions without justification
 - [ ] Type-only imports used where applicable
 - [ ] No unused variables or imports
 - [ ] Strict boolean expressions (no implicit coercion)
 
-### Code Structure
+### Code Structure <!-- AUTO-FILL: schema, service, api, state, hook, component, router, database, test -->
 - [ ] Functions are reasonable length (no excessively long functions)
 - [ ] No duplicated logic (repeated patterns extracted to helpers)
 - [ ] No duplicated strings/magic values (extracted to constants)
@@ -45,20 +47,20 @@ Adapt to the project's actual toolchain:
 - [ ] No TODO/FIXME without issue reference
 - [ ] Cognitive complexity is manageable
 
-### Architecture
+### Architecture <!-- AUTO-FILL: schema, service, api, state, hook, component, router, database, guardian -->
 - [ ] Files in correct directories per project conventions
 - [ ] Module boundaries respected (no forbidden imports)
 - [ ] Public APIs properly exported (barrel/index files updated)
 - [ ] No circular dependencies introduced
 - [ ] Import direction rules followed
 
-### Error Handling
+### Error Handling <!-- AUTO-FILL: service, api, hook, component, database -->
 - [ ] External calls have appropriate error handling
 - [ ] Error messages are descriptive
 - [ ] Edge cases handled (null, empty, invalid input)
 - [ ] Graceful degradation where appropriate
 
-### Security
+### Security <!-- AUTO-FILL: service, api, database -->
 - [ ] No hardcoded secrets, API keys, or credentials
 - [ ] User input validated at boundaries
 - [ ] No SQL injection, XSS, or command injection vectors
@@ -68,21 +70,21 @@ Adapt to the project's actual toolchain:
 
 ## UI Checks (if applicable)
 
-### Component Patterns
+### Component Patterns <!-- AUTO-FILL: component, router -->
 - [ ] Component follows project conventions (naming, structure, props)
 - [ ] Proper loading states during async operations
 - [ ] Proper error states when operations fail
 - [ ] Proper empty states when no data
 - [ ] Conditional rendering follows project style
 
-### Accessibility
+### Accessibility <!-- AUTO-FILL: component -->
 - [ ] Interactive elements have keyboard support
 - [ ] Interactive elements have appropriate ARIA attributes
 - [ ] Form inputs have labels
 - [ ] Color contrast meets standards
 - [ ] Focus management is correct
 
-### Design System
+### Design System <!-- AUTO-FILL: component -->
 - [ ] Uses project's design tokens / theme variables
 - [ ] No hardcoded colors outside the design system
 - [ ] Consistent spacing and typography
@@ -92,19 +94,19 @@ Adapt to the project's actual toolchain:
 
 ## API / Data Checks (if applicable)
 
-### API Contract
+### API Contract <!-- AUTO-FILL: schema, api -->
 - [ ] Request/response schemas defined and validated
 - [ ] Endpoints follow project naming conventions
 - [ ] Error responses are structured and consistent
 - [ ] Authentication/authorization properly enforced
 
-### State Management
+### State Management <!-- AUTO-FILL: state, hook -->
 - [ ] Server data uses the appropriate data-fetching pattern
 - [ ] Client-only state uses the appropriate state management
 - [ ] Cache invalidation is correct
 - [ ] No stale data scenarios
 
-### Database (if applicable)
+### Database (if applicable) <!-- AUTO-FILL: database -->
 - [ ] Migrations are reversible
 - [ ] Indexes exist for queried columns
 - [ ] No N+1 query patterns
@@ -138,7 +140,7 @@ Adapt to the project's actual toolchain:
 
 ---
 
-## Documentation (QA Agent handles on PASS)
+## Documentation (QA Agent handles on PASS) <!-- AUTO-FILL: schema, service, api, state, hook, component, router, database, guardian -->
 
 On PASS, the QA agent updates these docs on the workbranch:
 
