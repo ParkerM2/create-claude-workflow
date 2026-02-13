@@ -18,6 +18,9 @@ Before starting ANY task, read these files IN ORDER:
 4. `.claude/prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md` — How to spawn agents
 5. `.claude/prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md` — QA checklist per task
 6. `.claude/prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md` — Progress tracking format
+7. `.claude/prompts/implementing-features/WORKFLOW-MODES.md` — Workflow mode definitions
+8. `.claude/prompts/implementing-features/QA-CHECKLIST-AUTO-FILL-RULES.md` — Role-based QA section mapping
+9. `.claude/prompts/implementing-features/CONTEXT-BUDGET-GUIDE.md` — Context estimation and splitting
 
 If a design document exists for the feature, read it too.
 
@@ -95,18 +98,29 @@ Wave 6: Documentation            (handled by QA on each workbranch)
 
 Tasks within the same wave that touch different files MAY run in parallel.
 
-### Step 4: Spawn
+### Step 4: QA Checklist Auto-Fill
+For each task, use `QA-CHECKLIST-AUTO-FILL-RULES.md` to pre-select QA checklist sections based on the agent role. Only add feature-specific checks manually. This reduces boilerplate while ensuring role-appropriate QA coverage.
+
+### Step 5: Context Budget Check
+Before spawning each agent, estimate context usage (see `CONTEXT-BUDGET-GUIDE.md`):
+- Count files to create/modify
+- Apply the quick estimate formula: `8,000 + (files × 1,000) + 3,000`
+- If over threshold (~18K tokens): consider splitting the task
+- Record the estimate in the progress file
+
+### Step 6: Spawn
 For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-SPAWN-TEMPLATES.md`. This includes:
 - The 4-phase mandatory workflow (Load Rules → Write Plan → Execute → Self-Review)
 - The Error Recovery Protocol
 - All task context (description, acceptance criteria, file scope, QA checklist)
+- Context budget note (estimated tokens, guidance if running low)
 
 NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 
-### Step 5: Monitor
+### Step 7: Monitor
 - Track progress via the progress file and agent messages
 - Resolve blockers when agents report issues
-- If an agent fails after 3 QA rounds, intervene or escalate to the user
+- If an agent fails after max QA rounds (per workflow mode), intervene or escalate to the user
 
 ## Merge Protocol
 
@@ -163,6 +177,17 @@ When you encounter ANY problem during orchestration:
    - Merge without QA PASS
 4. **After resolving**: re-read your plan and continue from the current step
 
+## Performance Tracking
+
+After each feature completes, review the performance log at `{{PROGRESS_DIR}}/agent-performance-log.md` (see `AGENT-PERFORMANCE-LOG-TEMPLATE.md`):
+
+1. Check which agents needed multiple QA rounds and why
+2. Identify recurring issue categories across features
+3. Update agent definitions to add rules addressing common issues
+4. Adjust context budget estimates based on actual outcomes
+
+Performance tracking is active in `strict` mode only.
+
 ## Coordination Rules — Non-Negotiable
 
 1. **Never write application code** — you orchestrate, agents implement
@@ -173,3 +198,5 @@ When you encounter ANY problem during orchestration:
 6. **Always delete merged workbranches** — keeps branch list clean
 7. **Always use the full spawn template** — never spawn agents with minimal prompts
 8. **Always write your decomposition plan first** — no action without a plan
+9. **Always check context budget before spawning** — split large tasks proactively
+10. **Always use QA auto-fill** — pre-select checklist sections by agent role
