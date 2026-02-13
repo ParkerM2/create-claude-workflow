@@ -132,11 +132,12 @@ A Claude Code skill that indexes the codebase at runtime and generates tailored 
 ```
 /discover-agents flow:
 
-Phase 1: Index ──→ Languages, packages, frameworks, patterns, structure, existing agents/MCPs
+Phase 1: Index ──→ Languages, packages, frameworks, patterns, structure, existing agents/MCPs/plugins
 Phase 2: Map   ──→ Detection → agent role (subtract existing agents)
 Phase 3: Ask   ──→ Present options to user with multiSelect
 Phase 4: Gen   ──→ Create .claude/agents/*.md tailored to actual project paths + bundled skills
 Phase 5: Done  ──→ Summary + recommended skills.sh installs
+Phase 6: Super ──→ Check Superpowers plugin → prompt install if missing → restart notice
 ```
 
 **Detection → Agent mapping:**
@@ -298,6 +299,10 @@ Users can customize after scaffolding — all output files are plain `.md` that 
 4. Skills.sh integration: map agents to marketplace skills
 5. MCP/plugin detection: read `.mcp.json`, `.claude/settings.json`, `.skills/`
 6. Agent generation: create tailored `.claude/agents/*.md` with real project paths
+7. Superpowers plugin check: detect if installed → prompt user → install → restart notice
+   - Detection: check `.claude/plugins/superpowers/`, settings files, available skills
+   - Standalone final step: nothing runs after install because CLI restart is required
+   - Install commands: `claude /plugin marketplace add obra/superpowers-marketplace` + `claude /plugin install superpowers@superpowers-marketplace`
 
 ### Phase 5: Documentation
 1. npm README with quick start

@@ -96,6 +96,7 @@ Command                What it does
 │                                                      │
 │  Languages ─── package.json ─── tsconfig ─── go.mod  │
 │  Frameworks    Patterns        Structure    MCP/Skills│
+│  Plugins ───── Superpowers installed? (yes/no)       │
 └──────────────┬───────────────────────────────────────┘
                │
                ▼
@@ -129,6 +130,27 @@ Command                What it does
 │    ↳ bundles: react-best-practices, frontend-design  │
 │  ✔ .claude/agents/qa-reviewer.md                     │
 │    ↳ bundles: webapp-testing                         │
+└──────────────┬───────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────┐
+│  Phase 5: Summary                                    │
+└──────────────┬───────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────┐
+│  Phase 6: Superpowers check (standalone, last step)  │
+│                                                      │
+│  Already installed? ──→ skip                         │
+│  Not installed? ──→ prompt user:                     │
+│                                                      │
+│  "Install Claude Superpowers to enable agents to     │
+│   utilize the plugin's built-in features?"           │
+│                                                      │
+│  Yes ──→ install + print restart notice              │
+│  No  ──→ print manual install command                │
+│                                                      │
+│  ⚠ RESTART REQUIRED after install                    │
 └──────────────────────────────────────────────────────┘
 ```
 
