@@ -36,8 +36,28 @@ npx create-claude-workflow init
                          ▼
               ┌─────────────────────┐
               │ Codebase Guardian   │
-              │ Updates docs        │
+              │ Final integrity     │
               └─────────────────────┘
+```
+
+### Branching Model
+
+```
+main/master
+  └── feature/<feature-name>                         ← Team Leader creates
+       ├── work/<feature-name>/schema-design         ← Wave 1 agent
+       ├── work/<feature-name>/api-service           ← Wave 2 agent
+       ├── work/<feature-name>/ui-components         ← Wave 3 agent
+       └── ...
+
+Per-task lifecycle:
+  1. Team Leader creates workbranch from feature/ HEAD
+  2. Agent works + commits on workbranch
+  3. Agent spawns QA on same workbranch
+  4. QA: FAIL → agent fixes → new QA (max 3 rounds)
+         PASS → QA updates docs on workbranch → commits
+  5. Team Leader rebases workbranch on feature/ → merges --no-ff → deletes
+  6. Next wave branches from updated feature/ HEAD
 ```
 
 ## Features
@@ -45,26 +65,30 @@ npx create-claude-workflow init
 ```
 Feature                      What it does
 ─────────────────────────────────────────────────────────────────
+Branch-per-task isolation    Each task gets its own workbranch off
+                             feature/ — no file conflicts
+
 Team orchestration           Decomposes features into tasks,
                              spawns specialist agents in waves
 
-Crash-safe progress          Temp files on disk survive terminal
+Crash-safe progress          Progress files on disk survive terminal
                              closes — new sessions auto-resume
 
 Per-agent QA                 Each coding agent spawns its own
-                             QA reviewer on the same worktree
+                             QA reviewer on the same workbranch
 
-Electron MCP testing         QA agents launch the app, click
-                             through UI, check console errors
+QA-driven doc updates        QA updates docs on PASS (not a
+                             separate agent), keeping branches
+                             self-contained: code + QA + docs
+
+Codebase Guardian            Final structural integrity check on
+                             merged feature branch before PR
 
 Auto agent discovery         /discover-agents indexes your codebase
                              and recommends specialist agents
 
 Skills.sh integration        Agents auto-bundle relevant skills
                              from the skills.sh marketplace
-
-Mandatory doc updates        Final gate ensures architecture
-                             docs stay current
 
 Superpowers enforcement      Agents must use thinking/planning/
                              debugging skills — no cowboy coding
@@ -83,7 +107,7 @@ Command                What it does
                        tailored agent definitions with skills
 
 /implement-feature     Runs the full orchestration workflow:
-                       plan → spawn agents → QA → docs update
+                       branch → plan → spawn → QA → merge → PR
 ```
 
 ### /discover-agents flow
@@ -282,6 +306,7 @@ Variable                  Example value
 {{PROJECT_NAME}}          my-app
 {{PROJECT_RULES_FILE}}    CLAUDE.md
 {{ARCHITECTURE_FILE}}     docs/ARCHITECTURE.md
+{{PROGRESS_DIR}}          docs/progress
 {{AGENT_ROLE}}            Service Engineer
 {{AGENT_FILE_SCOPE}}      src/services/**
 {{AGENT_EXCLUDED_FILES}}  src/components/**
@@ -292,10 +317,13 @@ Variable                  Example value
 ```
 Problem                              This tool's approach
 ──────────────────────────────────────────────────────────────────
+Agents conflict on shared files      Branch-per-task + file scoping +
+                                     sequential merges (5-layer prevention)
 Agents go rogue, edit wrong files    Each agent has a scoped file list
-QA happens at the end (too late)     QA runs per-agent, inline
+QA happens at the end (too late)     QA runs per-agent on the workbranch
 Terminal crash = lost progress       Progress files on disk, auto-resume
-Docs rot after features ship         Doc update is a mandatory final step
+Docs rot after features ship         QA updates docs on PASS + Guardian
+                                     checks coherence at the end
 Agents skip planning, debug blind    Superpowers skills are enforced
 Don't know which agents to create    /discover-agents auto-detects your stack
 Skills scattered, not integrated     Agents bundle relevant skills.sh skills
