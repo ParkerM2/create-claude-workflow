@@ -97,6 +97,7 @@ At a glance, here is what you get out of the box:
 | Command | What It Does |
 |---|---|
 | `/discover-agents` | Indexes codebase --> detects tech stack --> recommends agents --> you pick --> generates tailored agent definitions with skills |
+| `/create-feature-plan` | Deep technical planning: analyzes codebase, designs architecture, decomposes tasks, produces a design doc for `/implement-feature` |
 | `/implement-feature` | Runs the full orchestration workflow: branch --> plan --> spawn --> QA --> merge --> PR |
 | `/resume-feature` | Scans progress files, shows in-progress features, resumes from where the last session left off |
 | `/status` | Displays a formatted summary of the active feature's progress (tasks, QA, branches, blockers) |
@@ -150,6 +151,7 @@ Everything lives under `.claude/` -- nothing is loaded into context until invoke
 your-project/
 ├── .claude/
 │   ├── commands/
+│   │   ├── create-feature-plan.md         <- deep planning for implement-feature
 │   │   ├── implement-feature.md          <- full orchestration workflow
 │   │   ├── discover-agents.md            <- auto-detect stack, generate agents
 │   │   ├── resume-feature.md             <- resume crashed/paused features
