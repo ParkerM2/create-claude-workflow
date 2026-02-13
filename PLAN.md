@@ -14,6 +14,7 @@ A reusable workflow system for Claude Code that enables:
 - **Electron MCP testing** — QA agents spin up the app and test UI with `mcp__electron` tools
 - **Automatic documentation updates** — Final step ensures architecture docs stay current
 - **Superpowers integration** — Every agent is forced to use thinking/planning/debugging/verification skills
+- **Auto agent discovery** — `/discover-agents` indexes the codebase, recommends agents, bundles skills.sh skills
 
 ## Reference Implementation
 
@@ -50,19 +51,30 @@ Claude-UI/
 
 ### Layer 1: Claude Code Skill Pack
 
-A set of files that live in the project repo. Users invoke `/implement-feature` and Claude Code loads the full orchestration playbook.
+A set of files that live in the project repo under `.claude/`. Nothing is loaded into context until invoked.
 
-**What gets installed:**
+**What gets installed (all under `.claude/`):**
 ```
-.claude/commands/implement-feature.md              # Skill entry point
-ai-docs/prompts/implementing-features/README.md    # Master playbook
-ai-docs/prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md
-ai-docs/prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md
-ai-docs/prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md
-docs/progress/.gitkeep                             # Progress file directory
+.claude/commands/implement-feature.md              # Skill entry point ← loaded on /invoke
+.claude/commands/discover-agents.md                # Agent discovery   ← loaded on /invoke
+.claude/prompts/implementing-features/README.md    # Master playbook   ← loaded on explicit read
+.claude/prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md
+.claude/prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md
+.claude/prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md
+docs/progress/.gitkeep                             # Progress file directory (runtime output)
 ```
 
-**Optionally installed (user selects which):**
+**Context cost:**
+```
+File type                  When loaded        Cost if idle
+────────────────────────────────────────────────────────
+CLAUDE.md                  Every session      Always in context ← keep lean
+.claude/commands/*.md      On /invoke only    Zero
+.claude/agents/*.md        On agent spawn     Zero
+.claude/prompts/*          On explicit read   Zero
+```
+
+**Optionally installed (user selects which, or /discover-agents generates):**
 ```
 .claude/agents/team-leader.md
 .claude/agents/schema-designer.md
@@ -105,11 +117,53 @@ Interactive prompts:
 ? Progress file directory: (docs/progress/)
 
 ✔ Created .claude/commands/implement-feature.md
-✔ Created ai-docs/prompts/implementing-features/ (4 files)
+✔ Created .claude/commands/discover-agents.md
+✔ Created .claude/prompts/implementing-features/ (4 files)
 ✔ Created .claude/agents/ (6 agent definitions)
 ✔ Created docs/progress/.gitkeep
 
-Done! Invoke /implement-feature in Claude Code to start.
+Done! Run /discover-agents to auto-detect more agents, or /implement-feature to start.
+```
+
+### Layer 3: /discover-agents (Runtime Agent Discovery)
+
+A Claude Code skill that indexes the codebase at runtime and generates tailored agents:
+
+```
+/discover-agents flow:
+
+Phase 1: Index ──→ Languages, packages, frameworks, patterns, structure, existing agents/MCPs
+Phase 2: Map   ──→ Detection → agent role (subtract existing agents)
+Phase 3: Ask   ──→ Present options to user with multiSelect
+Phase 4: Gen   ──→ Create .claude/agents/*.md tailored to actual project paths + bundled skills
+Phase 5: Done  ──→ Summary + recommended skills.sh installs
+```
+
+**Detection → Agent mapping:**
+```
+Detection                          → Agent Role                → Skills.sh Bundle
+─────────────────────────────────────────────────────────────────────────────────
+React/Next.js/Vue/Svelte           → component-engineer        → vercel-labs/agent-skills, anthropics/skills (frontend-design)
+React Native/Expo                  → mobile-engineer           → vercel-labs/agent-skills (react-native-guidelines)
+CSS/Tailwind/styled                → styling-engineer          → anthropics/skills (frontend-design)
+Express/Fastify/NestJS/Django      → api-engineer              → —
+Prisma/Drizzle/TypeORM/SQL         → database-engineer         → —
+Redux/Zustand/Jotai/MobX          → state-engineer            → —
+Electron IPC                       → ipc-handler-engineer      → —
+Electron/Tauri                     → desktop-engineer          → —
+WebSocket/Socket.io                → realtime-engineer         → —
+tRPC/GraphQL                       → api-schema-engineer       → —
+Auth (next-auth/passport/clerk)    → auth-engineer             → —
+Jest/Vitest/pytest                 → test-engineer             → anthropics/skills (webapp-testing)
+Playwright/Cypress                 → e2e-test-engineer         → anthropics/skills (webapp-testing)
+Docker                             → devops-engineer           → —
+Terraform/Pulumi/CDK               → infra-engineer            → —
+GitHub Actions                     → ci-cd-engineer            → —
+Stripe/payments                    → payments-engineer         → —
+i18n/Intl                          → i18n-engineer             → —
+Any project                        → team-leader               → (always recommended)
+Any project                        → qa-reviewer               → anthropics/skills (webapp-testing)
+Any project                        → codebase-guardian         → (always recommended)
 ```
 
 ---
@@ -127,7 +181,8 @@ create-claude-workflow/
 │
 ├── templates/
 │   ├── commands/
-│   │   └── implement-feature.md    # The Claude Code skill
+│   │   ├── implement-feature.md    # The Claude Code skill
+│   │   └── discover-agents.md     # Agent discovery skill
 │   │
 │   ├── agents/
 │   │   ├── _base.md                # Common agent initialization section
@@ -189,6 +244,13 @@ Before writing ANY code, read:
 ONLY create/modify: {{AGENT_FILE_SCOPE}}
 NEVER modify: {{AGENT_EXCLUDED_FILES}}
 ```
+
+## Skills Integration
+This agent benefits from:
+{{SKILL_LIST}}
+
+## MCP Servers Available
+{{MCP_LIST}}
 ```
 
 Users can customize after scaffolding — all output files are plain `.md` that they own.
@@ -203,6 +265,8 @@ Users can customize after scaffolding — all output files are plain `.md` that 
 4. **Electron MCP testing built in** — QA agents don't just review code — they start the app, click through it, and check for console errors.
 5. **Documentation is mandatory, not optional** — The workflow enforces a doc-update step as the final gate before a feature is complete.
 6. **Superpowers enforcement** — Every agent must use thinking/planning/debugging skills. No cowboy coding.
+7. **Auto-discovery** — `/discover-agents` reads the actual codebase and generates agents tailored to the real tech stack, not generic templates.
+8. **Skills.sh integration** — Generated agents bundle relevant community skills from the marketplace automatically.
 
 ---
 
@@ -219,6 +283,7 @@ Users can customize after scaffolding — all output files are plain `.md` that 
 2. Generalize project-specific references (replace `Claude-UI` with `{{PROJECT_NAME}}`)
 3. Make agent definitions modular (each agent is independently selectable)
 4. Add project-type presets (Electron, React, Node, etc.)
+5. Consolidate all installed files under `.claude/` (prompts move from `ai-docs/` to `.claude/prompts/`)
 
 ### Phase 3: CLI Logic
 1. Detect existing `.claude/` directory (don't overwrite)
@@ -226,12 +291,20 @@ Users can customize after scaffolding — all output files are plain `.md` that 
 3. Detect project type from package.json / tsconfig
 4. Offer sensible defaults based on project type
 
-### Phase 4: Documentation
+### Phase 4: Discover-Agents Command
+1. Build the `/discover-agents` skill template
+2. Codebase indexing: languages, packages, frameworks, patterns, structure
+3. Agent recommendation engine: detection → role mapping → filtering existing agents
+4. Skills.sh integration: map agents to marketplace skills
+5. MCP/plugin detection: read `.mcp.json`, `.claude/settings.json`, `.skills/`
+6. Agent generation: create tailored `.claude/agents/*.md` with real project paths
+
+### Phase 5: Documentation
 1. npm README with quick start
 2. Each template has inline comments explaining customization points
 3. Link to Claude-UI repo as reference implementation
 
-### Phase 5: Publish
+### Phase 6: Publish
 1. `npm publish` as `create-claude-workflow`
 2. GitHub repo with issues/PRs for community contributions
 3. Consider: GitHub Actions template for CI validation
@@ -245,3 +318,5 @@ Users can customize after scaffolding — all output files are plain `.md` that 
 - **Progress dashboard**: Simple web UI that reads progress files and shows status
 - **VS Code extension**: Surface progress files in the editor sidebar
 - **Team analytics**: Aggregate QA pass/fail rates, agent performance metrics
+- **Skills.sh auto-install**: `discover-agents` automatically runs `npx skills add` for bundled skills
+- **MCP server recommendations**: Suggest MCP servers based on detected tech stack

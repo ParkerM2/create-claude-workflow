@@ -57,6 +57,12 @@ Per-agent QA                 Each coding agent spawns its own
 Electron MCP testing         QA agents launch the app, click
                              through UI, check console errors
 
+Auto agent discovery         /discover-agents indexes your codebase
+                             and recommends specialist agents
+
+Skills.sh integration        Agents auto-bundle relevant skills
+                             from the skills.sh marketplace
+
 Mandatory doc updates        Final gate ensures architecture
                              docs stay current
 
@@ -64,30 +70,131 @@ Superpowers enforcement      Agents must use thinking/planning/
                              debugging skills — no cowboy coding
 ```
 
+## Commands
+
+```
+Command                What it does
+───────────────────────────────────────────────────────────────
+/discover-agents       Indexes codebase → detects tech stack →
+                       recommends agents → you pick → generates
+                       tailored agent definitions with skills
+
+/implement-feature     Runs the full orchestration workflow:
+                       plan → spawn agents → QA → docs update
+```
+
+### /discover-agents flow
+
+```
+┌──────────────────────────────────────────────────────┐
+│  /discover-agents                                    │
+└──────────────┬───────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────┐
+│  Phase 1: Index                                      │
+│                                                      │
+│  Languages ─── package.json ─── tsconfig ─── go.mod  │
+│  Frameworks    Patterns        Structure    MCP/Skills│
+└──────────────┬───────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────┐
+│  Phase 2: Map detections → agent roles               │
+│                                                      │
+│  React + Tailwind ──→ component-engineer             │
+│  Prisma + SQL     ──→ database-engineer              │
+│  Vitest           ──→ test-engineer                  │
+│  Electron IPC     ──→ ipc-handler-engineer           │
+│  (subtract already-existing agents)                  │
+└──────────────┬───────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────┐
+│  Phase 3: Present options                            │
+│                                                      │
+│  ✔ team-leader         (core — always recommended)   │
+│  ✔ qa-reviewer         (core — always recommended)   │
+│  ✔ component-engineer  (detected: React, Next.js)    │
+│  ○ database-engineer   (detected: Prisma)            │
+│  ○ test-engineer       (detected: Vitest)            │
+└──────────────┬───────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────────┐
+│  Phase 4: Generate agents with bundled skills        │
+│                                                      │
+│  ✔ .claude/agents/team-leader.md                     │
+│  ✔ .claude/agents/component-engineer.md              │
+│    ↳ bundles: react-best-practices, frontend-design  │
+│  ✔ .claude/agents/qa-reviewer.md                     │
+│    ↳ bundles: webapp-testing                         │
+└──────────────────────────────────────────────────────┘
+```
+
+### Skills.sh integration
+
+Agents auto-reference relevant skills from the marketplace:
+
+```
+Agent                  Bundled skills.sh skills
+──────────────────────────────────────────────────────────────
+component-engineer     vercel-labs/agent-skills
+                         → react-best-practices
+                         → web-design-guidelines
+                         → composition-patterns
+                       anthropics/skills
+                         → frontend-design
+
+mobile-engineer        vercel-labs/agent-skills
+                         → react-native-guidelines
+
+styling-engineer       anthropics/skills
+                         → frontend-design
+
+qa-reviewer            anthropics/skills
+                         → webapp-testing
+
+test-engineer          anthropics/skills
+                         → webapp-testing
+
+Any agent              anthropics/skills
+                         → mcp-builder (if MCP detected)
+```
+
 ## What Gets Installed
+
+Everything lives under `.claude/` — nothing is loaded into context until invoked.
 
 ```
 your-project/
 ├── .claude/
 │   ├── commands/
-│   │   └── implement-feature.md        ← skill entry point
-│   └── agents/                         ← specialist agents (you pick which)
-│       ├── team-leader.md
-│       ├── schema-designer.md
-│       ├── service-engineer.md
-│       ├── component-engineer.md
-│       ├── qa-reviewer.md
-│       ├── codebase-guardian.md
-│       └── ...
-├── ai-docs/
+│   │   ├── implement-feature.md          ← loaded on /implement-feature
+│   │   └── discover-agents.md            ← loaded on /discover-agents
+│   ├── agents/                           ← loaded per agent spawn (zero cost when idle)
+│   │   ├── team-leader.md
+│   │   ├── component-engineer.md
+│   │   ├── qa-reviewer.md
+│   │   ├── codebase-guardian.md
+│   │   └── ...
 │   └── prompts/
 │       └── implementing-features/
-│           ├── README.md               ← master playbook
+│           ├── README.md                 ← master playbook (read by team-leader)
 │           ├── QA-CHECKLIST-TEMPLATE.md
 │           ├── PROGRESS-FILE-TEMPLATE.md
 │           └── AGENT-SPAWN-TEMPLATES.md
 └── docs/
-    └── progress/                       ← runtime progress files
+    └── progress/                         ← runtime progress files (one per feature)
+```
+
+```
+Context cost
+──────────────────────────────────────────────────
+CLAUDE.md              Always loaded     ← keep lean
+.claude/commands/*.md  On /invoke only   ← zero cost
+.claude/agents/*.md    On spawn only     ← zero cost
+.claude/prompts/*      On explicit read  ← zero cost
 ```
 
 ## Setup
@@ -99,11 +206,14 @@ your-project/
 cd your-project
 npx create-claude-workflow init
 
-# Then in Claude Code
+# Auto-detect your stack and generate tailored agents
+/discover-agents
+
+# Start orchestrated development
 /implement-feature "your feature description"
 ```
 
-### Interactive prompts
+### Interactive prompts (init)
 
 ```
 ? Project type:              Electron / React / Node / Full-stack / Custom
@@ -128,6 +238,8 @@ create-claude-workflow/
 │   └── templates.js          ← template loading + variable substitution
 ├── templates/
 │   ├── commands/             ← Claude Code skills
+│   │   ├── implement-feature.md
+│   │   └── discover-agents.md
 │   ├── agents/               ← agent definitions (modular)
 │   ├── prompts/              ← playbook + checklists
 │   └── electron/             ← optional Electron QA protocol
@@ -160,6 +272,8 @@ QA happens at the end (too late)     QA runs per-agent, inline
 Terminal crash = lost progress       Progress files on disk, auto-resume
 Docs rot after features ship         Doc update is a mandatory final step
 Agents skip planning, debug blind    Superpowers skills are enforced
+Don't know which agents to create    /discover-agents auto-detects your stack
+Skills scattered, not integrated     Agents bundle relevant skills.sh skills
 ```
 
 ## Roadmap
