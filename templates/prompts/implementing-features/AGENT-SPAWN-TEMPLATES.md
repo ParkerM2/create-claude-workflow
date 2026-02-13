@@ -196,9 +196,22 @@ When you encounter ANY error:
 - Blocked by: <Task #X or "none">
 - Blocks: <Task #Y or "none">
 
+## Context Budget
+
+This task is estimated at ~<N> tokens of context.
+Files to create/modify: <count>
+Files to read for context: <count>
+
+If you find yourself running low on context:
+1. Re-read your Phase 1 plan (it's your anchor)
+2. Focus on the remaining steps in order
+3. Skip non-essential reads (you've already internalized the rules)
+4. Report to Team Leader if you cannot complete all steps
+
 ## QA Checklist
 
 <paste relevant sections from QA-CHECKLIST-TEMPLATE.md, customized for this task>
+<use QA-CHECKLIST-AUTO-FILL-RULES.md to pre-select sections by agent role>
 ```
 
 ---

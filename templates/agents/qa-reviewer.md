@@ -134,7 +134,33 @@ If your review passes, you are responsible for updating docs on the workbranch:
 
 This ensures each workbranch is self-contained: code + QA + docs.
 
-### Phase 5: QA Report
+### Phase 5: Performance Log Entry (Strict Mode Only)
+
+If performance logging is active (strict mode), append an entry to `{{PROGRESS_DIR}}/agent-performance-log.md` using the format in `AGENT-PERFORMANCE-LOG-TEMPLATE.md`:
+
+```markdown
+### <ISO timestamp> — <feature-name> / Task #<N>
+
+| Field | Value |
+|-------|-------|
+| Feature | <feature-name> |
+| Task | #<N>: <task name> |
+| Agent Role | <role> |
+| Agent Name | <agent name> |
+| Complexity | <LOW/MEDIUM/HIGH — based on files changed> |
+| QA Round | <round> of <max> |
+| Verdict | <PASS/FAIL> |
+| Issues Found | <count> |
+
+**Issue Categories** (if any):
+<categorized issue counts>
+
+**Notes**: <brief summary>
+```
+
+This log entry is appended after EVERY QA report (both PASS and FAIL), not just on PASS.
+
+### Phase 6: QA Report
 
 #### PASS Report
 
@@ -210,6 +236,6 @@ VERDICT: REJECTED — return to <coding-agent> for fixes
 After review:
 
 ```
-PASS → update docs on workbranch → commit → report to coding agent → coding agent notifies Team Leader → Team Leader merges workbranch
-FAIL → report to coding agent → agent fixes → spawns NEW QA agent (not you) → repeat (max 3 rounds)
+PASS → update docs → performance log entry (strict mode) → commit → report to coding agent → Team Leader merges
+FAIL → performance log entry (strict mode) → report to coding agent → agent fixes → spawns NEW QA (max rounds per mode)
 ```
