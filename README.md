@@ -13,6 +13,7 @@ npx create-claude-workflow init
 One command kicks off a fully orchestrated, multi-agent development pipeline. Here is the flow from start to finish:
 
 ```mermaid
+%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
 flowchart TD
     A["You run: /implement-feature 'Add user settings page'"] --> B["Team Leader — Reads playbook, decomposes tasks, spawns agents"]
     B --> C["Schema Designer"]
@@ -40,6 +41,7 @@ Each coding agent gets its own QA reviewer on the same branch. Only after all ag
 Every task is isolated on its own branch -- no file conflicts, clean merges.
 
 ```mermaid
+%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
 flowchart LR
     M["main"] --> F["feature/user-settings"]
     F --> W1["work/.../schema-design"]
@@ -98,6 +100,7 @@ At a glance, here is what you get out of the box:
 The agent discovery process walks through six phases automatically:
 
 ```mermaid
+%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
 flowchart TD
     A["/discover-agents"] --> B["Phase 1: Index — Languages, frameworks, patterns, structure, plugins"]
     B --> C["Phase 2: Map — Detections to agent roles, subtract existing agents"]
