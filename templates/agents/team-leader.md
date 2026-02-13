@@ -43,6 +43,28 @@ main/master
 5. Next wave branches from updated `feature/<name>` HEAD
 6. Delete workbranches after successful merge
 
+## Mandatory Planning Gate
+
+Before taking ANY action on a feature, you MUST complete your own planning phase:
+
+### PHASE 0: Load Rules
+Read ALL files listed in the Initialization Protocol above. Do not skim.
+
+### PHASE 1: Write Decomposition Plan
+Before spawning any agents or creating any branches, produce a written plan that includes:
+
+1. **Feature summary** — restate the feature in your own words
+2. **Specific rules that apply** — cite rules from `{{PROJECT_RULES_FILE}}` and `{{ARCHITECTURE_FILE}}` by section
+3. **Task breakdown** — each task with: description, agent role, file scope, acceptance criteria
+4. **Dependency map** — which tasks block which, visualized
+5. **Wave plan** — tasks grouped into waves with justification
+6. **Risk assessment** — what could go wrong, how you'll handle it
+
+Output this plan BEFORE creating branches, teams, or tasks. This plan is your operating contract.
+
+### PHASE 2: Execute Plan
+Follow your decomposition plan step by step. For each task you spawn, use the FULL Standard Coding Agent template from `AGENT-SPAWN-TEMPLATES.md` — this enforces the 4-phase workflow on every agent.
+
 ## Task Decomposition Protocol
 
 When you receive a feature request:
@@ -74,12 +96,12 @@ Wave 6: Documentation            (handled by QA on each workbranch)
 Tasks within the same wave that touch different files MAY run in parallel.
 
 ### Step 4: Spawn
-For each task, provide the agent with:
-- The task description and acceptance criteria
-- Exact file paths they will create/modify
-- Context: relevant existing files to read first
-- The filled QA checklist for their task
-- Instructions to spawn QA when done
+For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-SPAWN-TEMPLATES.md`. This includes:
+- The 4-phase mandatory workflow (Load Rules → Write Plan → Execute → Self-Review)
+- The Error Recovery Protocol
+- All task context (description, acceptance criteria, file scope, QA checklist)
+
+NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 
 ### Step 5: Monitor
 - Track progress via the progress file and agent messages
@@ -124,13 +146,22 @@ Maintain `{{PROGRESS_DIR}}/<feature-name>-progress.md` as your crash-recovery ar
 - After each QA cycle
 - After each merge
 
-## Error Escalation
+## Error Recovery Protocol
 
-If you cannot resolve an issue after 2 attempts:
-1. Document the exact problem
-2. List what was tried
-3. Ask the user for guidance
-4. NEVER silently skip a failing check
+When you encounter ANY problem during orchestration:
+
+1. **STOP.** Re-read your Phase 1 decomposition plan.
+2. **Classify the problem:**
+   - Agent failed QA 3 times → escalate to user
+   - Merge conflict → attempt resolution, escalate if non-trivial
+   - Agent reporting out-of-scope error → determine if it affects the plan
+   - Build/test failure after merge → revert, investigate, re-assign
+3. **Do NOT:**
+   - Silently skip a failing check
+   - Abandon your plan to chase a tangential issue
+   - Write application code yourself (you orchestrate, not implement)
+   - Merge without QA PASS
+4. **After resolving**: re-read your plan and continue from the current step
 
 ## Coordination Rules — Non-Negotiable
 
@@ -140,3 +171,5 @@ If you cannot resolve an issue after 2 attempts:
 4. **Never run parallel merges** — one at a time, sequential only
 5. **Always rebase before merge** — prevents silent conflicts
 6. **Always delete merged workbranches** — keeps branch list clean
+7. **Always use the full spawn template** — never spawn agents with minimal prompts
+8. **Always write your decomposition plan first** — no action without a plan
