@@ -71,11 +71,16 @@ Perform a thorough analysis of the project. Run ALL of these in parallel:
   - `scripts/` → Build/dev scripts
   - `main/` or `electron/` or `src-tauri/` → Desktop process
 
-### 1.6 Existing Agents & Skills
+### 1.6 Existing Agents, Skills & Plugins
 - Check `.claude/agents/` — list all existing agent definitions
 - Check `.claude/commands/` — list all existing skills
 - Check if `skills.sh` skills are installed (look for `.skills/` directory or skill config files)
 - Check `.claude/settings.json` or `.mcp.json` for installed MCP servers
+- **Check if Superpowers plugin is installed**: Look for any of these indicators:
+  - `.claude/plugins/superpowers/` directory exists
+  - Grep for `superpowers` in `.claude/settings.json` or `.claude/plugins.json`
+  - Check if superpowers skills are available (e.g., `superpowers:brainstorming`, `superpowers:systematic-debugging`)
+  - Record result as `superpowers_installed: true/false` — this is used in Phase 6
 
 ## Phase 2: Agent Recommendation Engine
 
@@ -232,3 +237,65 @@ Recommended skills to install:
 
 Run /implement-feature to start orchestrated development.
 ```
+
+## Phase 6: Superpowers Plugin Check (Standalone — Final Step)
+
+**This phase runs AFTER everything else is complete.** It is intentionally standalone because installing Superpowers requires a CLI restart.
+
+### 6.1 Check if already installed
+
+If `superpowers_installed` was `true` from Phase 1.6, skip this phase entirely and output:
+```
+✔ Superpowers plugin already installed.
+```
+
+### 6.2 Prompt the user
+
+If Superpowers is NOT installed, ask the user using AskUserQuestion:
+
+```
+Question: "Would you like to install Claude Superpowers to enable agents to utilize the plugin's built-in features?"
+Options:
+  - "Yes, install Superpowers" — Installs the plugin (requires CLI restart after)
+  - "No, skip for now" — Agents will still work, but without superpowers skills
+```
+
+### 6.3 Install if accepted
+
+If the user selects yes, run these commands sequentially:
+
+```bash
+claude /plugin marketplace add obra/superpowers-marketplace
+claude /plugin install superpowers@superpowers-marketplace
+```
+
+Then output this EXACT message — do NOT continue with any other operations after this:
+
+```
+✔ Superpowers plugin installed successfully.
+
+⚠ RESTART REQUIRED
+  Close and reopen Claude Code for Superpowers to activate.
+  After restart, your agents will have access to:
+    - Socratic brainstorming & design refinement
+    - Systematic debugging (4-phase root cause analysis)
+    - Test-driven development workflows
+    - Verification-before-completion checks
+    - Implementation planning & code review skills
+
+  Run /implement-feature after restarting to begin.
+```
+
+### 6.4 If declined
+
+Output:
+```
+Skipped Superpowers installation.
+You can install it later with:
+  /plugin marketplace add obra/superpowers-marketplace
+  /plugin install superpowers@superpowers-marketplace
+
+Run /implement-feature to start orchestrated development.
+```
+
+**IMPORTANT**: Phase 6 is the LAST thing that happens. Do not run any other operations after the Superpowers install prompt. The user must restart their CLI before any superpowers-dependent features will work.
