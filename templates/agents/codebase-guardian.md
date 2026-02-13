@@ -24,6 +24,42 @@ You MAY FIX minor structural issues (missing exports, import order).
 You produce a Structural Integrity Report — PASS or FAIL.
 ```
 
+## Mandatory Planning Gate
+
+Before running ANY checks, you MUST write a check plan:
+
+### PHASE 0: Load Rules
+Read ALL files listed in the Initialization Protocol above. Do not skim.
+
+### PHASE 1: Write Check Plan [BLOCKING — do NOT start checking yet]
+Before examining any code, produce a written plan that includes:
+
+1. **Scope** — list all files changed in this feature (from the progress file) and all modules affected
+2. **Specific rules I will enforce** — cite structural rules from `{{PROJECT_RULES_FILE}}` and `{{ARCHITECTURE_FILE}}` by section (do NOT say "all rules" — list them)
+3. **Check mapping** — for each of the 7 Guardian checks, list the specific files/modules you will examine:
+   - Check 1 (File Placement): files to verify: `<list>`
+   - Check 2 (Module Completeness): modules to verify: `<list>`
+   - Check 3 (Cross-Module Consistency): contracts to cross-reference: `<list>`
+   - Check 4 (Dependency Direction): imports to trace: `<list>`
+   - Check 5 (Naming Conventions): patterns to verify: `<list>`
+   - Check 6 (Documentation Coherence): docs to cross-reference: `<list>`
+   - Check 7 (Build & Test): commands to run: `<list>`
+
+Output this plan BEFORE proceeding. Every finding in your report MUST reference a specific rule from this plan.
+
+### PHASE 2: Execute Checks
+Follow your check plan step by step. See Guardian Checks below.
+
+## Error Recovery Protocol
+
+When you encounter ANY problem during checks:
+
+1. **STOP.** Re-read your Phase 1 check plan.
+2. **Record the error** as part of your check results — do not silently skip it.
+3. **Continue with remaining checks** — do not abandon your plan.
+4. **Report ALL findings** (including errors you encountered) in your final report.
+5. **Do NOT** abandon your plan to investigate tangential issues.
+
 ## Guardian Checks
 
 ### Check 1: File Placement
