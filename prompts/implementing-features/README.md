@@ -62,7 +62,7 @@ PLAN ──▶ BRANCH ──▶ TRACK ──▶ ASSIGN ──▶ BUILD ──▶
   │         │         │             spawn agents on workbranches
   │         │         │
   │         │         └─ Create progress file at
-  │         │            {{PROGRESS_DIR}}/<feature>-progress.md
+  │         │            the progress directory/<feature>-progress.md
   │         │
   │         └─ Create feature/<name> from main
   │
@@ -133,7 +133,7 @@ Claude Code sessions can terminate unexpectedly (terminal close, timeout, proces
 
 ### The Progress File
 
-**Location**: `{{PROGRESS_DIR}}/<feature-name>-progress.md`
+**Location**: `the progress directory/<feature-name>-progress.md`
 
 **Template**: See [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md)
 
@@ -343,9 +343,9 @@ The Team Leader MUST use the complete spawn templates from [`AGENT-SPAWN-TEMPLAT
 These guards apply to ALL agents and ALL commands. Follow them automatically.
 
 #### File Existence
-- Before reading `{{PROJECT_RULES_FILE}}`: if it doesn't exist, warn the user and continue with project conventions you can infer from the codebase. Do NOT stop.
-- Before reading `{{ARCHITECTURE_FILE}}`: if it doesn't exist, skip it. Infer architecture from the codebase directly.
-- Before reading any `.claude/prompts/` file: if it doesn't exist, the workflow is not fully installed. Warn the user and continue with defaults.
+- Before reading `the project rules file`: if it doesn't exist, warn the user and continue with project conventions you can infer from the codebase. Do NOT stop.
+- Before reading `the architecture file`: if it doesn't exist, skip it. Infer architecture from the codebase directly.
+- Before reading any `prompts/` file: if it doesn't exist, the workflow is not fully installed. Warn the user and continue with defaults.
 
 #### Git State
 - Before any branch operation, detect the primary branch:
@@ -354,7 +354,7 @@ These guards apply to ALL agents and ALL commands. Follow them automatically.
 - Before any git operation: verify the repo is initialized (`git rev-parse --git-dir`) and has at least one commit (`git log -1`). If not, inform the user.
 
 #### Progress Directory
-- Before writing to `{{PROGRESS_DIR}}/`: create it if it doesn't exist (`mkdir -p {{PROGRESS_DIR}}`).
+- Before writing to `the progress directory/`: create it if it doesn't exist (`mkdir -p the progress directory`).
 
 #### Tool Detection
 - Do NOT assume `npm run lint`, `npm run test`, etc. exist.
@@ -391,7 +391,7 @@ Coding Agent                           QA Review Agent
      │   ├─ spawns NEW QA agent ────────────▶│  (max 3 rounds)
      │                                       │
      ├─ if PASS:                             │
-     │   │   QA updates docs ───────────────▶├─ updates {{ARCHITECTURE_FILE}}
+     │   │   QA updates docs ───────────────▶├─ updates the architecture file
      │   │   on workbranch                   ├─ updates other project docs
      │   │                                   ├─ commits doc updates
      │   │                                   │
@@ -514,7 +514,7 @@ A new Team Leader session should check for existing progress:
 
 ```bash
 # Check for progress files
-ls {{PROGRESS_DIR}}/
+ls the progress directory/
 
 # Check for workbranches
 git branch --list "work/*"
@@ -588,7 +588,7 @@ Three modes control ceremony level. The Team Leader resolves the mode at feature
 | **standard** | 2 | Yes (auto-fix trivial) | No | Lint only |
 | **fast** | 1 | No | No | Skip |
 
-**Resolution priority**: per-invocation override → `{{PROJECT_RULES_FILE}}` setting → default (strict).
+**Resolution priority**: per-invocation override → `the project rules file` setting → default (strict).
 
 Full details: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
 

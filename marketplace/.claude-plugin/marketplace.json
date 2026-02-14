@@ -1,0 +1,22 @@
+{
+  "name": "claude-workflow-marketplace",
+  "owner": {
+    "name": "ParkerM2"
+  },
+  "metadata": {
+    "description": "Multi-agent workflow orchestration plugins for Claude Code",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "claude-workflow",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/ParkerM2/claude-workflow.git"
+      },
+      "description": "Multi-agent workflow orchestration — branch-per-task development with automated QA, codebase guardian, crash recovery, and 12 workflow commands",
+      "version": "1.0.0",
+      "strict": true
+    }
+  ]
+}

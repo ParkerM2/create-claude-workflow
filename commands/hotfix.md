@@ -1,3 +1,7 @@
+---
+description: "Streamlined single-agent urgent fix with automatic QA verification"
+---
+
 # /hotfix — Streamlined Urgent Fix Workflow
 
 > Invoke this skill for urgent, small-scope fixes that don't need full team orchestration. Single agent, single QA round, minimal ceremony. Still enforces the planning gate — even urgent fixes need a plan.
@@ -24,16 +28,16 @@
 
 1. **Git repo check**: Verify git repo exists and has commits.
 2. **Primary branch detection**: Detect main/master and use consistently.
-3. **Progress directory**: Create `{{PROGRESS_DIR}}` if it doesn't exist.
+3. **Progress directory**: Create the progress directory if it doesn't exist.
 
 Read these files:
 
 ```
-1. {{PROJECT_RULES_FILE}}                                              — Project rules
-2. {{ARCHITECTURE_FILE}}                                               — System architecture
-3. .claude/prompts/implementing-features/README.md                     — Playbook reference
-4. .claude/prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md      — Spawn template
-5. .claude/prompts/implementing-features/WORKFLOW-MODES.md             — Mode reference
+1. the project rules file                                              — Project rules
+2. the architecture file                                               — System architecture
+3. prompts/implementing-features/README.md                     — Playbook reference
+4. prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md      — Spawn template
+5. prompts/implementing-features/WORKFLOW-MODES.md             — Mode reference
 ```
 
 Hotfix uses **fast mode** by default (1 QA round, no Guardian, no pre-flight). The user can override to `standard` or `strict` if needed.
@@ -73,7 +77,7 @@ git checkout main
 git checkout -b hotfix/<fix-name>
 ```
 
-Create a minimal progress file at `{{PROGRESS_DIR}}/<fix-name>-progress.md`:
+Create a minimal progress file in the progress directory:
 
 ```markdown
 # Hotfix: <Fix Name>

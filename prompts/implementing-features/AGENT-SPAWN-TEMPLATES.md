@@ -1,6 +1,6 @@
 # Agent Spawn Templates
 
-> Copy-paste templates for the Team Leader when spawning agents via the `Task` tool. Customize the bracketed sections `<like this>` for each task. Template variables `{{LIKE_THIS}}` are replaced during scaffolding.
+> Copy-paste templates for the Team Leader when spawning agents via the `Task` tool. Customize the bracketed sections `<like this>` for each task. Template variables have been replaced with descriptive references.
 >
 > **CRITICAL**: These templates enforce a mandatory phased workflow. Every agent MUST complete each phase before starting the next. This is not advisory — it is structural. Agents that skip phases produce work that fails QA.
 
@@ -42,12 +42,12 @@ Your workbranch is **work/<feature-name>/<task-slug>**.
 Read these files completely. Do not skim. Do not skip. Do not summarize.
 You will need specific rules from each file in Phase 1.
 
-1. Read `{{PROJECT_RULES_FILE}}` — project rules and conventions
-2. Read `{{ARCHITECTURE_FILE}}` — system architecture
-3. Read your agent definition at `.claude/agents/<your-agent>.md`
-4. Read `.claude/prompts/implementing-features/README.md` — the implementation playbook
+1. Read `the project rules file` — project rules and conventions
+2. Read `the architecture file` — system architecture
+3. Read your agent definition at `agents/<your-agent>.md`
+4. Read `prompts/implementing-features/README.md` — the implementation playbook
 
-> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+> **Defensive check**: Before reading each file, verify it exists. If `the project rules file` or `the architecture file` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
 
 Then verify your workbranch:
 ```bash
@@ -73,7 +73,7 @@ Restate the task in your own words. Prove you understand what is being asked.
 List SPECIFIC rules from the files you read in Phase 0 that constrain this task.
 Do not say "follow all rules" — cite the actual rules by name/section.
 Examples:
-- "{{PROJECT_RULES_FILE}} Section X: <quoted rule>"
+- "the project rules file Section X: <quoted rule>"
 - "Agent definition: file scope limited to <paths>"
 - "Architecture: <specific pattern to follow>"
 
@@ -291,12 +291,12 @@ You are reviewing on workbranch **work/<feature-name>/<task-slug>**.
 
 Read these files completely. You will reference specific rules during review.
 
-1. Read `{{PROJECT_RULES_FILE}}` — project rules and conventions
-2. Read `{{ARCHITECTURE_FILE}}` — system architecture
-3. Read `.claude/agents/qa-reviewer.md` — QA review protocol
-4. Read `.claude/prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md` — checklist reference
+1. Read `the project rules file` — project rules and conventions
+2. Read `the architecture file` — system architecture
+3. Read `agents/qa-reviewer.md` — QA review protocol
+4. Read `prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md` — checklist reference
 
-> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+> **Defensive check**: Before reading each file, verify it exists. If `the project rules file` or `the architecture file` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
 
 Verify workbranch:
 ```bash
@@ -372,7 +372,7 @@ Do not assume — read the code and confirm.
 
 If your review passes:
 1. Identify what documentation needs updating based on the changes
-2. Update `{{ARCHITECTURE_FILE}}` if new modules/services/structure were added
+2. Update `the architecture file` if new modules/services/structure were added
 3. Update other project docs if conventions or APIs changed
 4. Commit doc updates on the workbranch:
    ```bash
@@ -500,12 +500,12 @@ Your job is to perform a final structural integrity check on the merged feature 
 
 ## PHASE 0: LOAD RULES [BLOCKING]
 
-1. Read `{{PROJECT_RULES_FILE}}`
-2. Read `{{ARCHITECTURE_FILE}}`
-3. Read `.claude/agents/codebase-guardian.md` — your full protocol
-4. Read `{{PROGRESS_DIR}}/<feature-name>-progress.md` — what changed in this feature
+1. Read `the project rules file`
+2. Read `the architecture file`
+3. Read `agents/codebase-guardian.md` — your full protocol
+4. Read `the progress directory/<feature-name>-progress.md` — what changed in this feature
 
-> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+> **Defensive check**: Before reading each file, verify it exists. If `the project rules file` or `the architecture file` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
 
 Verify branch:
 ```bash
@@ -598,7 +598,7 @@ When starting a new feature, the Team Leader follows this sequence:
  3. CREATE feature branch:
       git checkout -b feature/<feature-name>
  4. CREATE progress file:
-      {{PROGRESS_DIR}}/<feature-name>-progress.md
+      the progress directory/<feature-name>-progress.md
  5. CREATE team:
       TeamCreate with team_name
  6. CREATE tasks:

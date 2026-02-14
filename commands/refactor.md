@@ -1,3 +1,7 @@
+---
+description: "Safe restructuring with mandatory baseline verification, wave execution, and before/after comparison"
+---
+
 # /refactor — Structured Codebase Refactoring
 
 > Invoke this skill to refactor code with safety guarantees. Establishes a baseline, proposes a plan, executes in waves, and verifies no regressions. All existing tests must pass before AND after the refactoring.
@@ -26,18 +30,18 @@
 
 1. **Git repo check**: Verify git repo exists and has commits.
 2. **Primary branch detection**: Detect main/master and use consistently.
-3. **Progress directory**: Create `{{PROGRESS_DIR}}` if it doesn't exist.
+3. **Progress directory**: Create the progress directory if it doesn't exist.
 4. **Branch check**: If `refactor/<name>` already exists, warn user.
 
 Read these files:
 
 ```
-1. {{PROJECT_RULES_FILE}}                                              — Project rules
-2. {{ARCHITECTURE_FILE}}                                               — System architecture
-3. .claude/prompts/implementing-features/README.md                     — Playbook
-4. .claude/prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md      — Spawn templates
-5. .claude/prompts/implementing-features/PRE-FLIGHT-CHECKS.md          — Pre-flight reference
-6. .claude/prompts/implementing-features/WORKFLOW-MODES.md             — Mode reference
+1. the project rules file                                              — Project rules
+2. the architecture file                                               — System architecture
+3. prompts/implementing-features/README.md                     — Playbook
+4. prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md      — Spawn templates
+5. prompts/implementing-features/PRE-FLIGHT-CHECKS.md          — Pre-flight reference
+6. prompts/implementing-features/WORKFLOW-MODES.md             — Mode reference
 ```
 
 Determine workflow mode. Default for refactoring is `strict` (pre-flight is critical for refactors).
@@ -140,7 +144,7 @@ Present a detailed refactoring plan to the user for approval:
   Wave 3: Cleanup
     - Remove old src/utils/auth.ts
     - Remove old src/utils/user.ts
-    - Update {{ARCHITECTURE_FILE}}
+    - Update the architecture file
 
   ─── Risk Mitigation ───────────────────────────────────
 
@@ -170,7 +174,7 @@ git checkout main
 git checkout -b refactor/<scope-name>
 ```
 
-Create a progress file at `{{PROGRESS_DIR}}/<scope-name>-refactor-progress.md`:
+Create a progress file in the progress directory:
 
 ```markdown
 # Refactor: <Scope Name>
@@ -297,7 +301,7 @@ If verification fails, investigate and fix before completing.
 
 ### Update Architecture Docs
 
-If the refactoring changed the project structure, update `{{ARCHITECTURE_FILE}}` to reflect the new layout.
+If the refactoring changed the project structure, update the architecture file to reflect the new layout.
 
 ### Create PR (if requested)
 
