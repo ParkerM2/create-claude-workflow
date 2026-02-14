@@ -16,10 +16,20 @@
 8. [Merge Protocol](#8-merge-protocol)
 9. [Codebase Guardian — Final Gate](#9-codebase-guardian--final-gate)
 10. [Crash Recovery](#10-crash-recovery)
+11. [Workflow Modes](#11-workflow-modes)
+12. [Wave Fence Protocol](#12-wave-fence-protocol)
+13. [Pre-Flight Checks](#13-pre-flight-checks)
+14. [Context Budget Management](#14-context-budget-management)
 
 For the QA Checklist Template, see: [`QA-CHECKLIST-TEMPLATE.md`](./QA-CHECKLIST-TEMPLATE.md)
 For the Progress File Template, see: [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md)
 For Agent Spawn Templates, see: [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
+For Workflow Modes, see: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
+For Wave Fence Protocol, see: [`WAVE-FENCE-PROTOCOL.md`](./WAVE-FENCE-PROTOCOL.md)
+For Pre-Flight Checks, see: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
+For Context Budget Guide, see: [`CONTEXT-BUDGET-GUIDE.md`](./CONTEXT-BUDGET-GUIDE.md)
+For QA Auto-Fill Rules, see: [`QA-CHECKLIST-AUTO-FILL-RULES.md`](./QA-CHECKLIST-AUTO-FILL-RULES.md)
+For Performance Logging, see: [`AGENT-PERFORMANCE-LOG-TEMPLATE.md`](./AGENT-PERFORMANCE-LOG-TEMPLATE.md)
 
 ---
 
@@ -328,6 +338,30 @@ The Team Leader MUST use the complete spawn templates from [`AGENT-SPAWN-TEMPLAT
 
 ### Full spawn templates: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
 
+### 6.5 Defensive Defaults
+
+These guards apply to ALL agents and ALL commands. Follow them automatically.
+
+#### File Existence
+- Before reading `{{PROJECT_RULES_FILE}}`: if it doesn't exist, warn the user and continue with project conventions you can infer from the codebase. Do NOT stop.
+- Before reading `{{ARCHITECTURE_FILE}}`: if it doesn't exist, skip it. Infer architecture from the codebase directly.
+- Before reading any `.claude/prompts/` file: if it doesn't exist, the workflow is not fully installed. Warn the user and continue with defaults.
+
+#### Git State
+- Before any branch operation, detect the primary branch:
+  `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|.*/||'` — if this fails, try `git branch -l main master 2>/dev/null | head -1 | tr -d '* '` — if both fail, ask the user.
+- Before `git checkout -b <branch>`: check if the branch already exists with `git branch --list "<branch>"`. If it exists, ask the user whether to resume or overwrite.
+- Before any git operation: verify the repo is initialized (`git rev-parse --git-dir`) and has at least one commit (`git log -1`). If not, inform the user.
+
+#### Progress Directory
+- Before writing to `{{PROGRESS_DIR}}/`: create it if it doesn't exist (`mkdir -p {{PROGRESS_DIR}}`).
+
+#### Tool Detection
+- Do NOT assume `npm run lint`, `npm run test`, etc. exist.
+- In Phase 0, determine the project's toolchain: check for `package.json` (npm/yarn/pnpm/bun), `Makefile`, `pyproject.toml`, `Cargo.toml`, `go.mod`, etc.
+- Adapt all check commands to the detected toolchain. If no toolchain is detected, skip automated checks and note this in the progress file.
+- If a check command fails with "command not found" or "script not found", skip that check and log a warning — do NOT treat it as a test failure.
+
 ---
 
 ## 7. QA Verification Workflow
@@ -539,4 +573,45 @@ Each wave:
 2. Agents work + commit on workbranches
 3. Agents spawn QA → QA reviews → QA updates docs → QA approves
 4. Team Leader rebases workbranch on `feature/` → merges → deletes branch
-5. Next wave starts from updated `feature/` HEAD
+5. **Wave fence check** — verify the feature branch is stable before proceeding
+6. Next wave starts from updated `feature/` HEAD
+
+---
+
+## 11. Workflow Modes
+
+Three modes control ceremony level. The Team Leader resolves the mode at feature start and records it in the progress file.
+
+| Mode | QA Rounds | Guardian | Pre-Flight | Wave Fence |
+|------|-----------|----------|------------|------------|
+| **strict** (default) | 3 | Yes | Yes | Full verify |
+| **standard** | 2 | Yes (auto-fix trivial) | No | Lint only |
+| **fast** | 1 | No | No | Skip |
+
+**Resolution priority**: per-invocation override → `{{PROJECT_RULES_FILE}}` setting → default (strict).
+
+Full details: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
+
+---
+
+## 12. Wave Fence Protocol
+
+The wave fence is a synchronization check between waves — it verifies the feature branch is stable before the next wave starts. Fence strictness follows the workflow mode (full verify / lint only / skip).
+
+Full details: [`WAVE-FENCE-PROTOCOL.md`](./WAVE-FENCE-PROTOCOL.md)
+
+---
+
+## 13. Pre-Flight Checks
+
+In `strict` mode, verify the codebase baseline (lint, typecheck, test, build) before spawning agents. Mandatory for `/refactor` regardless of mode.
+
+Full details: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
+
+---
+
+## 14. Context Budget Management
+
+Before spawning each agent, estimate context usage: `8,000 base + (files × 1,000) + 3,000 margin`. If a task touches 13+ files, split it.
+
+Full details: [`CONTEXT-BUDGET-GUIDE.md`](./CONTEXT-BUDGET-GUIDE.md)

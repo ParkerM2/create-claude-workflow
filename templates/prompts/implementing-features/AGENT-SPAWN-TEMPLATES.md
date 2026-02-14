@@ -11,12 +11,14 @@
 Use this for any specialist coding agent.
 
 ```
+<spawn-parameters>
 Task tool parameters:
   description: "<3-5 word summary>"
   subagent_type: general-purpose
   team_name: "<team-name>"
   name: "<agent-role>"
   mode: bypassPermissions
+</spawn-parameters>
 
 Prompt:
 
@@ -31,6 +33,10 @@ Your workbranch is **work/<feature-name>/<task-slug>**.
   Do NOT write any code until Phase 2.
 ═══════════════════════════════════════════════════════════════
 
+<workflow-phases>
+
+<phase name="load-rules" blocking="true">
+
 ## PHASE 0: LOAD RULES [BLOCKING — do NOT write code yet]
 
 Read these files completely. Do not skim. Do not skip. Do not summarize.
@@ -41,11 +47,17 @@ You will need specific rules from each file in Phase 1.
 3. Read your agent definition at `.claude/agents/<your-agent>.md`
 4. Read `.claude/prompts/implementing-features/README.md` — the implementation playbook
 
+> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+
 Then verify your workbranch:
 ```bash
 git checkout work/<feature-name>/<task-slug>
 git log --oneline -3
 ```
+
+</phase>
+
+<phase name="execution-plan" blocking="true">
 
 ## PHASE 1: WRITE EXECUTION PLAN [BLOCKING — do NOT write code yet]
 
@@ -92,7 +104,16 @@ What could go wrong? How will you handle it?
 Output this plan as a message BEFORE proceeding to Phase 2.
 Do NOT start coding until this plan is complete.
 
+</phase>
+
+<phase name="execute" blocking="false">
+
 ## PHASE 2: EXECUTE PLAN [now you may write code]
+
+Before creating or modifying ANY file:
+1. Verify the file path matches your Phase 1 scope (section 1c/1d)
+2. If modifying an existing file, read the ENTIRE file first to understand context
+3. If a file you planned to create already exists, read it before overwriting
 
 Follow your Phase 1 plan step by step. For each step:
 
@@ -107,6 +128,10 @@ git add <specific files from your plan>
 git commit -m "<type>: <description>"
 ```
 
+</phase>
+
+<phase name="self-review" blocking="false">
+
 ## PHASE 3: SELF-REVIEW [before spawning QA]
 
 Before spawning QA, you MUST verify your own work against your plan:
@@ -114,17 +139,21 @@ Before spawning QA, you MUST verify your own work against your plan:
 1. Re-read your Phase 1 plan
 2. For each acceptance criterion: verify it is met (run the check, read the file, confirm)
 3. For each file in your plan: verify it exists and contains what you planned
-4. Run automated checks:
+4. Run automated checks (adapt to project toolchain — see Defensive Defaults in playbook):
    ```bash
-   # Adapt to project toolchain
-   npm run lint
-   npm run typecheck
-   npm run test
-   npm run build
+   # Use the project's actual commands. Examples:
+   # JS/TS: npm run lint, npm run typecheck, npm run test
+   # Python: ruff check, mypy, pytest
+   # Go: golangci-lint run, go vet, go test ./...
+   # If a command doesn't exist, skip it and note in self-review
    ```
 5. If ANY check fails: fix it BEFORE spawning QA. Do not pass known failures to QA.
 
 Only after ALL self-review checks pass, proceed to Phase 4.
+
+</phase>
+
+<phase name="spawn-qa" blocking="false">
 
 ## PHASE 4: SPAWN QA
 
@@ -145,6 +174,12 @@ If QA returns PASS:
 1. QA will have updated docs and committed on your workbranch
 2. Send the QA report + completion summary to the Team Leader
 3. Mark Task #<N> as completed via TaskUpdate
+
+</phase>
+
+</workflow-phases>
+
+<error-recovery>
 
 ═══════════════════════════════════════════════════════════════
   ERROR RECOVERY PROTOCOL
@@ -173,6 +208,10 @@ When you encounter ANY error:
 
 ═══════════════════════════════════════════════════════════════
 
+</error-recovery>
+
+<task-context>
+
 ## Task
 
 <detailed task description>
@@ -196,9 +235,24 @@ When you encounter ANY error:
 - Blocked by: <Task #X or "none">
 - Blocks: <Task #Y or "none">
 
+## Context Budget
+
+This task is estimated at ~<N> tokens of context.
+Files to create/modify: <count>
+Files to read for context: <count>
+
+If you find yourself running low on context:
+1. Re-read your Phase 1 plan (it's your anchor)
+2. Focus on the remaining steps in order
+3. Skip non-essential reads (you've already internalized the rules)
+4. Report to Team Leader if you cannot complete all steps
+
 ## QA Checklist
 
 <paste relevant sections from QA-CHECKLIST-TEMPLATE.md, customized for this task>
+<use QA-CHECKLIST-AUTO-FILL-RULES.md to pre-select sections by agent role>
+
+</task-context>
 ```
 
 ---
@@ -208,12 +262,14 @@ When you encounter ANY error:
 The coding agent spawns this AFTER completing its work. It runs on the SAME workbranch.
 
 ```
+<spawn-parameters>
 Task tool parameters:
   description: "QA review Task #<N>"
   subagent_type: general-purpose
   team_name: "<team-name>"
   name: "qa-task-<N>"
   mode: bypassPermissions
+</spawn-parameters>
 
 Prompt:
 
@@ -227,6 +283,10 @@ You are reviewing on workbranch **work/<feature-name>/<task-slug>**.
   Do NOT start reviewing code until your review plan is written.
 ═══════════════════════════════════════════════════════════════
 
+<workflow-phases>
+
+<phase name="load-rules" blocking="true">
+
 ## PHASE 0: LOAD RULES [BLOCKING]
 
 Read these files completely. You will reference specific rules during review.
@@ -236,10 +296,16 @@ Read these files completely. You will reference specific rules during review.
 3. Read `.claude/agents/qa-reviewer.md` — QA review protocol
 4. Read `.claude/prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md` — checklist reference
 
+> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+
 Verify workbranch:
 ```bash
 git checkout work/<feature-name>/<task-slug>
 ```
+
+</phase>
+
+<phase name="review-plan" blocking="true">
 
 ## PHASE 1: WRITE REVIEW PLAN [BLOCKING — do NOT review code yet]
 
@@ -260,15 +326,20 @@ Number the files you will review and what you will check in each:
 2. <file> — check for: <specific things>
 
 ### 1d. Automated Checks to Run
-List the exact commands:
+List the exact commands (adapt to project toolchain — see Defensive Defaults in playbook):
 ```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run build
+# Use the project's actual commands. Examples:
+# JS/TS: npm run lint, npm run typecheck, npm run test
+# Python: ruff check, mypy, pytest
+# Go: golangci-lint run, go vet, go test ./...
+# If a command doesn't exist, skip it and note in review
 ```
 
 Output this plan before proceeding to Phase 2.
+
+</phase>
+
+<phase name="execute-review" blocking="false">
 
 ## PHASE 2: EXECUTE REVIEW
 
@@ -293,6 +364,10 @@ For each file in your review plan:
 Go through each acceptance criterion and verify it is met.
 Do not assume — read the code and confirm.
 
+</phase>
+
+<phase name="doc-update" blocking="false">
+
 ## PHASE 3: DOCUMENTATION UPDATE [ONLY IF ALL CHECKS PASS]
 
 If your review passes:
@@ -304,6 +379,10 @@ If your review passes:
    git add <doc-files>
    git commit -m "docs: update documentation for <task-name>"
    ```
+
+</phase>
+
+<phase name="qa-report" blocking="false">
 
 ## PHASE 4: QA REPORT
 
@@ -353,6 +432,12 @@ VERDICT: APPROVED / REJECTED
 
 Send this report to the coding agent that spawned you.
 
+</phase>
+
+</workflow-phases>
+
+<error-recovery>
+
 ═══════════════════════════════════════════════════════════════
   ERROR RECOVERY PROTOCOL
 ═══════════════════════════════════════════════════════════════
@@ -362,6 +447,8 @@ If you encounter an error during review (e.g., a check command fails to run):
 2. Determine if the error is in the reviewed code (report as FAIL) or in your review process (try alternative approach)
 3. Do NOT modify application code — you are a reviewer
 4. If you cannot complete a review step after 2 attempts: report the issue in your QA report and flag it for the Team Leader
+
+</error-recovery>
 
 ## Coding Agent's Plan (for verification)
 
@@ -387,12 +474,14 @@ If you encounter an error during review (e.g., a check command fails to run):
 The Team Leader spawns this AFTER all workbranches are merged to the feature branch.
 
 ```
+<spawn-parameters>
 Task tool parameters:
   description: "Guardian check for <feature>"
   subagent_type: general-purpose
   team_name: "<team-name>"
   name: "guardian"
   mode: bypassPermissions
+</spawn-parameters>
 
 Prompt:
 
@@ -405,6 +494,10 @@ Your job is to perform a final structural integrity check on the merged feature 
   Do NOT start checking code until your check plan is written.
 ═══════════════════════════════════════════════════════════════
 
+<workflow-phases>
+
+<phase name="load-rules" blocking="true">
+
 ## PHASE 0: LOAD RULES [BLOCKING]
 
 1. Read `{{PROJECT_RULES_FILE}}`
@@ -412,10 +505,16 @@ Your job is to perform a final structural integrity check on the merged feature 
 3. Read `.claude/agents/codebase-guardian.md` — your full protocol
 4. Read `{{PROGRESS_DIR}}/<feature-name>-progress.md` — what changed in this feature
 
+> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+
 Verify branch:
 ```bash
 git checkout feature/<feature-name>
 ```
+
+</phase>
+
+<phase name="check-plan" blocking="true">
 
 ## PHASE 1: WRITE CHECK PLAN [BLOCKING — do NOT start checking yet]
 
@@ -440,12 +539,20 @@ Map each of the 7 Guardian checks to the specific files/modules you will examine
 
 Output this plan before proceeding to Phase 2.
 
+</phase>
+
+<phase name="execute-checks" blocking="false">
+
 ## PHASE 2: EXECUTE CHECKS
 
 Follow your Phase 1 check plan. For each of the 7 checks:
 1. State which check you are executing
 2. Execute it against the specific files/modules from your plan
 3. Record the result (PASS/FAIL with details)
+
+</phase>
+
+<phase name="report" blocking="false">
 
 ## PHASE 3: REPORT
 
@@ -460,6 +567,12 @@ git commit -m "fix: structural cleanup for <feature>"
 
 For non-trivial issues, report them for the Team Leader to assign.
 
+</phase>
+
+</workflow-phases>
+
+<error-recovery>
+
 ═══════════════════════════════════════════════════════════════
   ERROR RECOVERY PROTOCOL
 ═══════════════════════════════════════════════════════════════
@@ -469,6 +582,8 @@ If you encounter an error during checks:
 2. Record the error as part of your check results
 3. Do NOT abandon your plan — continue with remaining checks
 4. Report all findings (including errors) in your final report
+
+</error-recovery>
 ```
 
 ---

@@ -1,6 +1,6 @@
 # create-claude-workflow
 
-A Claude Code skill pack + npx scaffolder for orchestrating multi-agent feature development with crash-safe progress tracking, per-task QA, and automated documentation.
+Multi-agent feature development for Claude Code -- agents plan before coding, work on isolated branches, get reviewed, and merge cleanly.
 
 ```
 npx create-claude-workflow init
@@ -8,9 +8,17 @@ npx create-claude-workflow init
 
 ---
 
-## How It Works
+## Quick Start
 
-One command kicks off a fully orchestrated, multi-agent development pipeline. Here is the flow from start to finish:
+1. **Scaffold** -- `npx create-claude-workflow init`
+2. **Generate agents** -- `/discover-agents`
+3. **Build a feature** -- `/implement-feature "add user authentication"`
+
+---
+
+## What Happens When You Run /implement-feature
+
+One command kicks off a fully orchestrated, multi-agent development pipeline:
 
 ```mermaid
 %%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
@@ -69,76 +77,46 @@ flowchart LR
 
 ---
 
-## Features
+## Why This Exists
 
-At a glance, here is what you get out of the box:
-
-| Feature | What It Does |
+| Problem | This Tool's Approach |
 |---|---|
-| :shield: Branch-per-task isolation | Each task gets its own work branch off `feature/` -- no file conflicts |
-| :busts_in_silhouette: Team orchestration | Decomposes features into tasks, spawns specialist agents in waves |
-| :floppy_disk: Crash-safe progress | Progress files on disk survive terminal closes -- new sessions auto-resume |
-| :mag: Per-agent QA | Each coding agent spawns its own QA reviewer on the same work branch |
-| :books: QA-driven doc updates | QA updates docs on PASS (not a separate agent), keeping branches self-contained |
-| :lock: Codebase Guardian | Final structural integrity check on merged feature branch before PR |
-| :detective: Auto agent discovery | `/discover-agents` indexes your codebase and recommends specialist agents |
-| :link: Skills.sh integration | Agents auto-bundle relevant skills from the skills.sh marketplace |
-| :zap: Superpowers enforcement | Agents must use thinking/planning/debugging skills -- no cowboy coding |
-| :inbox_tray: Superpowers auto-install | Detects if plugin is missing, prompts to install, handles CLI restart notice |
-| :gear: Workflow modes | Three modes (strict/standard/fast) control QA rounds, Guardian, pre-flight, and wave fences |
-| :clipboard: QA auto-fill | Agent roles auto-select relevant QA checklist sections -- less boilerplate |
-| :bar_chart: Performance tracking | QA logs agent performance per task -- data-driven agent improvement |
-| :compass: Context budget | Estimates context usage before spawning -- prevents "ran out of context" failures |
+| Agents conflict on shared files | Branch-per-task + file scoping + sequential merges (5-layer prevention) |
+| Agents go rogue, edit wrong files | Each agent has a scoped file list |
+| QA happens at the end (too late) | QA runs per-agent on the work branch |
+| Terminal crash = lost progress | Progress files on disk, auto-resume |
+| Docs rot after features ship | QA updates docs on PASS + Guardian checks coherence at the end |
+| Agents skip planning, debug blind | Superpowers skills are enforced |
+| Don't know which agents to create | `/discover-agents` auto-detects your stack |
+| Skills scattered, not integrated | Agents bundle relevant skills.sh skills |
 
 ---
 
-## Commands
+## Core Commands
 
 | Command | What It Does |
 |---|---|
-| `/discover-agents` | Indexes codebase --> detects tech stack --> recommends agents --> you pick --> generates tailored agent definitions with skills |
-| `/implement-feature` | Runs the full orchestration workflow: branch --> plan --> spawn --> QA --> merge --> PR |
+| `/implement-feature` | Full orchestration: branch, plan, spawn agents in waves, QA each task, Guardian check, PR |
+| `/discover-agents` | Indexes codebase, detects tech stack, recommends agents, generates tailored agent definitions |
 | `/resume-feature` | Scans progress files, shows in-progress features, resumes from where the last session left off |
-| `/status` | Displays a formatted summary of the active feature's progress (tasks, QA, branches, blockers) |
-| `/hotfix` | Streamlined single-agent urgent fix: branch --> one agent --> 1 QA round --> PR |
-| `/review-pr <number>` | Checks out a PR, spawns QA + Guardian, posts combined results as a PR comment |
-| `/generate-tests` | Identifies test targets, spawns test-engineer, QA verifies coverage quality |
-| `/refactor` | Pre-flight baseline --> analyze --> plan --> execute waves --> verify no regressions |
-| `/scaffold-agent` | Interactive Q&A to generate a new `.claude/agents/<role>.md` with full phased workflow |
-| `/audit-agents` | Scans agent definitions, compares scopes against project structure, flags issues |
 
-### /discover-agents Flow
+---
 
-The agent discovery process walks through six phases automatically:
+## Extended Commands
 
-```mermaid
-%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
-flowchart TD
-    A["/discover-agents"] --> B["Phase 1: Index<br>Languages, frameworks,<br>patterns, structure, plugins"]
-    B --> C["Phase 2: Map<br>Detections to agent roles,<br>subtract existing agents"]
-    C --> D["Phase 3: Present<br>Core + detected agents,<br>user selects"]
-    D --> E["Phase 4: Generate<br>Writes .claude/agents/*.md<br>with bundled skills"]
-    E --> F["Phase 5: Summary"]
-    F --> G["Phase 6: Superpowers<br>Check if installed,<br>prompt if missing"]
+> Ship with the workflow and are available when you need them. Zero context cost until invoked.
 
-    style A fill:#4a90d9,color:#fff
-    style D fill:#f5a623,color:#fff
-    style E fill:#7ed321,color:#fff
-    style G fill:#9b59b6,color:#fff
-```
-
-### Skills.sh Integration
-
-Agents auto-reference relevant skills from the marketplace. Here is the default mapping:
-
-| Agent | Bundled skills.sh Skills |
+| Command | What It Does |
 |---|---|
-| component-engineer | `vercel-labs/agent-skills` --> react-best-practices, web-design-guidelines, composition-patterns; `anthropics/skills` --> frontend-design |
-| mobile-engineer | `vercel-labs/agent-skills` --> react-native-guidelines |
-| styling-engineer | `anthropics/skills` --> frontend-design |
-| qa-reviewer | `anthropics/skills` --> webapp-testing |
-| test-engineer | `anthropics/skills` --> webapp-testing |
-| Any agent | `anthropics/skills` --> mcp-builder (if MCP detected) |
+| `/claude-new` | Unified creation entry point: features, phases, tasks, plans, agents, or ideas |
+| `/create-feature-plan` | Deep technical planning: codebase analysis, architecture design, task decomposition |
+| `/hotfix` | Streamlined single-agent urgent fix: one agent, one QA round, fast mode |
+| `/refactor` | Pre-flight baseline, analyze, plan, execute in waves, verify no regressions |
+| `/generate-tests` | Identifies test targets, spawns test-engineer, QA verifies coverage quality |
+| `/review-pr <number>` | Checks out a PR, spawns QA + Guardian, posts combined results as PR comment |
+| `/scaffold-agent` | Interactive Q&A to generate a new agent definition with full phased workflow |
+| `/audit-agents` | Scans agent definitions, compares scopes against project structure, flags issues |
+| `/status` | Formatted summary of active feature progress: tasks, QA, branches, blockers |
 
 ---
 
@@ -150,6 +128,7 @@ Everything lives under `.claude/` -- nothing is loaded into context until invoke
 your-project/
 ├── .claude/
 │   ├── commands/
+│   │   ├── create-feature-plan.md         <- deep planning for implement-feature
 │   │   ├── implement-feature.md          <- full orchestration workflow
 │   │   ├── discover-agents.md            <- auto-detect stack, generate agents
 │   │   ├── resume-feature.md             <- resume crashed/paused features
@@ -159,7 +138,8 @@ your-project/
 │   │   ├── generate-tests.md             <- focused test generation
 │   │   ├── refactor.md                   <- safe restructuring with baseline
 │   │   ├── scaffold-agent.md             <- interactive agent creator
-│   │   └── audit-agents.md              <- check agent scopes vs codebase
+│   │   ├── audit-agents.md              <- check agent scopes vs codebase
+│   │   └── claude-new.md               <- unified creation entry point
 │   ├── agents/                           <- loaded per agent spawn (zero cost when idle)
 │   │   ├── team-leader.md
 │   │   ├── component-engineer.md
@@ -177,7 +157,8 @@ your-project/
 │           ├── PRE-FLIGHT-CHECKS.md      <- baseline verification before agents
 │           ├── CONTEXT-BUDGET-GUIDE.md   <- context estimation and splitting
 │           ├── QA-CHECKLIST-AUTO-FILL-RULES.md  <- role-based QA section mapping
-│           └── AGENT-PERFORMANCE-LOG-TEMPLATE.md <- QA performance tracking
+│           ├── AGENT-PERFORMANCE-LOG-TEMPLATE.md <- QA performance tracking
+│           └── IDEAS-BACKLOG-TEMPLATE.md <- idea backlog for /claude-new idea
 ├── docs/
 │   ├── progress/                         <- runtime progress files (one per feature)
 │   ├── CUSTOMIZING-THE-WORKFLOW.md       <- guide: adjusting phases, branching, QA
@@ -222,41 +203,19 @@ npx create-claude-workflow init
 /implement-feature "your feature description"
 ```
 
-### Interactive Prompts (init)
-
-```
-? Project type:              Electron / React / Node / Full-stack / Custom
-? Include agent definitions? Yes - select roles / No - just templates
-? Select agents:             team-leader, qa-reviewer, ...
-? Electron MCP testing?      Yes / No
-? Progress file directory:   docs/progress/
-```
-
 ### Manual Install
 
 Copy the files from `templates/` into your project and customize the `.md` files directly.
 
----
-
-## Architecture
+### What Init Asks
 
 ```
-create-claude-workflow/
-├── bin/index.js              <- CLI entry point
-├── lib/
-│   ├── scaffolder.js         <- file generation
-│   ├── prompts.js            <- interactive questions
-│   └── templates.js          <- template loading + variable substitution
-├── templates/
-│   ├── commands/             <- Claude Code skills
-│   │   ├── implement-feature.md
-│   │   └── discover-agents.md
-│   ├── agents/               <- agent definitions (modular)
-│   ├── prompts/              <- playbook + checklists
-│   └── electron/             <- optional Electron QA protocol
-├── package.json
-└── README.md
+? Project rules file:     CLAUDE.md
+? Architecture file:      docs/ARCHITECTURE.md
+? Progress directory:     docs/progress
 ```
+
+That's it -- three questions, sensible defaults, done in seconds.
 
 ---
 
@@ -276,18 +235,12 @@ Templates use `{{VARIABLE}}` substitution. Customize after scaffolding -- all ou
 
 ---
 
-## Why This Exists
+## Customization
 
-| Problem | This Tool's Approach |
-|---|---|
-| Agents conflict on shared files | Branch-per-task + file scoping + sequential merges (5-layer prevention) |
-| Agents go rogue, edit wrong files | Each agent has a scoped file list |
-| QA happens at the end (too late) | QA runs per-agent on the work branch |
-| Terminal crash = lost progress | Progress files on disk, auto-resume |
-| Docs rot after features ship | QA updates docs on PASS + Guardian checks coherence at the end |
-| Agents skip planning, debug blind | Superpowers skills are enforced |
-| Don't know which agents to create | `/discover-agents` auto-detects your stack |
-| Skills scattered, not integrated | Agents bundle relevant skills.sh skills |
+The workflow is designed to be tailored to your project. Two guides ship with the install:
+
+- **`docs/CUSTOMIZING-THE-WORKFLOW.md`** -- Adjusting phases, branching, progress tracking, merge protocol, QA checks, workflow modes, template variables
+- **`docs/CREATING-AGENTS.md`** -- Agent anatomy, creating new agents, scoping, naming, skills integration, testing
 
 ---
 
