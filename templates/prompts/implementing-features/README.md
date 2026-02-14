@@ -338,6 +338,30 @@ The Team Leader MUST use the complete spawn templates from [`AGENT-SPAWN-TEMPLAT
 
 ### Full spawn templates: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
 
+### 6.5 Defensive Defaults
+
+These guards apply to ALL agents and ALL commands. Follow them automatically.
+
+#### File Existence
+- Before reading `{{PROJECT_RULES_FILE}}`: if it doesn't exist, warn the user and continue with project conventions you can infer from the codebase. Do NOT stop.
+- Before reading `{{ARCHITECTURE_FILE}}`: if it doesn't exist, skip it. Infer architecture from the codebase directly.
+- Before reading any `.claude/prompts/` file: if it doesn't exist, the workflow is not fully installed. Warn the user and continue with defaults.
+
+#### Git State
+- Before any branch operation, detect the primary branch:
+  `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|.*/||'` — if this fails, try `git branch -l main master 2>/dev/null | head -1 | tr -d '* '` — if both fail, ask the user.
+- Before `git checkout -b <branch>`: check if the branch already exists with `git branch --list "<branch>"`. If it exists, ask the user whether to resume or overwrite.
+- Before any git operation: verify the repo is initialized (`git rev-parse --git-dir`) and has at least one commit (`git log -1`). If not, inform the user.
+
+#### Progress Directory
+- Before writing to `{{PROGRESS_DIR}}/`: create it if it doesn't exist (`mkdir -p {{PROGRESS_DIR}}`).
+
+#### Tool Detection
+- Do NOT assume `npm run lint`, `npm run test`, etc. exist.
+- In Phase 0, determine the project's toolchain: check for `package.json` (npm/yarn/pnpm/bun), `Makefile`, `pyproject.toml`, `Cargo.toml`, `go.mod`, etc.
+- Adapt all check commands to the detected toolchain. If no toolchain is detected, skip automated checks and note this in the progress file.
+- If a check command fails with "command not found" or "script not found", skip that check and log a warning — do NOT treat it as a test failure.
+
 ---
 
 ## 7. QA Verification Workflow

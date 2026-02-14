@@ -14,6 +14,13 @@
 
 ## Phase 1: Load Context
 
+### Pre-Validation (before reading any files)
+
+1. **Git repo check**: Run `git rev-parse --git-dir`. If this fails, inform the user: "This directory is not a git repository. Initialize one with `git init` and make an initial commit before running /implement-feature."
+2. **Primary branch detection**: Detect the primary branch name (main/master/other) and store it. Use this throughout instead of hardcoding `main`.
+3. **Progress directory**: Create `{{PROGRESS_DIR}}` if it doesn't exist (`mkdir -p`).
+4. **Branch check**: If `feature/<feature-name>` already exists, inform the user and suggest `/resume-feature` instead of creating a duplicate.
+
 Before anything else, read these files to understand the system:
 
 ```

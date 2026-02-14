@@ -46,7 +46,8 @@ main/master
 
 ### Branch Rules
 
-1. **Create `feature/<name>`** from `main`/`master` at the start
+0. **Detect primary branch**: Before creating any branch, determine if the primary branch is `main`, `master`, or something else. Use: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|.*/||'`. Store this and use it consistently.
+1. **Create `feature/<name>`** from the primary branch at the start. Before `git checkout -b`, verify the branch doesn't already exist. If it does and has a matching progress file, this is a resume scenario.
 2. **Create `work/<feature-name>/<task-slug>`** from `feature/<name>` HEAD for each task
 3. Agents work + commit on their workbranch only
 4. After QA passes (and QA updates docs on workbranch), you merge workbranch back to `feature/<name>`
@@ -145,7 +146,11 @@ git checkout feature/<feature-name>
 git checkout work/<feature-name>/<task-slug>
 git rebase feature/<feature-name>
 
-# 3. If rebase conflicts: resolve or escalate to user
+# 3. If rebase conflicts:
+#    a. If < 5 conflicts and all in files the agent owns: resolve them
+#    b. If >= 5 conflicts or any in shared files: escalate to user
+#    c. NEVER force-push or drop commits to resolve conflicts
+#    d. After resolution: verify build/lint/test still pass before merging
 # 4. Merge with --no-ff for clear history
 git checkout feature/<feature-name>
 git merge --no-ff work/<feature-name>/<task-slug> -m "Merge <task-slug>: <summary>"
@@ -171,6 +176,10 @@ Maintain `{{PROGRESS_DIR}}/<feature-name>-progress.md` as your crash-recovery ar
 - After each QA cycle
 - After each merge
 
+### Concurrency
+
+Only ONE agent should update the progress file at a time. The Team Leader is the primary writer. If agents need to log status, they report to the Team Leader via message, and the Team Leader updates the file. Agents should NEVER write to the progress file directly.
+
 ## Error Recovery Protocol
 
 <error-recovery>
@@ -179,7 +188,12 @@ When you encounter ANY problem during orchestration:
 
 1. **STOP.** Re-read your Phase 1 decomposition plan.
 2. **Classify the problem:**
-   - Agent failed QA 3 times → escalate to user
+   - **Agent failed QA max rounds:**
+     1. Log BLOCKER status in the progress file with: agent role, task, rounds completed, recurring issues
+     2. Pause all other tasks in the current wave (do NOT proceed to next wave)
+     3. Report to user with: exact issues from the last QA report, what the agent tried, suggested remediation
+     4. Wait for user direction before continuing
+     5. Options: user fixes manually, user provides guidance and you re-spawn, user skips the task
    - Merge conflict → attempt resolution, escalate if non-trivial
    - Agent reporting out-of-scope error → determine if it affects the plan
    - Build/test failure after merge → revert, investigate, re-assign

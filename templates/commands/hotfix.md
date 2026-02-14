@@ -20,6 +20,12 @@
 
 ## Phase 1: Load Context
 
+### Pre-Validation
+
+1. **Git repo check**: Verify git repo exists and has commits.
+2. **Primary branch detection**: Detect main/master and use consistently.
+3. **Progress directory**: Create `{{PROGRESS_DIR}}` if it doesn't exist.
+
 Read these files:
 
 ```

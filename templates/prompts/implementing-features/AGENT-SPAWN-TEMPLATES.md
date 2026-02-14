@@ -47,6 +47,8 @@ You will need specific rules from each file in Phase 1.
 3. Read your agent definition at `.claude/agents/<your-agent>.md`
 4. Read `.claude/prompts/implementing-features/README.md` — the implementation playbook
 
+> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+
 Then verify your workbranch:
 ```bash
 git checkout work/<feature-name>/<task-slug>
@@ -108,6 +110,11 @@ Do NOT start coding until this plan is complete.
 
 ## PHASE 2: EXECUTE PLAN [now you may write code]
 
+Before creating or modifying ANY file:
+1. Verify the file path matches your Phase 1 scope (section 1c/1d)
+2. If modifying an existing file, read the ENTIRE file first to understand context
+3. If a file you planned to create already exists, read it before overwriting
+
 Follow your Phase 1 plan step by step. For each step:
 
 1. State which step you are executing (e.g., "Executing Step 3: Create auth service")
@@ -132,13 +139,13 @@ Before spawning QA, you MUST verify your own work against your plan:
 1. Re-read your Phase 1 plan
 2. For each acceptance criterion: verify it is met (run the check, read the file, confirm)
 3. For each file in your plan: verify it exists and contains what you planned
-4. Run automated checks:
+4. Run automated checks (adapt to project toolchain — see Defensive Defaults in playbook):
    ```bash
-   # Adapt to project toolchain
-   npm run lint
-   npm run typecheck
-   npm run test
-   npm run build
+   # Use the project's actual commands. Examples:
+   # JS/TS: npm run lint, npm run typecheck, npm run test
+   # Python: ruff check, mypy, pytest
+   # Go: golangci-lint run, go vet, go test ./...
+   # If a command doesn't exist, skip it and note in self-review
    ```
 5. If ANY check fails: fix it BEFORE spawning QA. Do not pass known failures to QA.
 
@@ -289,6 +296,8 @@ Read these files completely. You will reference specific rules during review.
 3. Read `.claude/agents/qa-reviewer.md` — QA review protocol
 4. Read `.claude/prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md` — checklist reference
 
+> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+
 Verify workbranch:
 ```bash
 git checkout work/<feature-name>/<task-slug>
@@ -317,12 +326,13 @@ Number the files you will review and what you will check in each:
 2. <file> — check for: <specific things>
 
 ### 1d. Automated Checks to Run
-List the exact commands:
+List the exact commands (adapt to project toolchain — see Defensive Defaults in playbook):
 ```bash
-npm run lint
-npm run typecheck
-npm run test
-npm run build
+# Use the project's actual commands. Examples:
+# JS/TS: npm run lint, npm run typecheck, npm run test
+# Python: ruff check, mypy, pytest
+# Go: golangci-lint run, go vet, go test ./...
+# If a command doesn't exist, skip it and note in review
 ```
 
 Output this plan before proceeding to Phase 2.
@@ -494,6 +504,8 @@ Your job is to perform a final structural integrity check on the merged feature 
 2. Read `{{ARCHITECTURE_FILE}}`
 3. Read `.claude/agents/codebase-guardian.md` — your full protocol
 4. Read `{{PROGRESS_DIR}}/<feature-name>-progress.md` — what changed in this feature
+
+> **Defensive check**: Before reading each file, verify it exists. If `{{PROJECT_RULES_FILE}}` or `{{ARCHITECTURE_FILE}}` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
 
 Verify branch:
 ```bash
