@@ -1,0 +1,27 @@
+{
+  "name": "create-claude-workflow",
+  "version": "1.0.0",
+  "description": "Claude Code skill pack + scaffolder for orchestrating multi-agent feature development",
+  "bin": {
+    "create-claude-workflow": "./bin/index.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "templates/"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "workflow",
+    "multi-agent",
+    "scaffolder"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@inquirer/prompts": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

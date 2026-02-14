@@ -34,6 +34,8 @@ Use this table to estimate context consumption for a task:
 
 ### Quick Estimate Formula
 
+<estimation-formula>
+
 ```
 Estimated context = Base overhead + (files × per-file cost) + error margin
 
@@ -42,6 +44,8 @@ Where:
   Per-file cost     = 1,000 tokens (read + write/edit + verify)
   Error margin      = 3,000 tokens (for unexpected errors, re-reads)
 ```
+
+</estimation-formula>
 
 ---
 
