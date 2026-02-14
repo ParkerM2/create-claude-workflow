@@ -155,10 +155,9 @@ claude-workflow/
 │   ├── destructive-guard.js
 │   ├── config-guard.js
 │   └── activity-logger.js
-├── skills/                      # Internal skills
-│   ├── workflow-setup/
-│   └── using-workflow/
-└── lib/                         # Shared utilities for hooks
+└── skills/                      # Internal skills
+    ├── workflow-setup/
+    └── using-workflow/
 ```
 
 ## License

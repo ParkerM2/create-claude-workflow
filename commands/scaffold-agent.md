@@ -21,7 +21,7 @@ description: "Interactive Q&A to create a new specialist agent definition"
 Before starting the Q&A, read:
 
 1. `.claude/agents/` — list all existing agent definitions, read their Scope sections
-2. `templates/docs/CREATING-AGENTS.md` (if installed) — agent creation guide
+2. `prompts/guides/CREATING-AGENTS.md` — agent creation guide
 3. the project rules file — project rules for reference
 4. the architecture file — project structure for scoping
 
