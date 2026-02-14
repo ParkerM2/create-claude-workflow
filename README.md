@@ -1,257 +1,165 @@
-# create-claude-workflow
+# claude-workflow
 
-Multi-agent feature development for Claude Code -- agents plan before coding, work on isolated branches, get reviewed, and merge cleanly.
+Multi-agent workflow orchestration for Claude Code -- branch-per-task development with automated QA, codebase guardian, and crash recovery.
 
+## Installation
+
+### Via Marketplace (Recommended)
+
+```bash
+# Add the marketplace
+/plugin marketplace add ParkerM2/claude-workflow-marketplace
+
+# Install the plugin
+/plugin install claude-workflow@claude-workflow-marketplace
 ```
-npx create-claude-workflow init
-```
 
----
+### Manual
+
+```bash
+# Clone the repository
+git clone https://github.com/ParkerM2/claude-workflow.git
+
+# Add as a local plugin
+/plugin add ./claude-workflow
+```
 
 ## Quick Start
 
-1. **Scaffold** -- `npx create-claude-workflow init`
-2. **Generate agents** -- `/discover-agents`
-3. **Build a feature** -- `/implement-feature "add user authentication"`
+1. Open any project in Claude Code
+2. Run `/workflow-setup` to configure project paths (project rules file, architecture file, progress directory)
+3. Run `/implement-feature "Add user authentication"`
+4. The plugin handles: planning, branching, agent spawning, QA, merge, and cleanup
 
----
+## Commands
 
-## What Happens When You Run /implement-feature
+| Command | Description |
+|---------|-------------|
+| `/implement-feature` | Full multi-agent feature implementation with branch-per-task isolation, QA cycles, and Codebase Guardian verification |
+| `/create-feature-plan` | Deep technical planning -- analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering |
+| `/resume-feature` | Crash recovery -- scans progress files, detects errors and blockers, auto-resumes or presents options to user |
+| `/claude-new` | Unified creation entry point -- create a feature, plan, task, phase, agent, or idea from a single command |
+| `/status` | Quick progress summary -- shows completion percentage, task states, branch status, and active blockers |
+| `/hotfix` | Streamlined single-agent urgent fix with automatic QA verification |
+| `/refactor` | Safe restructuring with mandatory baseline verification, wave execution, and before/after comparison |
+| `/review-pr` | QA reviewer + Codebase Guardian analysis on a pull request, posts combined results as PR comment |
+| `/generate-tests` | Automated test generation -- identifies targets, spawns test engineer, QA verifies coverage |
+| `/scaffold-agent` | Interactive Q&A to create a new specialist agent definition |
+| `/audit-agents` | Scan all agent definitions, validate scopes against project structure, flag issues |
+| `/discover-agents` | Analyze codebase to auto-discover optimal agent roles and generate definitions |
 
-One command kicks off a fully orchestrated, multi-agent development pipeline:
+## Agents
 
-```mermaid
-%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
-flowchart TD
-    A["You run:<br>/implement-feature 'Add user settings page'"] --> B["Team Leader<br>Reads playbook, decomposes tasks,<br>spawns agents"]
-    B --> C["Schema<br>Designer"]
-    B --> D["Service<br>Engineer"]
-    B --> E["Component<br>Engineer"]
-    C --> F["QA Review"]
-    D --> G["QA Review"]
-    E --> H["QA Review"]
-    F --> I["Codebase Guardian<br>Final integrity check"]
-    G --> I
-    H --> I
+The plugin ships with three built-in agents. Additional agents can be generated with `/discover-agents` or `/scaffold-agent`.
 
-    style A fill:#4a90d9,color:#fff
-    style B fill:#f5a623,color:#fff
-    style F fill:#7ed321,color:#fff
-    style G fill:#7ed321,color:#fff
-    style H fill:#7ed321,color:#fff
-    style I fill:#9b59b6,color:#fff
+| Agent | Role |
+|-------|------|
+| **Team Leader** | Orchestrator for multi-agent feature development. Decomposes tasks, manages branches, spawns agents in waves, merges workbranches. Does not write implementation code. |
+| **QA Reviewer** | Per-task quality gate. Reviews code changes, runs automated checks, verifies acceptance criteria, and updates documentation on PASS. Maximum 3 rounds per task. |
+| **Codebase Guardian** | Final structural integrity check on merged feature branches. Runs 7 checks covering architecture compliance, import health, type safety, test coverage, documentation, and security. |
+
+## Configuration
+
+Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-setup` to create or update it.
+
+```json
+{
+  "projectRulesFile": "CLAUDE.md",
+  "architectureFile": "docs/ARCHITECTURE.md",
+  "progressDir": "docs/progress"
+}
 ```
 
-Each coding agent gets its own QA reviewer on the same branch. Only after all agents pass QA does the Codebase Guardian run a final integrity check.
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `projectRulesFile` | `CLAUDE.md` | File containing coding standards and project conventions |
+| `architectureFile` | `docs/ARCHITECTURE.md` | File describing project structure and design decisions |
+| `progressDir` | `docs/progress` | Directory for crash-recovery progress files |
 
-### Branching Model
+## Workflow Modes
 
-Every task is isolated on its own branch -- no file conflicts, clean merges.
+Three modes control how much ceremony the workflow applies. Set in your project rules file or override per-invocation.
 
-```mermaid
-%%{init: {'flowchart': {'useMaxWidth': false, 'wrappingWidth': 400}}}%%
-flowchart LR
-    M["main"] --> F["feature/user-settings"]
-    F --> W1["work/.../schema-design"]
-    W1 -->|"QA pass"| F
-    F --> W2["work/.../api-service"]
-    W2 -->|"QA pass"| F
-    F --> W3["work/.../ui-components"]
-    W3 -->|"QA pass"| F
+| | Strict (default) | Standard | Fast |
+|---|---|---|---|
+| Planning gate | Required | Required | Required |
+| Pre-flight checks | Yes | No | No |
+| QA rounds (max) | 3 | 2 | 1 |
+| Codebase Guardian | Yes | Yes (auto-fix trivial) | No |
+| Performance logging | Yes | No | No |
+| Wave fence | Full verify | Quick verify | No fence |
+| Context budget check | Yes | Yes | No |
 
-    style M fill:#6c757d,color:#fff
-    style F fill:#f5a623,color:#fff
-    style W1 fill:#4a90d9,color:#fff
-    style W2 fill:#4a90d9,color:#fff
-    style W3 fill:#4a90d9,color:#fff
-```
+Override per-invocation: `/implement-feature "Add auth" -- mode: fast`
 
-**Per-task lifecycle:**
+## How It Works
 
-1. Team Leader creates a work branch from `feature/` HEAD
-2. Agent works and commits on the work branch
-3. Agent spawns QA on the same work branch
-4. QA: **FAIL** --> agent fixes --> new QA (max 3 rounds) | **PASS** --> QA updates docs on work branch --> commits
-5. Team Leader rebases work branch onto `feature/` --> merges `--no-ff` --> deletes work branch
-6. Next wave branches from updated `feature/` HEAD
-
----
-
-## Why This Exists
-
-| Problem | This Tool's Approach |
-|---|---|
-| Agents conflict on shared files | Branch-per-task + file scoping + sequential merges (5-layer prevention) |
-| Agents go rogue, edit wrong files | Each agent has a scoped file list |
-| QA happens at the end (too late) | QA runs per-agent on the work branch |
-| Terminal crash = lost progress | Progress files on disk, auto-resume |
-| Docs rot after features ship | QA updates docs on PASS + Guardian checks coherence at the end |
-| Agents skip planning, debug blind | Superpowers skills are enforced |
-| Don't know which agents to create | `/discover-agents` auto-detects your stack |
-| Skills scattered, not integrated | Agents bundle relevant skills.sh skills |
-
----
-
-## Core Commands
-
-| Command | What It Does |
-|---|---|
-| `/implement-feature` | Full orchestration: branch, plan, spawn agents in waves, QA each task, Guardian check, PR |
-| `/discover-agents` | Indexes codebase, detects tech stack, recommends agents, generates tailored agent definitions |
-| `/resume-feature` | Scans progress files, shows in-progress features, resumes from where the last session left off |
-
----
-
-## Extended Commands
-
-> Ship with the workflow and are available when you need them. Zero context cost until invoked.
-
-| Command | What It Does |
-|---|---|
-| `/claude-new` | Unified creation entry point: features, phases, tasks, plans, agents, or ideas |
-| `/create-feature-plan` | Deep technical planning: codebase analysis, architecture design, task decomposition |
-| `/hotfix` | Streamlined single-agent urgent fix: one agent, one QA round, fast mode |
-| `/refactor` | Pre-flight baseline, analyze, plan, execute in waves, verify no regressions |
-| `/generate-tests` | Identifies test targets, spawns test-engineer, QA verifies coverage quality |
-| `/review-pr <number>` | Checks out a PR, spawns QA + Guardian, posts combined results as PR comment |
-| `/scaffold-agent` | Interactive Q&A to generate a new agent definition with full phased workflow |
-| `/audit-agents` | Scans agent definitions, compares scopes against project structure, flags issues |
-| `/status` | Formatted summary of active feature progress: tasks, QA, branches, blockers |
-
----
-
-## What Gets Installed
-
-Everything lives under `.claude/` -- nothing is loaded into context until invoked.
+Every feature is developed on isolated branches with per-task QA:
 
 ```
-your-project/
-├── .claude/
-│   ├── commands/
-│   │   ├── create-feature-plan.md         <- deep planning for implement-feature
-│   │   ├── implement-feature.md          <- full orchestration workflow
-│   │   ├── discover-agents.md            <- auto-detect stack, generate agents
-│   │   ├── resume-feature.md             <- resume crashed/paused features
-│   │   ├── status.md                     <- show feature progress summary
-│   │   ├── hotfix.md                     <- streamlined single-agent fix
-│   │   ├── review-pr.md                  <- QA + Guardian on a pull request
-│   │   ├── generate-tests.md             <- focused test generation
-│   │   ├── refactor.md                   <- safe restructuring with baseline
-│   │   ├── scaffold-agent.md             <- interactive agent creator
-│   │   ├── audit-agents.md              <- check agent scopes vs codebase
-│   │   └── claude-new.md               <- unified creation entry point
-│   ├── agents/                           <- loaded per agent spawn (zero cost when idle)
-│   │   ├── team-leader.md
-│   │   ├── component-engineer.md
-│   │   ├── qa-reviewer.md
-│   │   ├── codebase-guardian.md
-│   │   └── ...
-│   └── prompts/
-│       └── implementing-features/
-│           ├── README.md                 <- master playbook (read by team-leader)
-│           ├── QA-CHECKLIST-TEMPLATE.md
-│           ├── PROGRESS-FILE-TEMPLATE.md
-│           ├── AGENT-SPAWN-TEMPLATES.md
-│           ├── WORKFLOW-MODES.md         <- strict/standard/fast mode definitions
-│           ├── WAVE-FENCE-PROTOCOL.md    <- inter-wave synchronization
-│           ├── PRE-FLIGHT-CHECKS.md      <- baseline verification before agents
-│           ├── CONTEXT-BUDGET-GUIDE.md   <- context estimation and splitting
-│           ├── QA-CHECKLIST-AUTO-FILL-RULES.md  <- role-based QA section mapping
-│           ├── AGENT-PERFORMANCE-LOG-TEMPLATE.md <- QA performance tracking
-│           └── IDEAS-BACKLOG-TEMPLATE.md <- idea backlog for /claude-new idea
-├── docs/
-│   ├── progress/                         <- runtime progress files (one per feature)
-│   ├── CUSTOMIZING-THE-WORKFLOW.md       <- guide: adjusting phases, branching, QA
-│   └── CREATING-AGENTS.md               <- guide: agent anatomy, creation, scoping
+main --> feature/name --> work/name/task-1
+                      --> work/name/task-2
+                      --> work/name/task-3
 ```
 
-### Documentation
+1. **Plan** -- Team Leader reads the playbook, decomposes the feature into tasks with wave ordering
+2. **Branch** -- Creates `feature/name` from `main`, then `work/` branches per task
+3. **Execute** -- Agents work in waves; each agent gets its own `work/` branch with scoped files
+4. **QA** -- QA Reviewer runs on each `work/` branch. FAIL = agent fixes (up to 3 rounds). PASS = docs updated.
+5. **Merge** -- Work branches rebase onto `feature/` and merge `--no-ff`, then delete
+6. **Guard** -- Codebase Guardian runs final integrity check on the merged `feature/` branch
+7. **PR** -- Feature branch is ready for pull request to `main`
 
-User-facing guides are installed to `docs/`:
+## Enforcement Hooks
 
-| Guide | What It Covers |
-|---|---|
-| `CUSTOMIZING-THE-WORKFLOW.md` | Adjusting phases, branching, progress tracking, merge protocol, QA checks, workflow modes, template variables |
-| `CREATING-AGENTS.md` | Agent anatomy, creating new agents, updating existing ones, scoping, naming, skills integration, testing |
+Four hooks run automatically to protect against common mistakes:
 
-### Context Cost
+| Hook | Trigger | Protection |
+|------|---------|------------|
+| `session-start` | Session start/resume | Loads workflow context and displays active feature status |
+| `branch-guard` | Before Bash commands | Prevents git operations on wrong branches |
+| `destructive-guard` | Before Bash commands | Blocks destructive operations (`rm -rf`, `git reset --hard`, etc.) |
+| `config-guard` | Before Edit/Write | Prevents modification of workflow config files |
+| `activity-logger` | After Edit/Write | Logs file modifications for audit trail |
 
-Nothing is loaded until you need it:
-
-| File | When Loaded | Cost |
-|---|---|---|
-| `CLAUDE.md` | Always loaded | Keep lean |
-| `.claude/commands/*.md` | On `/invoke` only | Zero cost |
-| `.claude/agents/*.md` | On spawn only | Zero cost |
-| `.claude/prompts/*` | On explicit read | Zero cost |
-
----
-
-## Setup
-
-### Quick Start
-
-```bash
-# Scaffold into an existing project
-cd your-project
-npx create-claude-workflow init
-
-# Auto-detect your stack and generate tailored agents
-/discover-agents
-
-# Start orchestrated development
-/implement-feature "your feature description"
-```
-
-### Manual Install
-
-Copy the files from `templates/` into your project and customize the `.md` files directly.
-
-### What Init Asks
+## Project Structure
 
 ```
-? Project rules file:     CLAUDE.md
-? Architecture file:      docs/ARCHITECTURE.md
-? Progress directory:     docs/progress
+claude-workflow/
+├── .claude-plugin/
+│   └── plugin.json              # Plugin metadata
+├── commands/                    # 12 slash commands (loaded on /invoke)
+│   ├── implement-feature.md
+│   ├── create-feature-plan.md
+│   ├── resume-feature.md
+│   ├── claude-new.md
+│   ├── status.md
+│   ├── hotfix.md
+│   ├── refactor.md
+│   ├── review-pr.md
+│   ├── generate-tests.md
+│   ├── scaffold-agent.md
+│   ├── audit-agents.md
+│   └── discover-agents.md
+├── agents/                      # Agent definitions (loaded on spawn)
+│   ├── team-leader.md
+│   ├── qa-reviewer.md
+│   └── codebase-guardian.md
+├── prompts/                     # Reference docs and templates
+│   ├── implementing-features/   # Playbook, QA templates, workflow modes
+│   └── guides/                  # User-facing customization guides
+├── hooks/                       # Enforcement hooks
+│   ├── hooks.json
+│   ├── session-start.js
+│   ├── branch-guard.js
+│   ├── destructive-guard.js
+│   ├── config-guard.js
+│   └── activity-logger.js
+├── skills/                      # Internal skills
+│   ├── workflow-setup/
+│   └── using-workflow/
+└── lib/                         # Shared utilities for hooks
 ```
-
-That's it -- three questions, sensible defaults, done in seconds.
-
----
-
-## Template Variables
-
-Templates use `{{VARIABLE}}` substitution. Customize after scaffolding -- all output is plain `.md` you own.
-
-| Variable | Example Value |
-|---|---|
-| `{{PROJECT_NAME}}` | my-app |
-| `{{PROJECT_RULES_FILE}}` | CLAUDE.md |
-| `{{ARCHITECTURE_FILE}}` | docs/ARCHITECTURE.md |
-| `{{PROGRESS_DIR}}` | docs/progress |
-| `{{AGENT_ROLE}}` | Service Engineer |
-| `{{AGENT_FILE_SCOPE}}` | src/services/** |
-| `{{AGENT_EXCLUDED_FILES}}` | src/components/** |
-
----
-
-## Customization
-
-The workflow is designed to be tailored to your project. Two guides ship with the install:
-
-- **`docs/CUSTOMIZING-THE-WORKFLOW.md`** -- Adjusting phases, branching, progress tracking, merge protocol, QA checks, workflow modes, template variables
-- **`docs/CREATING-AGENTS.md`** -- Agent anatomy, creating new agents, scoping, naming, skills integration, testing
-
----
-
-## Roadmap
-
-- [ ] Preset packs (`--preset=electron`, `--preset=react`)
-- [ ] Community agent marketplace
-- [ ] Progress dashboard (web UI reading progress files)
-- [ ] VS Code extension (progress in sidebar)
-
----
 
 ## License
 
