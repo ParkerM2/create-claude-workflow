@@ -296,8 +296,7 @@ Templates use `{{VARIABLE}}` substitution. Customize after scaffolding -- all ou
 ## Roadmap
 
 - [ ] Preset packs (`--preset=electron`, `--preset=react`)
-- [ ] Community agent marketplace
-- [ ] Progress dashboard (web UI reading progress files)
+- [ ] Easy sharing of Workflow / Agents / Commands between teams
 - [ ] VS Code extension (progress in sidebar)
 
 ---
