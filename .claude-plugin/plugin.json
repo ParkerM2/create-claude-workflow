@@ -1,0 +1,20 @@
+{
+  "name": "claude-workflow",
+  "description": "Multi-agent workflow orchestration for Claude Code — branch-per-task development with automated QA, codebase guardian, and crash recovery",
+  "version": "1.0.0",
+  "author": {
+    "name": "ParkerM2"
+  },
+  "homepage": "https://github.com/ParkerM2/claude-workflow",
+  "repository": "https://github.com/ParkerM2/claude-workflow",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "multi-agent",
+    "orchestration",
+    "qa",
+    "feature-development",
+    "branch-management",
+    "team-leader"
+  ]
+}
