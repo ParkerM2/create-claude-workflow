@@ -7,14 +7,17 @@
 ```markdown
 # Feature: <Feature Name>
 
-**Status**: PLANNING | IN_PROGRESS | QA_REVIEW | INTEGRATING | COMPLETE
-**Team**: <team-name>
-**Base Branch**: main (or master)
-**Feature Branch**: feature/<feature-name>
-**Design Doc**: <path or "N/A">
-**Started**: <YYYY-MM-DD HH:MM>
-**Last Updated**: <YYYY-MM-DD HH:MM>
-**Updated By**: <agent name or "team-lead">
+---
+status: PLANNING | IN_PROGRESS | QA_REVIEW | INTEGRATING | COMPLETE
+team: <team-name>
+base_branch: main
+feature_branch: feature/<feature-name>
+design_doc: <path or "N/A">
+started: <YYYY-MM-DD HH:MM>
+last_updated: <YYYY-MM-DD HH:MM>
+updated_by: <agent name or "team-lead">
+workflow_mode: strict | standard | fast
+---
 
 ---
 

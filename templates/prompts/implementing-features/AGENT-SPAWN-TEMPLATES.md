@@ -11,12 +11,14 @@
 Use this for any specialist coding agent.
 
 ```
+<spawn-parameters>
 Task tool parameters:
   description: "<3-5 word summary>"
   subagent_type: general-purpose
   team_name: "<team-name>"
   name: "<agent-role>"
   mode: bypassPermissions
+</spawn-parameters>
 
 Prompt:
 
@@ -30,6 +32,10 @@ Your workbranch is **work/<feature-name>/<task-slug>**.
   Skipping or rushing a phase is a CRITICAL VIOLATION.
   Do NOT write any code until Phase 2.
 ═══════════════════════════════════════════════════════════════
+
+<workflow-phases>
+
+<phase name="load-rules" blocking="true">
 
 ## PHASE 0: LOAD RULES [BLOCKING — do NOT write code yet]
 
@@ -46,6 +52,10 @@ Then verify your workbranch:
 git checkout work/<feature-name>/<task-slug>
 git log --oneline -3
 ```
+
+</phase>
+
+<phase name="execution-plan" blocking="true">
 
 ## PHASE 1: WRITE EXECUTION PLAN [BLOCKING — do NOT write code yet]
 
@@ -92,6 +102,10 @@ What could go wrong? How will you handle it?
 Output this plan as a message BEFORE proceeding to Phase 2.
 Do NOT start coding until this plan is complete.
 
+</phase>
+
+<phase name="execute" blocking="false">
+
 ## PHASE 2: EXECUTE PLAN [now you may write code]
 
 Follow your Phase 1 plan step by step. For each step:
@@ -106,6 +120,10 @@ After ALL steps are complete, commit your work:
 git add <specific files from your plan>
 git commit -m "<type>: <description>"
 ```
+
+</phase>
+
+<phase name="self-review" blocking="false">
 
 ## PHASE 3: SELF-REVIEW [before spawning QA]
 
@@ -126,6 +144,10 @@ Before spawning QA, you MUST verify your own work against your plan:
 
 Only after ALL self-review checks pass, proceed to Phase 4.
 
+</phase>
+
+<phase name="spawn-qa" blocking="false">
+
 ## PHASE 4: SPAWN QA
 
 Spawn a QA Review agent using the QA template below. Include:
@@ -145,6 +167,12 @@ If QA returns PASS:
 1. QA will have updated docs and committed on your workbranch
 2. Send the QA report + completion summary to the Team Leader
 3. Mark Task #<N> as completed via TaskUpdate
+
+</phase>
+
+</workflow-phases>
+
+<error-recovery>
 
 ═══════════════════════════════════════════════════════════════
   ERROR RECOVERY PROTOCOL
@@ -172,6 +200,10 @@ When you encounter ANY error:
    - Spend more than 2 attempts on any single error
 
 ═══════════════════════════════════════════════════════════════
+
+</error-recovery>
+
+<task-context>
 
 ## Task
 
@@ -212,6 +244,8 @@ If you find yourself running low on context:
 
 <paste relevant sections from QA-CHECKLIST-TEMPLATE.md, customized for this task>
 <use QA-CHECKLIST-AUTO-FILL-RULES.md to pre-select sections by agent role>
+
+</task-context>
 ```
 
 ---
@@ -221,12 +255,14 @@ If you find yourself running low on context:
 The coding agent spawns this AFTER completing its work. It runs on the SAME workbranch.
 
 ```
+<spawn-parameters>
 Task tool parameters:
   description: "QA review Task #<N>"
   subagent_type: general-purpose
   team_name: "<team-name>"
   name: "qa-task-<N>"
   mode: bypassPermissions
+</spawn-parameters>
 
 Prompt:
 
@@ -239,6 +275,10 @@ You are reviewing on workbranch **work/<feature-name>/<task-slug>**.
   Complete each phase fully before starting the next.
   Do NOT start reviewing code until your review plan is written.
 ═══════════════════════════════════════════════════════════════
+
+<workflow-phases>
+
+<phase name="load-rules" blocking="true">
 
 ## PHASE 0: LOAD RULES [BLOCKING]
 
@@ -253,6 +293,10 @@ Verify workbranch:
 ```bash
 git checkout work/<feature-name>/<task-slug>
 ```
+
+</phase>
+
+<phase name="review-plan" blocking="true">
 
 ## PHASE 1: WRITE REVIEW PLAN [BLOCKING — do NOT review code yet]
 
@@ -283,6 +327,10 @@ npm run build
 
 Output this plan before proceeding to Phase 2.
 
+</phase>
+
+<phase name="execute-review" blocking="false">
+
 ## PHASE 2: EXECUTE REVIEW
 
 Follow your Phase 1 review plan step by step.
@@ -306,6 +354,10 @@ For each file in your review plan:
 Go through each acceptance criterion and verify it is met.
 Do not assume — read the code and confirm.
 
+</phase>
+
+<phase name="doc-update" blocking="false">
+
 ## PHASE 3: DOCUMENTATION UPDATE [ONLY IF ALL CHECKS PASS]
 
 If your review passes:
@@ -317,6 +369,10 @@ If your review passes:
    git add <doc-files>
    git commit -m "docs: update documentation for <task-name>"
    ```
+
+</phase>
+
+<phase name="qa-report" blocking="false">
 
 ## PHASE 4: QA REPORT
 
@@ -366,6 +422,12 @@ VERDICT: APPROVED / REJECTED
 
 Send this report to the coding agent that spawned you.
 
+</phase>
+
+</workflow-phases>
+
+<error-recovery>
+
 ═══════════════════════════════════════════════════════════════
   ERROR RECOVERY PROTOCOL
 ═══════════════════════════════════════════════════════════════
@@ -375,6 +437,8 @@ If you encounter an error during review (e.g., a check command fails to run):
 2. Determine if the error is in the reviewed code (report as FAIL) or in your review process (try alternative approach)
 3. Do NOT modify application code — you are a reviewer
 4. If you cannot complete a review step after 2 attempts: report the issue in your QA report and flag it for the Team Leader
+
+</error-recovery>
 
 ## Coding Agent's Plan (for verification)
 
@@ -400,12 +464,14 @@ If you encounter an error during review (e.g., a check command fails to run):
 The Team Leader spawns this AFTER all workbranches are merged to the feature branch.
 
 ```
+<spawn-parameters>
 Task tool parameters:
   description: "Guardian check for <feature>"
   subagent_type: general-purpose
   team_name: "<team-name>"
   name: "guardian"
   mode: bypassPermissions
+</spawn-parameters>
 
 Prompt:
 
@@ -418,6 +484,10 @@ Your job is to perform a final structural integrity check on the merged feature 
   Do NOT start checking code until your check plan is written.
 ═══════════════════════════════════════════════════════════════
 
+<workflow-phases>
+
+<phase name="load-rules" blocking="true">
+
 ## PHASE 0: LOAD RULES [BLOCKING]
 
 1. Read `{{PROJECT_RULES_FILE}}`
@@ -429,6 +499,10 @@ Verify branch:
 ```bash
 git checkout feature/<feature-name>
 ```
+
+</phase>
+
+<phase name="check-plan" blocking="true">
 
 ## PHASE 1: WRITE CHECK PLAN [BLOCKING — do NOT start checking yet]
 
@@ -453,12 +527,20 @@ Map each of the 7 Guardian checks to the specific files/modules you will examine
 
 Output this plan before proceeding to Phase 2.
 
+</phase>
+
+<phase name="execute-checks" blocking="false">
+
 ## PHASE 2: EXECUTE CHECKS
 
 Follow your Phase 1 check plan. For each of the 7 checks:
 1. State which check you are executing
 2. Execute it against the specific files/modules from your plan
 3. Record the result (PASS/FAIL with details)
+
+</phase>
+
+<phase name="report" blocking="false">
 
 ## PHASE 3: REPORT
 
@@ -473,6 +555,12 @@ git commit -m "fix: structural cleanup for <feature>"
 
 For non-trivial issues, report them for the Team Leader to assign.
 
+</phase>
+
+</workflow-phases>
+
+<error-recovery>
+
 ═══════════════════════════════════════════════════════════════
   ERROR RECOVERY PROTOCOL
 ═══════════════════════════════════════════════════════════════
@@ -482,6 +570,8 @@ If you encounter an error during checks:
 2. Record the error as part of your check results
 3. Do NOT abandon your plan — continue with remaining checks
 4. Report all findings (including errors) in your final report
+
+</error-recovery>
 ```
 
 ---

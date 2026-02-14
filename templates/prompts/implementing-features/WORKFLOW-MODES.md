@@ -50,6 +50,8 @@ The per-invocation mode overrides the project default for that feature only.
 
 ## Mode Details
 
+<mode name="strict">
+
 ### Strict Mode (Default)
 
 Use for: production features, critical paths, regulated environments.
@@ -72,6 +74,10 @@ Context budget:      CHECK — estimate context, split if over threshold
 5. Spawn Codebase Guardian after all waves complete
 6. Instruct QA to append performance log entries
 
+</mode>
+
+<mode name="standard">
+
 ### Standard Mode
 
 Use for: normal development, day-to-day feature work.
@@ -92,6 +98,10 @@ Context budget:      CHECK — estimate context, split if over threshold
 3. Tell Guardian to auto-fix trivial issues (missing exports, import order) and only report non-trivial issues
 4. Skip performance log entries
 5. Wave fence: run lint only (skip full test/build between waves)
+
+</mode>
+
+<mode name="fast">
 
 ### Fast Mode
 
@@ -114,6 +124,8 @@ Context budget:      SKIP
 4. Skip Codebase Guardian entirely
 5. Skip wave fence — merge and proceed immediately
 6. Skip performance logging
+
+</mode>
 
 ---
 

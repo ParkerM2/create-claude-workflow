@@ -1,5 +1,7 @@
 # Claude Workflow Skill — Distribution Plan
 
+> **Status: SUPERSEDED** — This was the original vision document. The project has evolved significantly. See `docs/internal/DEVELOPMENT-LOG.md` for current state and decisions.
+
 > A Claude Code skill pack + npx scaffolder for orchestrating multi-agent feature development with crash-safe progress tracking, per-task QA verification, and automated documentation maintenance.
 
 ---

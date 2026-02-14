@@ -1,3 +1,9 @@
+---
+type: performance-log
+version: 2
+append_only: true
+---
+
 # Agent Performance Log
 
 > Track QA outcomes, issue patterns, and agent effectiveness across features. The QA reviewer appends an entry after each QA report. The Team Leader reviews the log after each feature completes to identify improvement opportunities.
@@ -17,6 +23,8 @@ This is a single, append-only file that accumulates entries across features.
 ## Entry Format
 
 After each QA report (PASS or FAIL), the QA reviewer appends one entry:
+
+<qa-entry>
 
 ```markdown
 ### <ISO timestamp> — <feature-name> / Task #<N>
@@ -46,6 +54,8 @@ After each QA report (PASS or FAIL), the QA reviewer appends one entry:
 
 **Notes**: <brief summary of significant findings or patterns>
 ```
+
+</qa-entry>
 
 ---
 
@@ -86,6 +96,8 @@ Based on the review:
 
 ## Example Log
 
+<qa-entry>
+
 ```markdown
 ### 2025-01-15T14:32:00Z — user-settings / Task #1
 
@@ -101,7 +113,13 @@ Based on the review:
 | Issues Found | 0 |
 
 **Notes**: Clean pass, well-scoped task.
+```
 
+</qa-entry>
+
+<qa-entry>
+
+```markdown
 ### 2025-01-15T15:45:00Z — user-settings / Task #3
 
 | Field | Value |
@@ -120,7 +138,13 @@ Based on the review:
 - [ ] Type safety — 1
 
 **Notes**: Missing error handling on validation failures. No try-catch on database calls.
+```
 
+</qa-entry>
+
+<qa-entry>
+
+```markdown
 ### 2025-01-15T16:20:00Z — user-settings / Task #3
 
 | Field | Value |
@@ -136,3 +160,5 @@ Based on the review:
 
 **Notes**: All error handling issues resolved. Added comprehensive try-catch blocks.
 ```
+
+</qa-entry>
