@@ -155,9 +155,12 @@ claude-workflow/
 │   ├── destructive-guard.js
 │   ├── config-guard.js
 │   └── activity-logger.js
-└── skills/                      # Internal skills
-    ├── workflow-setup/
-    └── using-workflow/
+├── skills/                      # Internal skills
+│   ├── workflow-setup/
+│   └── using-workflow/
+├── marketplace/                 # Marketplace distribution metadata
+└── docs/                        # Project documentation
+    └── internal/                # Development logs and planning
 ```
 
 ## License

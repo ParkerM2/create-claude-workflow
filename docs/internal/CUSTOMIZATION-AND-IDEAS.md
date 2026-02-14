@@ -12,13 +12,13 @@
 
 ## Part 1: Documentation to Ship
 
-These are guides users need when they install the skill pack and want to tailor it.
+These are guides users need when they install the plugin and want to tailor it.
 
 ---
 
 ### 1A. Customizing the Workflow
 
-**Target file**: `templates/docs/CUSTOMIZING-THE-WORKFLOW.md` (new)
+**Target file**: `prompts/guides/CUSTOMIZING-THE-WORKFLOW.md`
 
 #### Topics to cover:
 
@@ -44,16 +44,16 @@ These are guides users need when they install the skill pack and want to tailor 
 - How to add CI checks as a merge gate (wait for GitHub Actions before merge)
 - How to require user approval before each merge (instead of auto-merge on QA pass)
 
-**Template variable reference**
-- Full list of all `{{VARIABLES}}` and where they're used
-- How to add custom variables for project-specific needs
+**Runtime configuration reference**
+- Full list of configuration keys in `.claude/workflow.json`
+- How the session-start hook injects configuration at runtime
 - Examples of common configurations (monorepo, multi-package, etc.)
 
 ---
 
 ### 1B. Creating & Updating Agents
 
-**Target file**: `templates/docs/CREATING-AGENTS.md` (new)
+**Target file**: `prompts/guides/CREATING-AGENTS.md`
 
 #### Topics to cover:
 
@@ -296,7 +296,7 @@ These are proposals. Mark which ones are worth building.
 - `agents/presets/react-fullstack/` — component-engineer, api-engineer, test-engineer
 - `agents/presets/python-api/` — service-engineer, database-engineer, test-engineer
 - `agents/presets/electron/` — ipc-handler-engineer, component-engineer, desktop-engineer
-- User selects preset during `/discover-agents` or `npx init`
+- User selects preset during `/discover-agents`
 - *Complexity: Low (curated agent definitions)*
 
 **Spawn template variants**

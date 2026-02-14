@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.0.0] — 2026-02-14
+
+### Changed
+- Migrated from npm scaffolder to Claude Code plugin system
+- Commands, agents, and prompts now live at plugin root (not templates/)
+- Template variables ({{VAR}}) replaced with runtime config via session-start hook
+- Installation via `/plugin install` instead of `npx create-claude-workflow`
+
+### Added
+- Plugin manifest (.claude-plugin/plugin.json)
+- Hook system (hooks.json + 5 hook scripts)
+- Skills (using-workflow, workflow-setup)
+- Marketplace structure for plugin distribution
+
+### Removed
+- npm scaffolder (lib/, bin/, templates/, package.json)
+- Template variable baking at install time
+- Per-project file scaffolding
+
 ## [1.0.0] - 2026-02-14
 
 ### Added
