@@ -4,8 +4,11 @@ Multi-agent workflow orchestration for Claude Code -- branch-per-task developmen
 
 ## Installation
 
-### Via Marketplace (Recommended)
+### Via Marketplace
 
+> **Note**: This plugin has been submitted to the official Claude Code marketplace and is pending review. In the meantime, use the manual installation method below.
+
+<!--
 ```bash
 # Add the marketplace
 /plugin marketplace add ParkerM2/claude-workflow-marketplace
@@ -13,8 +16,9 @@ Multi-agent workflow orchestration for Claude Code -- branch-per-task developmen
 # Install the plugin
 /plugin install claude-workflow@claude-workflow-marketplace
 ```
+-->
 
-### Manual
+### Manual (Current)
 
 ```bash
 # Clone the repository
