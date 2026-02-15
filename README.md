@@ -18,10 +18,10 @@ Multi-agent workflow orchestration for Claude Code -- branch-per-task developmen
 
 ```bash
 # Clone the repository
-git clone https://github.com/ParkerM2/claude-workflow.git
+git clone https://github.com/ParkerM2/create-claude-workflow.git
 
 # Add as a local plugin
-/plugin add ./claude-workflow
+/plugin add ./create-claude-workflow
 ```
 
 ## Quick Start
