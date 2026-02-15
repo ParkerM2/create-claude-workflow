@@ -113,7 +113,7 @@ For short-lived feature branches:
 
 The progress directory variable (default: `docs/progress`) is used everywhere. To change it:
 
-1. Run `npx create-claude-workflow init` and specify a different directory
+1. Edit `.claude/workflow.json` in your project and set `"progressDir"` to your preferred path
 2. Or manually update progress directory references in:
    - `commands/implement-feature.md`
    - `prompts/implementing-features/README.md`
@@ -261,7 +261,7 @@ All template files use descriptive references that should be adapted to your pro
 
 ### Adding Custom Variables
 
-1. Define the variable in your scaffolding config or replace manually after install
+1. Edit `.claude/workflow.json` in your project, or update references directly in the relevant files
 2. Common additions:
    - Test command — `npm run test` or `pytest` or `go test ./...`
    - Lint command — `npm run lint` or `ruff check` or `golangci-lint run`
