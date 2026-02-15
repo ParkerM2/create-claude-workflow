@@ -1,21 +1,21 @@
 # Development Log
 
-> Central tracking document for the create-claude-workflow project.
+> Central tracking document for the claude-workflow plugin project.
 > Updated after each development session.
 
 ---
 
-## Current State: v1.0.0 (pre-publish)
+## Current State: v2.0.0 (plugin system)
 
 **Identity**: The best way to run multi-agent development with Claude Code.
 
 **Core product**: `/implement-feature` — one command that decomposes features into tasks, spawns agents in waves on isolated branches, QA-reviews each, and merges cleanly.
 
-**Distribution**: `npx create-claude-workflow init` — scaffolds the skill pack into any project.
+**Distribution**: Claude Code plugin system — install via `/plugin install` from the marketplace or add as a local plugin.
 
 ---
 
-## File Inventory (28 template files + 8 scaffolder files)
+## File Inventory (plugin assets)
 
 | Category | Count | Key Files |
 |----------|-------|-----------|
@@ -23,7 +23,9 @@
 | Agents | 3 | team-leader, qa-reviewer, codebase-guardian |
 | Prompts | 11 | README (playbook), AGENT-SPAWN-TEMPLATES, QA-CHECKLIST, + 8 supporting |
 | Docs | 2 | CREATING-AGENTS, CUSTOMIZING-THE-WORKFLOW |
-| Scaffolder | 8 | package.json, bin/index.js, lib/*.js (7 modules) |
+| Hooks | 6 | hooks.json, session-start, branch-guard, destructive-guard, config-guard, activity-logger |
+| Skills | 2 | workflow-setup, using-workflow |
+| Plugin | 1 | .claude-plugin/plugin.json |
 
 ---
 
@@ -80,6 +82,30 @@
 - PLAN.md and CUSTOMIZATION-AND-IDEAS.md moved to docs/internal/
 - .npmignore created
 
+### Session 3 — Plugin Restructure (v2.0.0)
+
+**Motivation**: Claude Code introduced a native plugin system, making the npm scaffolder unnecessary. Plugins install directly via `/plugin install` and load commands, agents, prompts, hooks, and skills without file scaffolding.
+
+**Built:**
+- Plugin manifest (`.claude-plugin/plugin.json`)
+- Hook system: `hooks.json` + 5 hook scripts (session-start, branch-guard, destructive-guard, config-guard, activity-logger)
+- Skills: `workflow-setup` (project configuration), `using-workflow` (usage guide)
+- Marketplace structure for plugin distribution
+- Runtime configuration injection via session-start hook (replaces template variable baking)
+
+**Removed:**
+- npm scaffolder: `package.json`, `bin/index.js`, `lib/*.js` (7 modules)
+- `templates/` directory (commands, agents, prompts moved to plugin root)
+- Template variable system (`{{VAR}}` baking at install time)
+- Per-project file scaffolding
+
+**Migration:**
+- All 12 commands moved from `templates/commands/` to `commands/`
+- All 3 agents moved from `templates/agents/` to `agents/`
+- All 11 prompts moved from `templates/prompts/` to `prompts/`
+- All 2 guides moved from `templates/docs/` to `prompts/guides/`
+- Template variables replaced with runtime config via `.claude/workflow.json`
+
 ---
 
 ## Key Decisions
@@ -88,35 +114,33 @@
 |---|----------|-----------|------|
 | 1 | Hybrid XML+Markdown format | +23% accuracy on structured tasks per research; tags are additive, max 2 nesting levels | Session 2 |
 | 2 | Sentinel-delimited merging (`<!-- BEGIN/END -->`) | Re-running init replaces section rather than duplicating; works for CLAUDE.md and agent files | Session 2 |
-| 3 | Single npm dependency (`@inquirer/prompts`) | All file ops use Node built-ins; scaffolder doesn't need heavy frameworks | Session 2 |
-| 4 | Agent protocol injection deferred to v2 | < 5% of v1 users have existing agents; simplify init flow | Session 2 |
-| 5 | Agent classification deferred to v2 | WORKFLOW_COMPATIBLE/PARTIAL/STANDALONE scoring is premature; just list names for now | Session 2 |
+| 3 | ~~Single npm dependency (`@inquirer/prompts`)~~ | ~~Scaffolder-specific; removed in v2.0.0 plugin migration~~ | Session 2 |
+| 4 | ~~Agent protocol injection deferred~~ | ~~Scaffolder-specific; removed in v2.0.0 plugin migration~~ | Session 2 |
+| 5 | ~~Agent classification deferred~~ | ~~Scaffolder-specific; removed in v2.0.0 plugin migration~~ | Session 2 |
 | 6 | Commands split into Core (3) + Extended (9) | Signals hierarchy; core is the product, extended is available when needed | Session 2 |
-| 7 | Template variables use `{{VARIABLE}}` pattern | Simple, grep-able, no build step; 5 canonical variables | Session 1 |
-| 8 | All templates are user-owned `.md` | No runtime dependency; users can customize anything post-install | Session 1 |
+| 7 | ~~Template variables use `{{VARIABLE}}` pattern~~ | ~~Replaced in v2.0.0 with runtime config via session-start hook~~ | Session 1 |
+| 8 | All plugin assets are `.md` files | No runtime dependency; users can fork and customize anything | Session 1 |
 
 ---
 
-## What's Next (Not Yet Started)
+## What's Next
 
 ### Pre-Publish Checklist
 
-- [ ] Re-run baseline token report (numbers changed after XML refactor + trim)
-- [ ] Smoke test: `node bin/index.js init` in a temp directory
-- [ ] Merge test: init in a directory with existing CLAUDE.md + agents
-- [ ] Verify all `{{VARIABLE}}` references use canonical names
 - [ ] Verify all cross-file path references resolve
-- [ ] npm publish as `create-claude-workflow`
+- [ ] Smoke test: install plugin in a fresh project via `/plugin add`
+- [ ] Test `/workflow-setup` configuration flow
+- [ ] Test `/implement-feature` end-to-end
+- [ ] Publish to marketplace
 - [ ] GitHub release
 
-### v2 Ideas (Deferred)
+### Future Ideas
 
-- Agent protocol injection during init (per-agent opt-in)
-- Agent compatibility classification (WORKFLOW_COMPATIBLE / PARTIAL / STANDALONE)
-- Preset packs (`--preset=electron`, `--preset=react`)
+- Preset agent packs (e.g., react-fullstack, python-api)
 - Community agent marketplace
 - Progress dashboard (web UI)
 - VS Code extension
+- GitHub Actions integration for CI-based Guardian checks
 
 ---
 
@@ -124,7 +148,5 @@
 
 | Document | Purpose | Status |
 |----------|---------|--------|
-| `docs/internal/PLAN.md` | Original distribution vision | Superseded by this log |
-| `docs/internal/CUSTOMIZATION-AND-IDEAS.md` | Feature ideas backlog | Part 1 implemented, Part 2 partially implemented |
-| `SPEC-v1-trim.md` | v1 focus trim specification | Completed |
-| `docs/BASELINE-TOKEN-REPORT.md` | Template token measurements | Outdated (pre-XML-refactor) |
+| `docs/internal/CUSTOMIZATION-AND-IDEAS.md` | Feature ideas backlog | Part 1 implemented, Part 2 mostly shipped |
+| `CHANGELOG.md` | Release history | Current (v2.0.0) |
