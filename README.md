@@ -1,4 +1,4 @@
-# claude-workflow
+# create-claude-workflow
 
 Multi-agent workflow orchestration for Claude Code -- branch-per-task development with automated QA, codebase guardian, and crash recovery.
 
