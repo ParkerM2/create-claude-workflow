@@ -6,7 +6,7 @@ Plugin marketplace for multi-agent workflow orchestration in Claude Code.
 
 | Plugin | Description |
 |--------|-------------|
-| `claude-workflow` | Multi-agent workflow orchestration -- branch-per-task development with automated QA, codebase guardian, crash recovery, and 12 workflow commands |
+| `claude-workflow` | Multi-agent workflow orchestration -- branch-per-task development with automated QA, codebase guardian, crash recovery, and 14 workflow commands |
 
 ## Installation
 
@@ -20,4 +20,4 @@ Plugin marketplace for multi-agent workflow orchestration in Claude Code.
 
 ## Documentation
 
-See the [claude-workflow plugin repository](https://github.com/ParkerM2/claude-workflow) for full documentation, command reference, and configuration guide.
+See the [claude-workflow plugin repository](https://github.com/ParkerM2/create-claude-workflow) for full documentation, command reference, and configuration guide.

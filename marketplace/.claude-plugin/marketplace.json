@@ -12,9 +12,9 @@
       "name": "claude-workflow",
       "source": {
         "source": "url",
-        "url": "https://github.com/ParkerM2/claude-workflow.git"
+        "url": "https://github.com/ParkerM2/create-claude-workflow.git"
       },
-      "description": "Multi-agent workflow orchestration — branch-per-task development with automated QA, codebase guardian, crash recovery, and 12 workflow commands",
+      "description": "Multi-agent workflow orchestration — branch-per-task development with automated QA, codebase guardian, crash recovery, and 14 workflow commands",
       "version": "1.0.0",
       "strict": true
     }
