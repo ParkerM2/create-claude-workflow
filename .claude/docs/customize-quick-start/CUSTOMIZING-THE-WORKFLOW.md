@@ -111,7 +111,7 @@ For short-lived feature branches:
 
 ### Changing the Progress File Location
 
-The progress directory variable (default: `docs/progress`) is used everywhere. To change it:
+The progress directory variable (default: `.claude/progress`) is used everywhere. To change it:
 
 1. Edit `.claude/workflow.json` in your project and set `"progressDir"` to your preferred path
 2. Or manually update progress directory references in:
@@ -143,10 +143,10 @@ The progress file is plain markdown — you can parse it with scripts:
 
 ```bash
 # Extract status from progress file
-grep "^\\*\\*Status\\*\\*:" docs/progress/*-progress.md
+grep "^\\*\\*Status\\*\\*:" .claude/progress/*-progress.md
 
 # Count tasks by status
-grep -c "\\[COMPLETE\\]" docs/progress/*-progress.md
+grep -c "\\[COMPLETE\\]" .claude/progress/*-progress.md
 ```
 
 For CI integration, see the GitHub Actions workflow example in the project README.
@@ -254,7 +254,7 @@ All template files use descriptive references that should be adapted to your pro
 | Project name | Directory name | Progress file | Project identifier |
 | Project rules file | `CLAUDE.md` | All agents, commands | Path to project rules |
 | Architecture file | `docs/ARCHITECTURE.md` | All agents, commands | Path to architecture doc |
-| Progress directory | `docs/progress` | Commands, playbook, agents | Progress file directory |
+| Progress directory | `.claude/progress` | Commands, playbook, agents | Progress file directory |
 | Agent role | Per agent | Agent definitions | Agent's role name |
 | Agent file scope | Per agent | Agent definitions | Files the agent may modify |
 | Agent excluded files | Per agent | Agent definitions | Files the agent must not touch |
@@ -272,7 +272,7 @@ All template files use descriptive references that should be adapted to your pro
 
 **Monorepo (Nx, Turborepo)**:
 ```
-Progress directory = docs/progress
+Progress directory = .claude/progress
 Architecture file = docs/ARCHITECTURE.md
 Agent scopes use package-relative paths: packages/web/src/components/**
 ```

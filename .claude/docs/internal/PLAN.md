@@ -1,6 +1,6 @@
 # Claude Workflow Skill — Distribution Plan
 
-> **Status: SUPERSEDED** — This was the original vision document. The project has evolved significantly. See `docs/internal/DEVELOPMENT-LOG.md` for current state and decisions.
+> **Status: SUPERSEDED** — This was the original vision document. The project has evolved significantly. See `.claude/docs/internal/DEVELOPMENT-LOG.md` for current state and decisions.
 
 > A Claude Code skill pack + npx scaffolder for orchestrating multi-agent feature development with crash-safe progress tracking, per-task QA verification, and automated documentation maintenance.
 
@@ -63,7 +63,7 @@ A set of files that live in the project repo under `.claude/`. Nothing is loaded
 .claude/prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md
 .claude/prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md
 .claude/prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md
-docs/progress/.gitkeep                             # Progress file directory (runtime output)
+.claude/progress/.gitkeep                          # Progress file directory (runtime output)
 ```
 
 **Context cost:**
@@ -116,13 +116,13 @@ Interactive prompts:
   ...
 ? Include Electron MCP testing in QA? (Yes / No)
 ? Include Hub/backend workflow? (Yes / No)
-? Progress file directory: (docs/progress/)
+? Progress file directory: (.claude/progress/)
 
 ✔ Created .claude/commands/implement-feature.md
 ✔ Created .claude/commands/discover-agents.md
 ✔ Created .claude/prompts/implementing-features/ (4 files)
 ✔ Created .claude/agents/ (6 agent definitions)
-✔ Created docs/progress/.gitkeep
+✔ Created .claude/progress/.gitkeep
 
 Done! Run /discover-agents to auto-detect more agents, or /implement-feature to start.
 ```

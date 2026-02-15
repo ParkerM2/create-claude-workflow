@@ -79,7 +79,7 @@
   - `lib/merge-agent.js`: marked as v2 library, not called in v1
 - Team Leader init protocol: 9 flat → 4 essential + 5 reference
 - Playbook trimmed: 631 → 594 lines (sections 11-14 → pointers to dedicated files)
-- PLAN.md and CUSTOMIZATION-AND-IDEAS.md moved to docs/internal/
+- PLAN.md and CUSTOMIZATION-AND-IDEAS.md moved to .claude/docs/internal/
 - .npmignore created
 
 ### Session 3 — Plugin Restructure (v2.0.0)
@@ -103,7 +103,7 @@
 - All 12 commands moved from `templates/commands/` to `commands/`
 - All 3 agents moved from `templates/agents/` to `agents/`
 - All 11 prompts moved from `templates/prompts/` to `prompts/`
-- All 2 guides moved from `templates/docs/` to `prompts/guides/`
+- All 2 guides moved from `templates/docs/` to `.claude/docs/customize-quick-start/`
 - Template variables replaced with runtime config via `.claude/workflow.json`
 
 ---
@@ -148,5 +148,5 @@
 
 | Document | Purpose | Status |
 |----------|---------|--------|
-| `docs/internal/CUSTOMIZATION-AND-IDEAS.md` | Feature ideas backlog | Part 1 implemented, Part 2 mostly shipped |
+| `.claude/docs/internal/CUSTOMIZATION-AND-IDEAS.md` | Feature ideas backlog | Part 1 implemented, Part 2 mostly shipped |
 | `CHANGELOG.md` | Release history | Current (v2.0.0) |

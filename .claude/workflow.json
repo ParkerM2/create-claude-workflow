@@ -1,0 +1,5 @@
+{
+  "projectRulesFile": "CLAUDE.md",
+  "architectureFile": ".claude/docs/ARCHITECTURE.md",
+  "progressDir": ".claude/progress"
+}

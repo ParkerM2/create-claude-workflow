@@ -1,8 +1,8 @@
 # Customization Guide & Future Ideas
 
 > **Status: PARTIALLY IMPLEMENTED**
-> - Part 1 (Docs): Shipped as `docs/CREATING-AGENTS.md` and `docs/CUSTOMIZING-THE-WORKFLOW.md`
-> - Part 2 (Ideas): Items marked below. See `docs/internal/DEVELOPMENT-LOG.md` for current tracking.
+> - Part 1 (Docs): Shipped as `.claude/docs/customize-quick-start/CREATING-AGENTS.md` and `.claude/docs/customize-quick-start/CUSTOMIZING-THE-WORKFLOW.md`
+> - Part 2 (Ideas): Items marked below. See `.claude/docs/internal/DEVELOPMENT-LOG.md` for current tracking.
 
 > Working document — review before implementing. Split into two parts:
 > Part 1: Documentation to ship (customization guides for users)
@@ -18,7 +18,7 @@ These are guides users need when they install the plugin and want to tailor it.
 
 ### 1A. Customizing the Workflow
 
-**Target file**: `prompts/guides/CUSTOMIZING-THE-WORKFLOW.md`
+**Target file**: `.claude/docs/customize-quick-start/CUSTOMIZING-THE-WORKFLOW.md`
 
 #### Topics to cover:
 
@@ -53,7 +53,7 @@ These are guides users need when they install the plugin and want to tailor it.
 
 ### 1B. Creating & Updating Agents
 
-**Target file**: `prompts/guides/CREATING-AGENTS.md`
+**Target file**: `.claude/docs/customize-quick-start/CREATING-AGENTS.md`
 
 #### Topics to cover:
 

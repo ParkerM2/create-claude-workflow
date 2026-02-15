@@ -212,6 +212,6 @@ Reference the agent creation guide:
 
 ```
 For guidance on creating or updating agents, see:
-  prompts/guides/CREATING-AGENTS.md
+  .claude/docs/customize-quick-start/CREATING-AGENTS.md
   Or run /scaffold-agent to create a new agent interactively
 ```

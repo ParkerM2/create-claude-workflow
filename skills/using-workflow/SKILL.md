@@ -22,6 +22,8 @@ Multi-agent workflow orchestration for Claude Code. Provides branch-per-task fea
 | /generate-tests | Automated test generation with QA verification |
 | /scaffold-agent | Interactive agent definition creator |
 | /audit-agents | Scan and validate agent definitions |
+| /audit-performance | Audit workflow config for performance bottlenecks |
+| /track | Emit tracking events to JSONL progress log |
 | /discover-agents | Auto-discover optimal agent roles for a codebase |
 
 ## Agents
@@ -43,7 +45,7 @@ Project configuration lives in `.claude/workflow.json`. Run `/workflow-setup` to
 Configuration options:
 - `projectRulesFile` — path to the project rules file (default: `CLAUDE.md`)
 - `architectureFile` — path to the architecture documentation (default: `docs/ARCHITECTURE.md`)
-- `progressDir` — directory for progress tracking files (default: `docs/progress`)
+- `progressDir` — directory for JSONL event logs and rendered progress (default: `.claude/progress`)
 
 ## Prompt Reference Files
 

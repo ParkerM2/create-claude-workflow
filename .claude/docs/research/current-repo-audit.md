@@ -105,9 +105,9 @@ Reference documents read by agents at runtime. These are the "playbook" and supp
 | `AGENT-PERFORMANCE-LOG-TEMPLATE.md` | QA performance tracking template. Strict mode only. 165 lines. | `prompts/implementing-features/AGENT-PERFORMANCE-LOG-TEMPLATE.md` | `{{PROGRESS_DIR}}` | Referenced by: team-leader, qa-reviewer |
 | `IDEAS-BACKLOG-TEMPLATE.md` | Ideas backlog for `/claude-new idea`. 28 lines. | `prompts/implementing-features/IDEAS-BACKLOG-TEMPLATE.md` | None | Referenced by: claude-new |
 
-### templates/docs/ (2 files -> plugin docs or user-facing guides)
+### templates/docs/ (2 files -> plugin .claude/docs/customize-quick-start/)
 
-User-facing documentation installed to the project's `docs/` directory.
+User-facing documentation installed to the project's `.claude/docs/customize-quick-start/` directory.
 
 | File | Purpose | Plugin Mapping | Template Vars | Dependencies |
 |------|---------|----------------|---------------|--------------|
@@ -118,13 +118,13 @@ User-facing documentation installed to the project's `docs/` directory.
 
 | File | Purpose | Plugin Mapping | Template Vars | Dependencies |
 |------|---------|----------------|---------------|--------------|
-| `docs/BASELINE-TOKEN-REPORT.md` | Token measurement report | Internal only, do not ship | None | None |
-| `docs/internal/PLAN.md` | Distribution strategy document | Internal only, do not ship | None | None |
-| `docs/internal/DEVELOPMENT-LOG.md` | Dev log of changes | Internal only, do not ship | None | None |
-| `docs/internal/CUSTOMIZATION-AND-IDEAS.md` | Feature ideas and customization notes | Internal only, do not ship | None | None |
-| `docs/plans/global-skill-refactor.md` | Plugin restructure plan | Internal only, do not ship | None | None |
-| `docs/plans/2026-02-14-tmux-research.md` | Tmux research | Internal only, do not ship | None | None |
-| `docs/plans/2026-02-14-tracker-design.md` | Tracker design | Internal only, do not ship | None | None |
+| `.claude/docs/BASELINE-TOKEN-REPORT.md` | Token measurement report | Internal only, do not ship | None | None |
+| `.claude/docs/internal/PLAN.md` | Distribution strategy document | Internal only, do not ship | None | None |
+| `.claude/docs/internal/DEVELOPMENT-LOG.md` | Dev log of changes | Internal only, do not ship | None | None |
+| `.claude/docs/internal/CUSTOMIZATION-AND-IDEAS.md` | Feature ideas and customization notes | Internal only, do not ship | None | None |
+| `.claude/docs/plans/global-skill-refactor.md` | Plugin restructure plan | Internal only, do not ship | None | None |
+| `.claude/docs/plans/2026-02-14-tmux-research.md` | Tmux research | Internal only, do not ship | None | None |
+| `.claude/docs/plans/2026-02-14-tracker-design.md` | Tracker design | Internal only, do not ship | None | None |
 
 ---
 
@@ -136,7 +136,7 @@ User-facing documentation installed to the project's `docs/` directory.
 |----------|--------------|--------|-----------------|
 | `{{PROJECT_RULES_FILE}}` | `CLAUDE.md` | `lib/prompts.js` interactive prompt | 28+ files (all commands, all agents, playbook, spawn templates, workflow modes, docs) |
 | `{{ARCHITECTURE_FILE}}` | `docs/ARCHITECTURE.md` | `lib/prompts.js` interactive prompt | 25+ files (all commands, all agents, playbook, spawn templates, QA checklist, docs) |
-| `{{PROGRESS_DIR}}` | `docs/progress` | `lib/prompts.js` interactive prompt | 20+ files (commands, agents, playbook, progress template, performance log, activity-logger.js, docs) |
+| `{{PROGRESS_DIR}}` | `.claude/progress` | `lib/prompts.js` interactive prompt | 20+ files (commands, agents, playbook, progress template, performance log, activity-logger.js, docs) |
 | `{{AGENT_ROLE}}` | Dynamic per agent | `discover-agents.md` at generation time | Generated agent files only |
 | `{{AGENT_FILE_SCOPE}}` | Dynamic per agent | `discover-agents.md` at generation time | Generated agent files only |
 | `{{AGENT_EXCLUDED_FILES}}` | Dynamic per agent | `discover-agents.md` at generation time | Generated agent files only |
@@ -157,10 +157,10 @@ User-facing documentation installed to the project's `docs/` directory.
 3. **Use plugin settings**: Claude's plugin system may support settings that get injected into template files.
 4. **Keep scaffolder as install step**: `npx create-claude-workflow init` still runs, but produces a lightweight `.claude/workflow-config.json` that the plugin reads at runtime.
 
-**Critical case -- `activity-logger.js`**: This hook file uses `{{PROGRESS_DIR}}` as a JavaScript string literal (`const logDir = '{{PROGRESS_DIR}}'`). In the scaffolder model, this becomes `const logDir = 'docs/progress'`. In the plugin model, this JS file needs a different approach:
+**Critical case -- `activity-logger.js`**: This hook file uses `{{PROGRESS_DIR}}` as a JavaScript string literal (`const logDir = '{{PROGRESS_DIR}}'`). In the scaffolder model, this becomes `const logDir = '.claude/progress'`. In the plugin model, this JS file needs a different approach:
 - Read from a config file at runtime
 - Use an environment variable
-- Hardcode `docs/progress` as default with config override
+- Hardcode `.claude/progress` as default with config override
 
 ---
 
@@ -320,7 +320,7 @@ activity-logger.js  -> writes to PROGRESS_DIR/.edit-log (uses {{PROGRESS_DIR}})
 | `templates/agents/*.md` (3 files) | `agents/*.md` | Direct move, resolve template vars |
 | `templates/hooks/*.js` (4 files) | `hooks/*.js` | Direct move, fix `activity-logger.js` var issue |
 | `templates/prompts/**/*.md` (11 files) | `prompts/**/*.md` or inline as skills | May need restructuring for plugin discovery |
-| `templates/docs/*.md` (2 files) | TBD -- could become skills, inline docs, or separate | Not standard plugin directory |
+| `templates/docs/*.md` (2 files) | `.claude/docs/customize-quick-start/*.md` | User-facing guides |
 
 ### Scaffolder code (needs rethinking)
 
@@ -339,9 +339,9 @@ activity-logger.js  -> writes to PROGRESS_DIR/.edit-log (uses {{PROGRESS_DIR}})
 
 | Path | Action |
 |------|--------|
-| `docs/BASELINE-TOKEN-REPORT.md` | Keep in repo, exclude from plugin package |
-| `docs/internal/*.md` (3 files) | Keep in repo, exclude from plugin package |
-| `docs/plans/*.md` (3 files) | Keep in repo, exclude from plugin package |
+| `.claude/docs/BASELINE-TOKEN-REPORT.md` | Keep in repo, exclude from plugin package |
+| `.claude/docs/internal/*.md` (3 files) | Keep in repo, exclude from plugin package |
+| `.claude/docs/plans/*.md` (3 files) | Keep in repo, exclude from plugin package |
 | `SPEC-v1-trim.md` | Keep in repo, exclude from plugin package |
 
 ---
@@ -367,9 +367,9 @@ Agent definitions hardcode paths like `.claude/prompts/implementing-features/REA
 The scaffolder handles: detecting CLAUDE.md variants, merging workflow sections with sentinels, creating the progress directory, configuring hook settings in `.claude/settings.json`. Some of this (especially hook registration) may still be needed as a one-time setup step even in the plugin model.
 
 ### Finding 7: docs/ Templates Have Unclear Plugin Mapping
-`CREATING-AGENTS.md` and `CUSTOMIZING-THE-WORKFLOW.md` are user-facing guides installed to `docs/`. Plugins don't have a standard `docs/` output. These could become:
+`CREATING-AGENTS.md` and `CUSTOMIZING-THE-WORKFLOW.md` are user-facing guides installed to `.claude/docs/customize-quick-start/`. Plugins don't have a standard `docs/` output. These could become:
 - Skills that output the guide content when invoked
-- Files in a `docs/` plugin directory that get served as prompts
+- Files in a `.claude/docs/` plugin directory that get served as prompts
 - Removed from the plugin and published separately
 
 ### Finding 8: Hook Registration Needs Settings.json

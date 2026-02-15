@@ -12,7 +12,7 @@ const configPath = path.join(process.cwd(), '.claude', 'workflow.json');
 let config = {
   projectRulesFile: 'CLAUDE.md',
   architectureFile: 'docs/ARCHITECTURE.md',
-  progressDir: 'docs/progress'
+  progressDir: '.claude/progress'
 };
 let configStatus = 'using defaults — run /workflow-setup to customize';
 

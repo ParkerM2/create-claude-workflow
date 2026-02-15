@@ -46,6 +46,8 @@ git clone https://github.com/ParkerM2/claude-workflow.git
 | `/generate-tests` | Automated test generation -- identifies targets, spawns test engineer, QA verifies coverage |
 | `/scaffold-agent` | Interactive Q&A to create a new specialist agent definition |
 | `/audit-agents` | Scan all agent definitions, validate scopes against project structure, flag issues |
+| `/audit-performance` | Audit workflow configuration for performance bottlenecks — file sizes, hook overhead, context budget, progress file growth |
+| `/track` | Emit a tracking event to the JSONL progress log — records checkpoints, task state, errors, blockers, and QA results |
 | `/discover-agents` | Analyze codebase to auto-discover optimal agent roles and generate definitions |
 
 ## Agents
@@ -66,7 +68,7 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
 {
   "projectRulesFile": "CLAUDE.md",
   "architectureFile": "docs/ARCHITECTURE.md",
-  "progressDir": "docs/progress"
+  "progressDir": ".claude/progress"
 }
 ```
 
@@ -74,7 +76,7 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
 |---------|---------|---------|
 | `projectRulesFile` | `CLAUDE.md` | File containing coding standards and project conventions |
 | `architectureFile` | `docs/ARCHITECTURE.md` | File describing project structure and design decisions |
-| `progressDir` | `docs/progress` | Directory for crash-recovery progress files |
+| `progressDir` | `.claude/progress` | Directory for JSONL event logs and rendered progress files |
 
 ## Workflow Modes
 
@@ -120,7 +122,8 @@ Four hooks run automatically to protect against common mistakes:
 | `branch-guard` | Before Bash commands | Prevents git operations on wrong branches |
 | `destructive-guard` | Before Bash commands | Blocks destructive operations (`rm -rf`, `git reset --hard`, etc.) |
 | `config-guard` | Before Edit/Write | Prevents modification of workflow config files |
-| `activity-logger` | After Edit/Write | Logs file modifications for audit trail |
+| `tracker` | After Edit/Write | Emits file modification events to JSONL progress log |
+| `git-tracker` | After Bash | Detects git operations and emits branch events to JSONL progress log |
 
 ## Project Structure
 
@@ -128,7 +131,19 @@ Four hooks run automatically to protect against common mistakes:
 claude-workflow/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin metadata
-├── commands/                    # 12 slash commands (loaded on /invoke)
+├── .claude/
+│   ├── docs/                    # Plugin documentation
+│   │   ├── internal/            # Dev logs, plans
+│   │   ├── plans/               # Feature plans, research
+│   │   ├── research/            # Audits, references
+│   │   └── customize-quick-start/ # User customization guides
+│   └── progress/                # JSONL event logs (per-feature)
+│       ├── index.md             # Top-level dashboard
+│       └── <feature>/
+│           ├── events.jsonl     # Append-only event log
+│           ├── current.md       # Active task state
+│           └── history.md       # Unified timeline
+├── commands/                    # 14 slash commands (loaded on /invoke)
 │   ├── implement-feature.md
 │   ├── create-feature-plan.md
 │   ├── resume-feature.md
@@ -140,27 +155,27 @@ claude-workflow/
 │   ├── generate-tests.md
 │   ├── scaffold-agent.md
 │   ├── audit-agents.md
-│   └── discover-agents.md
+│   ├── audit-performance.md
+│   ├── discover-agents.md
+│   └── track.md
 ├── agents/                      # Agent definitions (loaded on spawn)
 │   ├── team-leader.md
 │   ├── qa-reviewer.md
 │   └── codebase-guardian.md
 ├── prompts/                     # Reference docs and templates
-│   ├── implementing-features/   # Playbook, QA templates, workflow modes
-│   └── guides/                  # User-facing customization guides
+│   └── implementing-features/   # Playbook, QA templates, workflow modes
 ├── hooks/                       # Enforcement hooks
 │   ├── hooks.json
 │   ├── session-start.js
 │   ├── branch-guard.js
 │   ├── destructive-guard.js
 │   ├── config-guard.js
-│   └── activity-logger.js
+│   ├── tracker.js
+│   └── git-tracker.js
 ├── skills/                      # Internal skills
 │   ├── workflow-setup/
 │   └── using-workflow/
-├── marketplace/                 # Marketplace distribution metadata
-└── docs/                        # Project documentation
-    └── internal/                # Development logs and planning
+└── marketplace/                 # Marketplace distribution metadata
 ```
 
 ## License

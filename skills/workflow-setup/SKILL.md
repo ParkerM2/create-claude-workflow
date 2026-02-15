@@ -32,7 +32,7 @@ Use the AskUserQuestion tool to ask the following questions one at a time:
 **Question 3: Progress directory**
 > Where should workflow progress files be stored? These track feature implementation state for crash recovery.
 >
-> Default: `docs/progress`
+> Default: `.claude/progress`
 
 ### 3. Write configuration
 

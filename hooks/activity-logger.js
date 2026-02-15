@@ -13,9 +13,9 @@ function getProgressDir() {
   try {
     const configPath = path.join(process.cwd(), '.claude', 'workflow.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    return config.progressDir || 'docs/progress';
+    return config.progressDir || '.claude/progress';
   } catch {
-    return 'docs/progress';
+    return '.claude/progress';
   }
 }
 

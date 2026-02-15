@@ -133,9 +133,16 @@ Claude Code sessions can terminate unexpectedly (terminal close, timeout, proces
 
 ### The Progress File
 
-**Location**: `the progress directory/<feature-name>-progress.md`
+**Location**: `.claude/progress/<feature-name>/events.jsonl` (source of truth)
 
-**Template**: See [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md)
+**Rendered summaries**:
+- `.claude/progress/<feature-name>/current.md` — active task state
+- `.claude/progress/<feature-name>/history.md` — full timeline
+- `.claude/progress/index.md` — dashboard across all features
+
+**Template**: See [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md) for the current.md format
+
+**Event Schema**: See [`EVENT-SCHEMA.md`](./EVENT-SCHEMA.md) for the JSONL event type reference
 
 The Team Leader MUST create this file BEFORE spawning any agents.
 
@@ -151,6 +158,8 @@ Update the progress file after EVERY significant state change:
 | QA cycle (pass/fail) | QA results section, task QA status |
 | Workbranch merged | Branch status (Merged = YES), merge log |
 | Integration complete | Overall status → COMPLETE |
+
+Events are emitted via `/track` commands or automatically by PostToolUse hooks (tracker.js, git-tracker.js).
 
 ### Branch Status Table
 
@@ -508,13 +517,15 @@ The Codebase Guardian runs on the fully-merged feature branch and checks:
 
 ## 10. Crash Recovery
 
+> See also: [`RESUME-PROTOCOL.md`](./RESUME-PROTOCOL.md) for the full JSONL-based recovery flow.
+
 ### Detecting a Crashed Session
 
 A new Team Leader session should check for existing progress:
 
 ```bash
 # Check for progress files
-ls the progress directory/
+ls the progress directory/*/events.jsonl 2>/dev/null
 
 # Check for workbranches
 git branch --list "work/*"
@@ -528,7 +539,7 @@ ls ~/.claude/teams/
 
 ### Recovery Protocol
 
-1. **Read the progress file** — it contains the full state of the feature
+1. **Read the JSONL event log** — `events.jsonl` contains the complete event history. Read `current.md` for a quick summary.
 2. **Check branch status** — which workbranches exist, which are merged
 3. **Check team state** — does the team still exist? Use `TaskList` for task status
 4. **Resume from first non-COMPLETE task**:
