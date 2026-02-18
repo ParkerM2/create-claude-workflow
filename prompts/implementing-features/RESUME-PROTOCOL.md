@@ -376,6 +376,23 @@ git status
 | Branch IN_PROGRESS per JSONL | Branch does not exist | Branch was lost. Recreate from feature branch and restart task. |
 | No branch record in JSONL | Branch exists in git | Orphaned branch. Warn user, do not auto-delete. |
 
+### Verify Worktree State
+
+If worktrees are enabled (`useWorktrees: true` in config), check for existing worktrees:
+
+```bash
+git worktree list
+```
+
+**Worktree reconciliation**:
+
+| JSONL State | Git Worktree State | Action |
+|---|---|---|
+| Task merged | Worktree exists | `git worktree remove <path>` — orphaned worktree |
+| Task in-progress | Worktree exists | Resume in existing worktree |
+| Task in-progress | Worktree missing | Recreate: `git worktree add <worktreeDir>/<feature>/<task>` |
+| No record | Worktree exists | Orphaned — warn user, do not auto-delete |
+
 ### Continue from Resume Point
 
 Based on the decision from Phase 3:
@@ -539,6 +556,8 @@ Execution:
   [ ] Verified/recreated team in ~/.claude/teams/
   [ ] Verified git branch state matches JSONL state
   [ ] Reconciled any branch mismatches
+  [ ] Verified worktree state matches JSONL state
+  [ ] Reconciled any worktree mismatches (removed orphaned, recreated missing)
   [ ] Identified resume point (next planned step)
   [ ] Created workbranches as needed
   [ ] Spawned agents for tasks to (re)start

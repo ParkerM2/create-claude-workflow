@@ -38,26 +38,36 @@ If a design document exists for the feature, read it too.
 
 ## Branching Model
 
-You operate a branch-per-task model:
+You operate a configurable branch-per-task model with git worktree isolation. Read the branching configuration from `<workflow-config>` injected at session start.
+
+### Default Model (with worktrees)
 
 ```
-main/master
-  └── feature/<feature-name>                    ← you create this
-       ├── work/<feature-name>/schema-design    ← Wave 1 agent
-       ├── work/<feature-name>/api-service      ← Wave 2 agent
-       ├── work/<feature-name>/ui-components    ← Wave 3 agent
+<base-branch>
+  └── <featurePrefix>/<feature-name>           ← team-leader creates this
+       ├── Worktree: .worktrees/<feature>/t1   ← Wave 1 agent (isolated)
+       ├── Worktree: .worktrees/<feature>/t2   ← Wave 2 agent (isolated)
        └── ...
 ```
 
 ### Branch Rules
 
-0. **Detect primary branch**: Before creating any branch, determine if the primary branch is `main`, `master`, or something else. Use: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|.*/||'`. Store this and use it consistently.
-1. **Create `feature/<name>`** from the primary branch at the start. Before `git checkout -b`, verify the branch doesn't already exist. If it does and has a matching progress file, this is a resume scenario.
-2. **Create `work/<feature-name>/<task-slug>`** from `feature/<name>` HEAD for each task
-3. Agents work + commit on their workbranch only
-4. After QA passes (and QA updates docs on workbranch), you merge workbranch back to `feature/<name>`
-5. Next wave branches from updated `feature/<name>` HEAD
-6. Delete workbranches after successful merge
+0. **Read branching config** from `<workflow-config>` at session start. Use the configured `baseBranch`, `featurePrefix`, `workPrefix`, `worktreeDir`, and `enforce` level.
+1. **Detect base branch**: If `baseBranch` is `"auto"`, detect the primary branch: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|.*/||'`. Store this and use it consistently.
+2. **Create `<featurePrefix>/<name>`** from the base branch at the start. Before creating, verify the branch doesn't already exist. If it does and has a matching progress file, this is a resume scenario.
+3. **Create worktrees for each task**: `git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<feature-name>/<task-slug>`
+4. Agents work + commit in their worktree directory only
+5. After QA passes, you merge the workbranch back to `<featurePrefix>/<name>` from the main repo
+6. Remove the worktree after merge: `git worktree remove <worktreeDir>/<feature-name>/<task-slug>`
+7. Next wave: create new worktrees from updated `<featurePrefix>/<name>` HEAD
+8. Delete workbranches after successful merge: `git branch -d <workPrefix>/<feature-name>/<task-slug>`
+
+### Fallback (shared directory)
+
+If `useWorktrees` is `false` in config, use the legacy model:
+1. Create `<workPrefix>/<feature-name>/<task-slug>` branches from `<featurePrefix>/<name>` HEAD
+2. Agents switch branches via `git checkout` in the shared working directory
+3. Sequential execution within waves (no true parallelism)
 
 ## Mandatory Planning Gate
 
@@ -143,30 +153,50 @@ NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 
 When a task's QA passes (and QA has updated docs on the workbranch):
 
+### With Worktrees (default)
+
 ```bash
-# 1. Switch to feature branch
-git checkout feature/<feature-name>
+# 1. Rebase from worktree
+git -C <worktreeDir>/<feature-name>/<task-slug> rebase <featurePrefix>/<feature-name>
 
-# 2. Rebase workbranch on latest feature branch (conflict prevention)
-git checkout work/<feature-name>/<task-slug>
-git rebase feature/<feature-name>
-
-# 3. If rebase conflicts:
+# 2. If rebase conflicts:
 #    a. If < 5 conflicts and all in files the agent owns: resolve them
 #    b. If >= 5 conflicts or any in shared files: escalate to user
 #    c. NEVER force-push or drop commits to resolve conflicts
 #    d. After resolution: verify build/lint/test still pass before merging
-# 4. Merge with --no-ff for clear history
-git checkout feature/<feature-name>
-git merge --no-ff work/<feature-name>/<task-slug> -m "Merge <task-slug>: <summary>"
+
+# 3. Merge from main repo with --no-ff for clear history
+git checkout <featurePrefix>/<feature-name>
+git merge --no-ff <workPrefix>/<feature-name>/<task-slug> -m "Merge <task-slug>: <summary>"
+
+# 4. Remove worktree
+git worktree remove <worktreeDir>/<feature-name>/<task-slug>
 
 # 5. Delete workbranch
-git branch -d work/<feature-name>/<task-slug>
+git branch -d <workPrefix>/<feature-name>/<task-slug>
+```
+
+### Without Worktrees (legacy)
+
+```bash
+# 1. Switch to feature branch
+git checkout <featurePrefix>/<feature-name>
+
+# 2. Rebase workbranch on latest feature branch
+git checkout <workPrefix>/<feature-name>/<task-slug>
+git rebase <featurePrefix>/<feature-name>
+
+# 3. Merge to feature branch
+git checkout <featurePrefix>/<feature-name>
+git merge --no-ff <workPrefix>/<feature-name>/<task-slug> -m "Merge <task-slug>: <summary>"
+
+# 4. Delete workbranch
+git branch -d <workPrefix>/<feature-name>/<task-slug>
 ```
 
 ### Conflict Prevention (5 layers)
 
-1. **File scoping** — no two agents edit the same file
+1. **File scoping + worktree isolation** — no two agents edit the same file; each agent works in its own worktree directory, preventing filesystem conflicts
 2. **Wave ordering** — dependency-based execution order
 3. **Pre-merge rebase** — workbranch rebased on `feature/` before merge
 4. **Sequential merges** — one workbranch at a time, never parallel

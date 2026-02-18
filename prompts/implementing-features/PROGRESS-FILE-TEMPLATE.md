@@ -43,11 +43,11 @@ Wave <N> of <total> — <status>
 
 ## Tasks
 
-| # | Task | Agent | Status | QA | Branch |
-|---|------|-------|--------|-----|--------|
-| 1 | <task name> | <agent> | COMPLETE | PASS (round 1) | merged |
-| 2 | <task name> | <agent> | IN_PROGRESS | — | work/<feature>/<task> |
-| 3 | <task name> | <agent> | PENDING | — | not created |
+| # | Task | Agent | Status | QA | Branch | Worktree |
+|---|------|-------|--------|-----|--------|----------|
+| 1 | <task name> | <agent> | COMPLETE | PASS (round 1) | merged | removed |
+| 2 | <task name> | <agent> | IN_PROGRESS | — | <workPrefix>/<feature>/<task> | <worktreeDir>/<feature>/<task> |
+| 3 | <task name> | <agent> | PENDING | — | not created | — |
 
 ## Blockers
 

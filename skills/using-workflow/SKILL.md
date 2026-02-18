@@ -47,6 +47,49 @@ Configuration options:
 - `architectureFile` — path to the architecture documentation (default: `docs/ARCHITECTURE.md`)
 - `progressDir` — directory for JSONL event logs and rendered progress (default: `.claude/progress`)
 
+Branching configuration (`branching` section in `.claude/workflow.json`):
+- `baseBranch` — primary branch to branch from (default: `auto` — auto-detects main/master)
+- `featurePrefix` — prefix for feature branches (default: `feature`)
+- `workPrefix` — prefix for agent work branches (default: `work`)
+- `enforce` — branch rule enforcement level: `warn`, `block`, or `off` (default: `warn`)
+- `protectedBranches` — branches protected from direct commits (default: `["main", "master"]`)
+- `useWorktrees` — enable git worktrees for agent isolation (default: `true`)
+- `worktreeDir` — directory for worktrees relative to repo root (default: `.worktrees`)
+
+## Agent Isolation with Worktrees
+
+When `branching.useWorktrees` is `true` (default), each agent task gets its own isolated git worktree:
+
+```
+<repo-root>/
+├── .claude/workflow.json          ← config (always read from main repo root)
+├── .claude/progress/              ← progress tracking (always in main repo root)
+├── .worktrees/                    ← worktree root (configurable via worktreeDir)
+│   └── <feature>/
+│       ├── task-1/                ← agent 1's isolated worktree
+│       ├── task-2/                ← agent 2's isolated worktree (parallel!)
+│       └── task-3/                ← agent 3's isolated worktree
+└── (main repo working tree)       ← team-leader works here
+```
+
+Each agent receives: `git worktree add <worktreeDir>/<feature>/<task> -b <workPrefix>/<feature>/<task>`
+After merge: `git worktree remove <worktreeDir>/<feature>/<task>`
+
+Benefits:
+- Agents in the same wave can work truly in parallel — no checkout conflicts
+- Each agent has a clean working directory with no interference from others
+- The team leader stays on the feature branch in the main repo
+
+When `useWorktrees` is `false`, agents share the main working directory and switch branches via `git checkout` (the legacy model).
+
+## Changing Branch Rules at Runtime
+
+Branch rules are guidelines, not permanent constraints. You can change them anytime:
+
+1. **Edit config directly**: Modify `.claude/workflow.json` branching section
+2. **Tell Claude**: Say "allow commits on main" or "turn off branch enforcement" — Claude will update the config
+3. **Re-run setup**: Use `/workflow-setup` to reconfigure interactively
+
 ## Prompt Reference Files
 
 Agent prompt files and workflow definitions are available under `${PLUGIN_ROOT}/prompts/implementing-features/`. Agents read these during execution to understand their roles, responsibilities, and the current workflow state.

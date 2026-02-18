@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
+const { getRepoRoot, getBranchingConfig, getEffectiveBranch } = require('./config.js');
 
 // ---------------------------------------------------------------------------
 // Session identity — generated once per module load
@@ -38,12 +39,14 @@ const RENDER_TRIGGERS = new Set([
 // ---------------------------------------------------------------------------
 
 /**
- * Read progressDir from .claude/workflow.json in the current working directory.
+ * Read progressDir from .claude/workflow.json using the repo root.
+ * Works correctly from both the main repo and worktree directories.
  * Falls back to '.claude/progress'.
  */
 function getProgressDir() {
   try {
-    const configPath = path.join(process.cwd(), '.claude', 'workflow.json');
+    const repoRoot = getRepoRoot();
+    const configPath = path.join(repoRoot, '.claude', 'workflow.json');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     return config.progressDir || '.claude/progress';
   } catch {
@@ -57,19 +60,39 @@ function getProgressDir() {
 
 /**
  * Detect the current feature name from the git branch.
- *   work/<feature>/<task>  -> feature
- *   feature/<feature>      -> feature
- *   anything else          -> null
+ * Uses configurable prefixes from .claude/workflow.json.
+ *
+ * Patterns matched (using configured prefixes):
+ *   <workPrefix>/<feature>/<task>    -> feature
+ *   <featurePrefix>/<feature>        -> feature
+ *   hotfix/<name>                    -> name
+ *   refactor/<name>                  -> name
+ *   anything else                    -> null
+ *
+ * @param {string} [command] - Optional bash command for worktree-aware detection.
+ *   If provided, uses getEffectiveBranch(command) to detect branch from
+ *   commands that include `cd <path> &&` or `git -C <path>`.
  */
-function getFeatureFromBranch() {
+function getFeatureFromBranch(command) {
   try {
-    const branch = execSync('git branch --show-current', {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe']
-    }).trim();
+    let branch;
+    if (command) {
+      branch = getEffectiveBranch(command);
+    } else {
+      branch = execSync('git branch --show-current', {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      }).trim();
+    }
 
-    // work/<feature>/<task> — extract the second segment
-    if (branch.startsWith('work/')) {
+    if (!branch) return null;
+
+    const config = getBranchingConfig();
+    const workPrefix = config.workPrefix;
+    const featurePrefix = config.featurePrefix;
+
+    // <workPrefix>/<feature>/<task> — extract the second segment
+    if (workPrefix && branch.startsWith(workPrefix + '/')) {
       const parts = branch.split('/');
       if (parts.length >= 3) {
         return parts[1];
@@ -77,8 +100,26 @@ function getFeatureFromBranch() {
       return null;
     }
 
-    // feature/<feature> — extract the second segment
-    if (branch.startsWith('feature/')) {
+    // <featurePrefix>/<feature> — extract the second segment
+    if (featurePrefix && branch.startsWith(featurePrefix + '/')) {
+      const parts = branch.split('/');
+      if (parts.length >= 2 && parts[1]) {
+        return parts[1];
+      }
+      return null;
+    }
+
+    // hotfix/<name> — extract the second segment
+    if (branch.startsWith('hotfix/')) {
+      const parts = branch.split('/');
+      if (parts.length >= 2 && parts[1]) {
+        return parts[1];
+      }
+      return null;
+    }
+
+    // refactor/<name> — extract the second segment
+    if (branch.startsWith('refactor/')) {
       const parts = branch.split('/');
       if (parts.length >= 2 && parts[1]) {
         return parts[1];

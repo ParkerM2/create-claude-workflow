@@ -1,6 +1,6 @@
 ---
 name: workflow-setup
-description: Use when a workflow command is invoked but no .claude/workflow.json config exists — runs first-time project setup to configure project rules file, architecture file, and progress directory paths
+description: Use when a workflow command is invoked but no .claude/workflow.json config exists — runs first-time project setup to configure project rules file, architecture file, progress directory paths, and branching strategy
 ---
 
 # Workflow Setup
@@ -34,6 +34,50 @@ Use the AskUserQuestion tool to ask the following questions one at a time:
 >
 > Default: `.claude/progress`
 
+**Question 4: Branching strategy**
+> How should branches be organized for feature work?
+>
+> Options:
+> - `Standard` (recommended) — `base → feature/<name> → work/<name>/<task>` with worktrees for agent isolation
+> - `Flat` — `base → <featurePrefix>/<task>`, agents work on feature branches directly (no work branches)
+> - `Custom` — provide your own prefix configuration
+>
+> Default: `Standard`
+
+**Question 5: Base branch**
+> What is your primary/base branch?
+>
+> Default: `auto` (auto-detects main or master)
+
+**Question 6: Agent isolation**
+> How should agents be isolated during parallel work?
+>
+> Options:
+> - `Worktrees` (recommended) — each agent gets an isolated git worktree directory
+> - `Shared directory` — all agents share one working directory, switching branches via checkout
+>
+> Default: `Worktrees`
+
+**Question 7: Branch enforcement**
+> How strictly should branch rules be enforced?
+>
+> Options:
+> - `warn` (recommended) — show warnings but allow the operation
+> - `block` — prevent commits/pushes on protected branches
+> - `off` — no branch checking at all
+>
+> Default: `warn`
+
+**Question 8: Protected branches**
+> Which branches should be protected from direct commits?
+>
+> Default: `main, master`
+
+Auto-fill the branching section based on the strategy choice:
+- Standard: featurePrefix=feature, workPrefix=work, useWorktrees=true
+- Flat: featurePrefix=feature, workPrefix=(empty), useWorktrees=false
+- Custom: user provides all values
+
 ### 3. Write configuration
 
 Create `.claude/workflow.json` with the user's answers:
@@ -42,7 +86,16 @@ Create `.claude/workflow.json` with the user's answers:
 {
   "projectRulesFile": "<answer or default>",
   "architectureFile": "<answer or default>",
-  "progressDir": "<answer or default>"
+  "progressDir": "<answer or default>",
+  "branching": {
+    "baseBranch": "<answer or auto>",
+    "featurePrefix": "<answer or feature>",
+    "workPrefix": "<answer or work>",
+    "enforce": "<answer or warn>",
+    "protectedBranches": ["<answer or main, master>"],
+    "useWorktrees": <true or false>,
+    "worktreeDir": ".worktrees"
+  }
 }
 ```
 
@@ -57,3 +110,5 @@ Tell the user:
 - Progress directory created at `<progressDir>`
 - They can re-run `/workflow-setup` at any time to update settings
 - They can now use any workflow command (e.g., `/implement-feature`)
+
+Change anytime by editing `.claude/workflow.json` or asking Claude to adjust.
