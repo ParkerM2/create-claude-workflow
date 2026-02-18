@@ -25,6 +25,7 @@ Prompt:
 You are the **<Agent Role>** on team "<team-name>".
 Your task is **Task #<N>: <task name>**.
 Your workbranch is **work/<feature-name>/<task-slug>**.
+Your worktree path is **<worktreeDir>/<feature-name>/<task-slug>**.
 
 ═══════════════════════════════════════════════════════════════
   MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING
@@ -51,8 +52,8 @@ You will need specific rules from each file in Phase 1.
 
 Then verify your workbranch:
 ```bash
-git checkout work/<feature-name>/<task-slug>
-git log --oneline -3
+# Verify worktree (or fallback to checkout if worktrees disabled)
+cd <worktreeDir>/<feature-name>/<task-slug> 2>/dev/null && git log --oneline -3 || git checkout <workPrefix>/<feature-name>/<task-slug> && git log --oneline -3
 ```
 
 </phase>
@@ -127,6 +128,9 @@ After ALL steps are complete, commit your work:
 git add <specific files from your plan>
 git commit -m "<type>: <description>"
 ```
+
+If working in a worktree, all git commands run from your worktree directory automatically.
+All file paths are relative to the worktree root.
 
 </phase>
 
@@ -276,6 +280,7 @@ Prompt:
 You are a **QA Review Agent** on team "<team-name>".
 Your job is to validate the work done for **Task #<N>: <task name>**.
 You are reviewing on workbranch **work/<feature-name>/<task-slug>**.
+Worktree path: **<worktreeDir>/<feature-name>/<task-slug>** (if worktrees enabled).
 
 ═══════════════════════════════════════════════════════════════
   MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING
@@ -300,7 +305,7 @@ Read these files completely. You will reference specific rules during review.
 
 Verify workbranch:
 ```bash
-git checkout work/<feature-name>/<task-slug>
+cd <worktreeDir>/<feature-name>/<task-slug> 2>/dev/null || git checkout <workPrefix>/<feature-name>/<task-slug>
 ```
 
 </phase>
@@ -512,6 +517,8 @@ Verify branch:
 git checkout feature/<feature-name>
 ```
 
+Note: Guardian runs on the feature branch in the main repo directory (not in a worktree).
+
 </phase>
 
 <phase name="check-plan" blocking="true">
@@ -607,16 +614,18 @@ When starting a new feature, the Team Leader follows this sequence:
       TaskUpdate with addBlockedBy for each task
  8. UPDATE progress file with task list + dependency graph
  9. For each wave (in order):
-      a. CREATE workbranches from feature/ HEAD:
-           git checkout feature/<feature-name>
-           git checkout -b work/<feature-name>/<task-slug>
+      a. CREATE worktrees from feature/ HEAD:
+           git checkout <featurePrefix>/<feature-name>
+           git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<feature-name>/<task-slug>
       b. SPAWN coding agents using the Standard Coding Agent template above
          (CRITICAL: use the FULL template with all 4 phases + error recovery)
       c. UPDATE progress file with agent registry
 10. MONITOR agent messages:
       a. On QA PASS:
          - UPDATE progress file
-         - MERGE workbranch to feature/ (rebase first, --no-ff)
+         - REBASE from worktree: git -C <worktreeDir>/<feature-name>/<task-slug> rebase <featurePrefix>/<feature-name>
+         - MERGE workbranch to feature/ (--no-ff)
+         - REMOVE worktree: git worktree remove <worktreeDir>/<feature-name>/<task-slug>
          - DELETE workbranch
          - Check if next-wave tasks are unblocked
       b. On QA FAIL (round < 3):
@@ -634,4 +643,6 @@ When starting a new feature, the Team Leader follows this sequence:
          - Re-run Guardian
 12. SHUT DOWN all agents
 13. DELETE team (TeamDelete)
+
+Note: `<worktreeDir>`, `<featurePrefix>`, `<workPrefix>` come from `<workflow-config>`.
 ```

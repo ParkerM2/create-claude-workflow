@@ -77,40 +77,43 @@ PLAN ──▶ BRANCH ──▶ TRACK ──▶ ASSIGN ──▶ BUILD ──▶
 ### Branch Hierarchy
 
 ```
-main/master
-  └── feature/<feature-name>                         ← Team Leader creates from main
-       ├── work/<feature-name>/schema-design         ← Wave 1 agent
-       ├── work/<feature-name>/api-service           ← Wave 2 agent
-       ├── work/<feature-name>/ui-components         ← Wave 3 agent
+<base-branch> (configurable — default: auto-detected main/master)
+  └── <featurePrefix>/<feature-name>                    ← Team Leader creates from base
+       ├── Worktree: <worktreeDir>/<feature>/task-1     ← Wave 1 agent (isolated)
+       ├── Worktree: <worktreeDir>/<feature>/task-2     ← Wave 2 agent (isolated)
+       ├── Worktree: <worktreeDir>/<feature>/task-3     ← Wave 3 agent (isolated)
        └── ...
 ```
 
 ### Rules
 
-1. **`feature/<name>`** is created from `main`/`master` at the start of the feature
-2. **`work/<feature-name>/<task-slug>`** is created from `feature/<name>` HEAD for each task
-3. Agents work exclusively on their workbranch — no direct commits to `feature/`
-4. After QA passes on a workbranch, the Team Leader merges it to `feature/<name>`
-5. Next wave's workbranches are created from the UPDATED `feature/<name>` HEAD
-6. Workbranches are deleted after successful merge
+1. **`<featurePrefix>/<name>`** is created from the configured base branch at the start of the feature
+2. For each task, create a worktree: `git worktree add <worktreeDir>/<feature>/<task-slug> -b <workPrefix>/<feature>/<task-slug>`
+3. Agents work exclusively in their worktree directory — no direct commits to `<featurePrefix>/`
+4. After QA passes on a workbranch, the Team Leader merges it to `<featurePrefix>/<name>` from the main repo
+5. Remove worktree after merge: `git worktree remove <worktreeDir>/<feature>/<task-slug>`
+6. Next wave's worktrees are created from the UPDATED `<featurePrefix>/<name>` HEAD
+7. Workbranches are deleted after successful merge
 
-### Why Branches (Not Worktrees)
+All prefixes (`featurePrefix`, `workPrefix`, `worktreeDir`) are configurable in `.claude/workflow.json`. Read them from `<workflow-config>` at session start.
 
-- Universally compatible — works on all systems, CI environments, and git hosting
-- Simpler mental model — one repo, one working directory
-- Sequential merges enforce clean, linear history per wave
-- No path confusion or cross-worktree file access issues
+### Why Worktrees
+
+- **True parallel execution** — agents in the same wave work in isolated directories with no checkout conflicts
+- **No switching overhead** — each agent stays in its worktree for its entire lifecycle
+- **Clean state** — each worktree has its own working directory, index, and HEAD
+- **Configurable** — set `useWorktrees: false` in config to fall back to the shared-directory model
 
 ### Creating Branches
 
 ```bash
 # Create feature branch (once, at start)
-git checkout main
-git checkout -b feature/<feature-name>
+git checkout <base-branch>
+git checkout -b <featurePrefix>/<feature-name>
 
-# Create workbranch (per task, from feature HEAD)
-git checkout feature/<feature-name>
-git checkout -b work/<feature-name>/<task-slug>
+# Create worktree per task (from feature HEAD)
+git checkout <featurePrefix>/<feature-name>
+git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<feature-name>/<task-slug>
 ```
 
 ### Conflict Prevention (5 Layers)

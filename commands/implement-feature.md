@@ -22,8 +22,9 @@ description: "Full multi-agent feature implementation with branch-per-task isola
 
 1. **Git repo check**: Run `git rev-parse --git-dir`. If this fails, inform the user: "This directory is not a git repository. Initialize one with `git init` and make an initial commit before running /implement-feature."
 2. **Primary branch detection**: Detect the primary branch name (main/master/other) and store it. Use this throughout instead of hardcoding `main`.
-3. **Progress directory**: Create `.claude/progress/<feature-name>/` directory if it doesn't exist.
-4. **Branch check**: If `feature/<feature-name>` already exists, inform the user and suggest `/resume-feature` instead of creating a duplicate.
+3. **Branching config**: Read branching configuration from `<workflow-config>`. Use configured `baseBranch` (resolve `"auto"` to detected primary branch), `featurePrefix`, `workPrefix`, `worktreeDir`.
+4. **Progress directory**: Create `.claude/progress/<feature-name>/` directory if it doesn't exist.
+5. **Branch check**: If `feature/<feature-name>` already exists, inform the user and suggest `/resume-feature` instead of creating a duplicate.
 
 Before anything else, read these files to understand the system:
 
@@ -114,9 +115,9 @@ If a feature directory exists in the progress directory with an `events.jsonl` f
 ## Phase 4: Create Feature Branch & Progress File
 
 ```bash
-# Create feature branch from main
-git checkout main
-git checkout -b feature/<feature-name>
+# Create feature branch from configured base
+git checkout <base-branch>
+git checkout -b <featurePrefix>/<feature-name>
 ```
 
 Create the feature's progress directory and initialize tracking:
@@ -146,12 +147,12 @@ For each wave, in dependency order:
 ### 6a. Create Workbranches
 
 ```bash
-# Create workbranch from feature branch HEAD
-git checkout feature/<feature-name>
-git checkout -b work/<feature-name>/<task-slug>
+# Create worktree with workbranch from feature branch HEAD
+git checkout <featurePrefix>/<feature-name>
+git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<feature-name>/<task-slug>
 ```
 
-Create one workbranch per task in this wave.
+Create one worktree per task in this wave.
 
 ### 6b. Spawn Agents
 
@@ -163,6 +164,8 @@ Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 - Filled QA checklist (use `QA-CHECKLIST-AUTO-FILL-RULES.md` to pre-select sections by role)
 - Context budget note (see `CONTEXT-BUDGET-GUIDE.md` — estimate before spawning, split if over threshold)
 - Instructions to commit on workbranch and spawn QA when done
+- Worktree path: `<worktreeDir>/<feature-name>/<task-slug>` — agent must work from this directory
+- Instructions: "Your working directory is `<worktreeDir>/<feature-name>/<task-slug>`. Run all commands from this directory."
 
 ### 6c. Monitor & Collect Results
 
@@ -176,17 +179,19 @@ Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 For each workbranch with QA PASS (one at a time, sequentially):
 
 ```bash
-# Rebase workbranch on latest feature HEAD
-git checkout work/<feature-name>/<task-slug>
-git rebase feature/<feature-name>
+# Rebase workbranch on latest feature HEAD (from worktree)
+git -C <worktreeDir>/<feature-name>/<task-slug> rebase <featurePrefix>/<feature-name>
 
 # Merge to feature branch
-git checkout feature/<feature-name>
-git merge --no-ff work/<feature-name>/<task-slug> \
-  -m "Merge work/<feature-name>/<task-slug>: <summary>"
+git checkout <featurePrefix>/<feature-name>
+git merge --no-ff <workPrefix>/<feature-name>/<task-slug> \
+  -m "Merge <workPrefix>/<feature-name>/<task-slug>: <summary>"
+
+# Remove worktree
+git worktree remove <worktreeDir>/<feature-name>/<task-slug>
 
 # Delete workbranch
-git branch -d work/<feature-name>/<task-slug>
+git branch -d <workPrefix>/<feature-name>/<task-slug>
 ```
 
 Update progress file: branch status, merge log, task status.
@@ -239,9 +244,10 @@ All must pass. If any fail, investigate and fix before proceeding.
 1. **Emit session.end** — `/track session.end "Feature complete"`
 2. **Update design doc** — status: IMPLEMENTED (if applicable)
 3. **Shut down all agents** — send shutdown requests
-4. **Delete the team** — `TeamDelete`
-5. **Report to user** — summary of what was built, files changed, branch name
-6. **Create PR** — if requested:
+4. **Clean up worktrees** — Remove any remaining worktrees: `git worktree list` and `git worktree remove` for each
+5. **Delete the team** — `TeamDelete`
+6. **Report to user** — summary of what was built, files changed, branch name
+7. **Create PR** — if requested:
    ```bash
    git push -u origin feature/<feature-name>
    gh pr create --title "<feature title>" --body "<summary>"
@@ -271,25 +277,30 @@ See `.claude/agents/` for all specialist definitions.
 ## Quick Reference — Branching Commands
 
 ```bash
-# Feature branch (once)
-git checkout main && git checkout -b feature/<name>
+# Feature branch (once, from configured base)
+git checkout <base-branch> && git checkout -b <featurePrefix>/<name>
 
-# Workbranch (per task)
-git checkout feature/<name> && git checkout -b work/<name>/<task>
+# Worktree per task (from feature branch HEAD)
+git checkout <featurePrefix>/<name>
+git worktree add <worktreeDir>/<name>/<task> -b <workPrefix>/<name>/<task>
 
-# Pre-merge rebase
-git checkout work/<name>/<task> && git rebase feature/<name>
+# Pre-merge rebase (from worktree)
+git -C <worktreeDir>/<name>/<task> rebase <featurePrefix>/<name>
 
 # Merge workbranch
-git checkout feature/<name> && git merge --no-ff work/<name>/<task> -m "Merge ..."
+git checkout <featurePrefix>/<name> && git merge --no-ff <workPrefix>/<name>/<task> -m "Merge ..."
 
 # Cleanup
-git branch -d work/<name>/<task>
+git worktree remove <worktreeDir>/<name>/<task>
+git branch -d <workPrefix>/<name>/<task>
+
+# List worktrees
+git worktree list
 
 # List workbranches
-git branch --list "work/<name>/*"
+git branch --list "<workPrefix>/<name>/*"
 
 # PR
-git push -u origin feature/<name>
+git push -u origin <featurePrefix>/<name>
 gh pr create --title "..." --body "..."
 ```

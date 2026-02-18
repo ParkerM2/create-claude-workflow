@@ -30,8 +30,9 @@ description: "Safe restructuring with mandatory baseline verification, wave exec
 
 1. **Git repo check**: Verify git repo exists and has commits.
 2. **Primary branch detection**: Detect main/master and use consistently.
-3. **Progress directory**: Create the progress directory if it doesn't exist.
-4. **Branch check**: If `refactor/<name>` already exists, warn user.
+3. **Branching config**: Read branching configuration from `<workflow-config>`. If `baseBranch` is `"auto"`, use the detected primary branch.
+4. **Progress directory**: Create the progress directory if it doesn't exist.
+5. **Branch check**: If `refactor/<name>` already exists, warn user.
 
 Read these files:
 
@@ -169,8 +170,8 @@ Do NOT proceed without user approval.
 ## Phase 5: Create Branch & Progress File
 
 ```bash
-# Create refactor branch
-git checkout main
+# Create refactor branch from configured base (read baseBranch from <workflow-config>)
+git checkout <base-branch>
 git checkout -b refactor/<scope-name>
 ```
 

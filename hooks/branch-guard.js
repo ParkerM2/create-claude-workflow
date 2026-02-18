@@ -1,10 +1,22 @@
 #!/usr/bin/env node
 'use strict';
 
-// PreToolUse hook: Block git commit/push on protected branches.
-// Allows: commits on work/*, hotfix/*, refactor/* branches
-// Blocks: commits on main, master, feature/* branches
-// Passes through: all non-git commands
+// PreToolUse hook: Configurable branch guard for git commit/push.
+// Enforcement modes:
+//   "off"   → exit immediately, no checks
+//   "warn"  → write warning to stderr, allow operation (default)
+//   "block" → return { decision: "block" }, preventing the operation
+//
+// Uses branching config from .claude/workflow.json via hooks/config.js.
+// Worktree-aware: detects branch from command path (cd <path> && or git -C <path>).
+
+const {
+  getBranchingConfig,
+  isProtectedBranch,
+  isFeatureBranch,
+  isWorkBranch,
+  getEffectiveBranch
+} = require('./config.js');
 
 let input = '';
 process.stdin.setEncoding('utf8');
@@ -22,29 +34,58 @@ process.stdin.on('end', () => {
       process.exit(0);
     }
 
-    // Check current branch
-    const { execSync } = require('child_process');
-    let branch;
-    try {
-      branch = execSync('git branch --show-current', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-    } catch {
-      // Can't determine branch — allow (might not be in a git repo)
+    const config = getBranchingConfig();
+
+    // enforce: "off" → skip all checks
+    if (config.enforce === 'off') {
       process.exit(0);
     }
 
-    // Allow commits on agent workbranches
-    if (branch.startsWith('work/') || branch.startsWith('hotfix/') || branch.startsWith('refactor/')) {
+    // Detect branch (worktree-aware)
+    const branch = getEffectiveBranch(command);
+    if (!branch) {
+      // Can't determine branch — allow
       process.exit(0);
     }
 
-    // Block commits on protected branches (main, master, feature/*)
-    if (branch === 'main' || branch === 'master' || branch.startsWith('feature/')) {
-      const action = isGitCommit ? 'commit' : 'push';
-      const result = {
-        decision: 'block',
-        reason: `Branch guard: git ${action} blocked on protected branch "${branch}". Agents should only commit on work/* branches.`,
-      };
-      process.stdout.write(JSON.stringify(result));
+    // Allow commits on work branches, hotfix branches, and refactor branches
+    if (isWorkBranch(branch, config) ||
+        branch.startsWith('hotfix/') ||
+        branch.startsWith('refactor/')) {
+      process.exit(0);
+    }
+
+    const action = isGitCommit ? 'commit' : 'push';
+
+    // Check protected branches (main, master, etc.)
+    if (isProtectedBranch(branch, config.protectedBranches)) {
+      const msg = `Branch guard: git ${action} on protected branch "${branch}". ` +
+        `Agents should only commit on ${config.workPrefix}/* branches. ` +
+        `To change, edit .claude/workflow.json branching.enforce or tell Claude to adjust.`;
+
+      if (config.enforce === 'block') {
+        const result = { decision: 'block', reason: msg };
+        process.stdout.write(JSON.stringify(result));
+      } else {
+        // enforce: "warn" (default)
+        process.stderr.write(`⚠ ${msg}\n`);
+      }
+      process.exit(0);
+    }
+
+    // Feature branches: warn only if workPrefix is set (agents should use work branches)
+    if (config.workPrefix && isFeatureBranch(branch, config)) {
+      const msg = `Branch guard: git ${action} on feature branch "${branch}". ` +
+        `Agents should commit on ${config.workPrefix}/* branches instead. ` +
+        `To change, edit .claude/workflow.json branching.enforce or tell Claude to adjust.`;
+
+      if (config.enforce === 'block') {
+        const result = { decision: 'block', reason: msg };
+        process.stdout.write(JSON.stringify(result));
+      } else {
+        // enforce: "warn" (default)
+        process.stderr.write(`⚠ ${msg}\n`);
+      }
     }
 
     process.exit(0);

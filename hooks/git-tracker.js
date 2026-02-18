@@ -36,6 +36,22 @@ function getCurrentBranch() {
 function processGitCommand(command, toolResult) {
   const output = typeof toolResult === 'string' ? toolResult : '';
 
+  // git worktree add <path> [-b <branch>]
+  const worktreeAddMatch = command.match(/git\s+worktree\s+add\s+([\S]+)(?:\s+-b\s+([\w\-\/]+))?/);
+  if (worktreeAddMatch) {
+    const worktreePath = worktreeAddMatch[1];
+    const branch = worktreeAddMatch[2] || null;
+    emitEvent('worktree.created', { path: worktreePath, branch });
+    return;
+  }
+
+  // git worktree remove <path>
+  const worktreeRemoveMatch = command.match(/git\s+worktree\s+remove\s+([\S]+)/);
+  if (worktreeRemoveMatch) {
+    emitEvent('worktree.removed', { path: worktreeRemoveMatch[1] });
+    return;
+  }
+
   // git checkout -b <branch> or git switch -c <branch>
   const checkoutMatch = command.match(/git\s+checkout\s+-b\s+([\w\-\/]+)/);
   const switchMatch = command.match(/git\s+switch\s+-c\s+([\w\-\/]+)/);

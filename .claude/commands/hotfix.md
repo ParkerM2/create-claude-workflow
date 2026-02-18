@@ -28,7 +28,8 @@ description: "Streamlined single-agent urgent fix with automatic QA verification
 
 1. **Git repo check**: Verify git repo exists and has commits.
 2. **Primary branch detection**: Detect main/master and use consistently.
-3. **Progress directory**: Create the progress directory if it doesn't exist.
+3. **Branching config**: Read branching configuration from `<workflow-config>`. If `baseBranch` is `"auto"`, use the detected primary branch.
+4. **Progress directory**: Create the progress directory if it doesn't exist.
 
 Read these files:
 
@@ -72,8 +73,8 @@ If files to change > 3:
 ## Phase 3: Create Branch & Progress File
 
 ```bash
-# Create hotfix branch from main (or current branch)
-git checkout main
+# Create hotfix branch from configured base (read baseBranch from <workflow-config>)
+git checkout <base-branch>
 git checkout -b hotfix/<fix-name>
 ```
 

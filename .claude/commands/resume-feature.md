@@ -32,6 +32,9 @@ git branch --list "feature/*"
 
 # Check for existing teams
 ls ~/.claude/teams/ 2>/dev/null
+
+# Check for existing worktrees
+git worktree list
 ```
 
 For each feature directory with events.jsonl, read the events to determine state.
@@ -125,6 +128,9 @@ git status
 # List active workbranches for this feature
 git branch --list "work/<feature-name>/*"
 
+# List worktrees for this feature
+git worktree list | grep "<worktreeDir>/<feature-name>"
+
 # Check workbranch commit status
 git log --oneline -3 work/<feature-name>/<task-slug>  # for each workbranch
 ```
@@ -144,14 +150,16 @@ Using the progress file's Branch Status table and Task Progress section, determi
 
 | Scenario | Resume Action |
 |----------|--------------|
-| Task has workbranch + commits + QA PASS | Merge the workbranch |
-| Task has workbranch + commits + QA FAIL | Re-spawn agent to fix issues |
-| Task has workbranch + commits + no QA | Spawn QA reviewer |
-| Task has workbranch + no commits | Re-spawn the coding agent |
-| Task has no workbranch + not merged | Create workbranch + spawn agent |
-| Task is COMPLETE + merged | Skip, move to next task |
+| Task has workbranch + commits + QA PASS | Merge the workbranch, remove worktree if exists |
+| Task has workbranch + commits + QA FAIL | Re-spawn agent to fix issues (in existing worktree) |
+| Task has workbranch + commits + no QA | Spawn QA reviewer (in existing worktree) |
+| Task has workbranch + no commits | Re-spawn the coding agent (in existing worktree) |
+| Task has no workbranch + not merged | Create workbranch + worktree + spawn agent |
+| Task is COMPLETE + merged | Skip; remove worktree if lingering |
 | All tasks COMPLETE + Guardian not run | Spawn Guardian |
 | All tasks COMPLETE + Guardian PASS | Go to completion (Phase 9) |
+| Worktree exists but branch merged in JSONL | Orphaned worktree — `git worktree remove` |
+| Worktree missing but task in-progress | Recreate: `git worktree add <worktreeDir>/<feature>/<task>` |
 
 ### JSONL-Based Recovery (see RESUME-PROTOCOL.md)
 
@@ -160,6 +168,21 @@ Using the progress file's Branch Status table and Task Progress section, determi
 3. Check for `error.encountered`, `blocker.reported`, or `task.failed` events after the checkpoint
 4. If no issues: auto-resume from checkpoint
 5. If issues found: present to user with options
+
+### Worktree Reconciliation
+
+In addition to branch reconciliation, check worktree state:
+
+```bash
+git worktree list
+```
+
+| JSONL State | Worktree State | Action |
+|---|---|---|
+| Task merged | Worktree exists | `git worktree remove <path>` |
+| Task in-progress | Worktree exists | Resume work in worktree |
+| Task in-progress | Worktree missing | Recreate: `git worktree add <worktreeDir>/<feature>/<task>` |
+| No record | Worktree exists | Orphaned — warn user, do not auto-delete |
 
 ---
 

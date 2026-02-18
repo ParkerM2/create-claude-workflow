@@ -69,9 +69,13 @@ Derived from the current git branch name using these patterns:
 
 | Branch Pattern | Extracted Feature |
 |---------------|-------------------|
-| `work/<feature>/<task>` | `<feature>` |
-| `feature/<feature>` | `<feature>` |
-| `feature/<feature>/<subtopic>` | `<feature>` |
+| `<workPrefix>/<feature>/<task>` | `<feature>` |
+| `<featurePrefix>/<feature>` | `<feature>` |
+| `<featurePrefix>/<feature>/<subtopic>` | `<feature>` |
+| `hotfix/<name>` | `<name>` |
+| `refactor/<name>` | `<name>` |
+
+Prefixes are configurable in `.claude/workflow.json`. Defaults: `featurePrefix=feature`, `workPrefix=work`.
 
 If the branch does not match any pattern (e.g., `main`, `develop`), set to `null`.
 
@@ -502,6 +506,46 @@ Emitted when a branch is rebased onto another.
 
 ---
 
+#### `worktree.created`
+
+Emitted when a git worktree is created for an agent task.
+
+```jsonc
+{
+  "type": "worktree.created",
+  "data": {
+    "path": ".worktrees/auth-system/api-service",
+    "branch": "work/auth-system/api-service"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | string | Relative path to the worktree directory. |
+| `branch` | string or null | Branch checked out in the worktree (null if detached HEAD). |
+
+---
+
+#### `worktree.removed`
+
+Emitted when a git worktree is removed after task completion or during cleanup.
+
+```jsonc
+{
+  "type": "worktree.removed",
+  "data": {
+    "path": ".worktrees/auth-system/api-service"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | string | Relative path to the removed worktree directory. |
+
+---
+
 ### Quality Events
 
 These track QA review rounds and automated checks.
@@ -756,6 +800,8 @@ Emitted periodically to track context window consumption per agent.
 | Work | `branch.merged` | `name`, `target`, `conflicts` |
 | Work | `branch.pulled` | `branch`, `behind`, `ahead` |
 | Work | `branch.rebased` | `branch`, `onto`, `conflicts` |
+| Work | `worktree.created` | `path`, `branch` |
+| Work | `worktree.removed` | `path` |
 | Quality | `qa.started` | `taskId`, `round`, `reviewer` |
 | Quality | `qa.passed` | `taskId`, `round`, `summary` |
 | Quality | `qa.failed` | `taskId`, `round`, `issues` |
