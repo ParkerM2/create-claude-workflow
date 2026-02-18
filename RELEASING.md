@@ -64,37 +64,33 @@ gh release create vX.Y.Z --title "vX.Y.Z" --notes "See CHANGELOG.md for details"
 
 ### 6. Update the Marketplace Repo
 
-Clone or pull the marketplace repo, then update **both version fields** in `marketplace.json`:
+Use `gh api` to update the marketplace version directly — no cloning needed.
 
 ```bash
-git clone https://github.com/ParkerM2/claude-workflow-marketplace.git
-cd claude-workflow-marketplace
-```
+VERSION="X.Y.Z"
+REPO="ParkerM2/claude-workflow-marketplace"
+FILE_PATH=".claude-plugin/marketplace.json"
 
-Edit `.claude-plugin/marketplace.json`:
+# Get current file content and SHA
+CURRENT=$(gh api "repos/${REPO}/contents/${FILE_PATH}")
+SHA=$(echo "$CURRENT" | jq -r '.sha')
+CONTENT=$(echo "$CURRENT" | jq -r '.content' | base64 -d)
 
-```json
-{
-  "metadata": {
-    "version": "X.Y.Z"        // ← bump this
-  },
-  "plugins": [
-    {
-      "version": "X.Y.Z",     // ← bump this to match plugin.json
-    }
-  ]
-}
+# Update both version fields
+UPDATED=$(echo "$CONTENT" | jq \
+  --arg v "$VERSION" \
+  '.metadata.version = $v | .plugins[0].version = $v')
+
+# Push the update
+ENCODED=$(echo "$UPDATED" | base64 -w0)
+gh api "repos/${REPO}/contents/${FILE_PATH}" \
+  --method PUT \
+  -f message="chore: Bump claude-workflow to ${VERSION}" \
+  -f content="${ENCODED}" \
+  -f sha="${SHA}"
 ```
 
 **Both `metadata.version` and `plugins[0].version` must match the plugin repo's `plugin.json` version.**
-
-### 7. Commit and Push the Marketplace Repo
-
-```bash
-git add .claude-plugin/marketplace.json
-git commit -m "chore: Bump claude-workflow to X.Y.Z"
-git push origin master
-```
 
 ---
 
@@ -148,8 +144,8 @@ Release claude-workflow version X.Y.Z.
 3. Add a CHANGELOG.md entry for X.Y.Z with the changes from this branch
 4. Commit and push to master on create-claude-workflow
 5. Tag vX.Y.Z and create a GitHub release
-6. Clone claude-workflow-marketplace, bump both version fields
-   in .claude-plugin/marketplace.json to X.Y.Z, commit, push
+6. Use `gh api` to bump both version fields in
+   .claude-plugin/marketplace.json to X.Y.Z on claude-workflow-marketplace
 ```
 
 ---
