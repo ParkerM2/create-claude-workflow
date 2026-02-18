@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.1.0] — 2026-02-18
+
+### Added
+- **Git worktree agent isolation**: each agent task gets its own worktree directory, enabling true parallel execution within waves
+- New `hooks/config.js`: shared config reader with worktree-aware repo root resolution, branch pattern matchers, and effective branch detection
+- `/workflow-setup` branching questions (Q4–Q8): branching strategy, base branch, agent isolation, enforcement level, protected branches
+- `worktree.created` and `worktree.removed` event types in JSONL progress tracker
+- Worktree reconciliation in resume protocol for crash recovery
+- Worktree column in progress file task table
+- "Agent Isolation with Worktrees" and "Changing Branch Rules at Runtime" sections in using-workflow skill
+
+### Changed
+- **Branch enforcement is now `warn` by default** (was `block`) — branch rules are guidelines, not permanent blocks
+- `hooks/branch-guard.js`: configurable `enforce` modes (`warn`/`block`/`off`), worktree-aware branch detection, configurable protected branches
+- `hooks/tracker.js`: `getFeatureFromBranch()` uses configurable prefixes, `getProgressDir()` resolves from repo root (works in worktrees)
+- `hooks/git-tracker.js`: detects `git worktree add/remove` commands and emits tracking events
+- `hooks/session-start.js`: injects branching + worktree configuration into `<workflow-config>` context
+- `.claude/workflow.json`: added `branching` section with `baseBranch`, `featurePrefix`, `workPrefix`, `enforce`, `protectedBranches`, `useWorktrees`, `worktreeDir`
+- `agents/team-leader.md`: rewritten branching model and merge protocol for worktrees with configurable prefixes
+- `commands/implement-feature.md`: worktree creation/cleanup in Phases 4/6/9, updated Quick Reference
+- `commands/hotfix.md`, `commands/refactor.md`: configurable base branch
+- `commands/resume-feature.md`: worktree scanning and reconciliation
+- All `prompts/implementing-features/` files updated for worktree model and configurable prefixes
+- Version bump: 1.0.0 → 1.1.0
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [2.0.0] — 2026-02-14
 
 ### Changed
