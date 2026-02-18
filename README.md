@@ -4,28 +4,41 @@ Multi-agent workflow orchestration for Claude Code -- branch-per-task developmen
 
 ## Installation
 
-### Via Marketplace
+### Via Marketplace (Recommended)
 
-> **Note**: This plugin has been submitted to the official Claude Code marketplace and is pending review. In the meantime, use the manual installation method below.
-
-<!--
 ```bash
-# Add the marketplace
+# 1. Add the marketplace
 /plugin marketplace add ParkerM2/claude-workflow-marketplace
 
-# Install the plugin
-/plugin install claude-workflow@claude-workflow-marketplace
+# 2. Install the plugin
+/plugin install claude-workflow@ParkerM2-claude-workflow-marketplace
 ```
--->
 
-### Manual (Current)
+Or from the terminal (outside a Claude Code session):
+
+```bash
+claude plugin marketplace add ParkerM2/claude-workflow-marketplace
+claude plugin install claude-workflow@ParkerM2-claude-workflow-marketplace
+```
+
+### Manual (Alternative)
 
 ```bash
 # Clone the repository
 git clone https://github.com/ParkerM2/create-claude-workflow.git
 
-# Add as a local plugin
+# Add as a local plugin (from within a Claude Code session)
 /plugin add ./create-claude-workflow
+```
+
+### Updating
+
+```bash
+# Via marketplace (auto-updates on session start if enabled)
+/plugin update claude-workflow@ParkerM2-claude-workflow-marketplace
+
+# Or refresh the whole marketplace
+/plugin marketplace update ParkerM2-claude-workflow-marketplace
 ```
 
 ## Quick Start
@@ -72,7 +85,16 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
 {
   "projectRulesFile": "CLAUDE.md",
   "architectureFile": "docs/ARCHITECTURE.md",
-  "progressDir": ".claude/progress"
+  "progressDir": ".claude/progress",
+  "branching": {
+    "baseBranch": "auto",
+    "featurePrefix": "feature",
+    "workPrefix": "work",
+    "enforce": "warn",
+    "protectedBranches": ["main", "master"],
+    "useWorktrees": true,
+    "worktreeDir": ".worktrees"
+  }
 }
 ```
 
@@ -81,6 +103,13 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
 | `projectRulesFile` | `CLAUDE.md` | File containing coding standards and project conventions |
 | `architectureFile` | `docs/ARCHITECTURE.md` | File describing project structure and design decisions |
 | `progressDir` | `.claude/progress` | Directory for JSONL event logs and rendered progress files |
+| `branching.baseBranch` | `auto` | Base branch for feature branches (`auto` detects `main` or `master`) |
+| `branching.featurePrefix` | `feature` | Prefix for feature branches (e.g., `feature/my-feature`) |
+| `branching.workPrefix` | `work` | Prefix for task branches (e.g., `work/my-feature/task-1`) |
+| `branching.enforce` | `warn` | Branch protection mode: `warn`, `block`, or `off` |
+| `branching.protectedBranches` | `["main", "master"]` | Branches protected from direct commits |
+| `branching.useWorktrees` | `true` | Use git worktrees for agent isolation |
+| `branching.worktreeDir` | `.worktrees` | Directory for worktree checkouts |
 
 ## Workflow Modes
 
@@ -100,34 +129,38 @@ Override per-invocation: `/implement-feature "Add auth" -- mode: fast`
 
 ## How It Works
 
-Every feature is developed on isolated branches with per-task QA:
+Every feature is developed on isolated branches with per-task QA. Agents work in git worktrees for true parallel isolation:
 
 ```
-main --> feature/name --> work/name/task-1
-                      --> work/name/task-2
-                      --> work/name/task-3
+<base-branch>
+  └── feature/<name>                          ← team-leader creates this
+       ├── .worktrees/<name>/task-1/          ← agent 1 worktree (isolated)
+       ├── .worktrees/<name>/task-2/          ← agent 2 worktree (parallel)
+       └── .worktrees/<name>/task-3/          ← agent 3 worktree (parallel)
 ```
 
 1. **Plan** -- Team Leader reads the playbook, decomposes the feature into tasks with wave ordering
-2. **Branch** -- Creates `feature/name` from `main`, then `work/` branches per task
-3. **Execute** -- Agents work in waves; each agent gets its own `work/` branch with scoped files
-4. **QA** -- QA Reviewer runs on each `work/` branch. FAIL = agent fixes (up to 3 rounds). PASS = docs updated.
-5. **Merge** -- Work branches rebase onto `feature/` and merge `--no-ff`, then delete
+2. **Branch** -- Creates `feature/<name>` from the configured base branch
+3. **Execute** -- Each agent gets an isolated git worktree; agents in the same wave work truly in parallel
+4. **QA** -- QA Reviewer runs in each agent's worktree. FAIL = agent fixes (up to 3 rounds). PASS = docs updated.
+5. **Merge** -- Work branches rebase onto `feature/` and merge `--no-ff`, worktrees are cleaned up
 6. **Guard** -- Codebase Guardian runs final integrity check on the merged `feature/` branch
-7. **PR** -- Feature branch is ready for pull request to `main`
+7. **PR** -- Feature branch is ready for pull request
+
+Branch prefixes, base branch, enforcement mode, and worktree usage are all configurable via `.claude/workflow.json`.
 
 ## Enforcement Hooks
 
-Four hooks run automatically to protect against common mistakes:
+Six hooks run automatically to protect against common mistakes:
 
 | Hook | Trigger | Protection |
 |------|---------|------------|
-| `session-start` | Session start/resume | Loads workflow context and displays active feature status |
-| `branch-guard` | Before Bash commands | Prevents git operations on wrong branches |
+| `session-start` | Session start/resume | Loads workflow context, branching config, and active feature status |
+| `branch-guard` | Before Bash commands | Configurable branch protection (`warn`/`block`/`off`), worktree-aware |
 | `destructive-guard` | Before Bash commands | Blocks destructive operations (`rm -rf`, `git reset --hard`, etc.) |
 | `config-guard` | Before Edit/Write | Prevents modification of workflow config files |
 | `tracker` | After Edit/Write | Emits file modification events to JSONL progress log |
-| `git-tracker` | After Bash | Detects git operations and emits branch events to JSONL progress log |
+| `git-tracker` | After Bash | Detects git and worktree operations, emits events to JSONL progress log |
 
 ## Project Structure
 
@@ -170,6 +203,7 @@ claude-workflow/
 │   └── implementing-features/   # Playbook, QA templates, workflow modes
 ├── hooks/                       # Enforcement hooks
 │   ├── hooks.json
+│   ├── config.js               # Shared config reader (repo root, branching)
 │   ├── session-start.js
 │   ├── branch-guard.js
 │   ├── destructive-guard.js
