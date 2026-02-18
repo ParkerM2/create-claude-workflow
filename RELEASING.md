@@ -23,15 +23,15 @@ Ensure all feature work is merged to `master` on `create-claude-workflow`.
 
 Update the version in **both** files — they must match:
 
-```bash
-# .claude-plugin/plugin.json
+**`.claude-plugin/plugin.json`**:
+```json
 {
-  "version": "X.Y.Z"   # ← bump this
+  "version": "X.Y.Z"
 }
 ```
 
-```bash
-# CHANGELOG.md — add a new section at the top
+**`CHANGELOG.md`** — add a new section at the top:
+```markdown
 ## [X.Y.Z] — YYYY-MM-DD
 ### Added / Changed / Fixed
 - ...
@@ -64,37 +64,35 @@ gh release create vX.Y.Z --title "vX.Y.Z" --notes "See CHANGELOG.md for details"
 
 ### 6. Update the Marketplace Repo
 
-Clone or pull the marketplace repo, then update **both version fields** in `marketplace.json`:
+Use `gh api` to update the marketplace version directly — no cloning needed.
+
+**Fetch the current file, update both version fields, push:**
 
 ```bash
-git clone https://github.com/ParkerM2/claude-workflow-marketplace.git
-cd claude-workflow-marketplace
-```
+VERSION="X.Y.Z"
+REPO="ParkerM2/claude-workflow-marketplace"
+FILE_PATH=".claude-plugin/marketplace.json"
 
-Edit `.claude-plugin/marketplace.json`:
+# Get current file content and SHA
+CURRENT=$(gh api "repos/${REPO}/contents/${FILE_PATH}")
+SHA=$(echo "$CURRENT" | jq -r '.sha')
+CONTENT=$(echo "$CURRENT" | jq -r '.content' | base64 -d)
 
-```json
-{
-  "metadata": {
-    "version": "X.Y.Z"        // ← bump this
-  },
-  "plugins": [
-    {
-      "version": "X.Y.Z",     // ← bump this to match plugin.json
-    }
-  ]
-}
+# Update both version fields
+UPDATED=$(echo "$CONTENT" | jq \
+  --arg v "$VERSION" \
+  '.metadata.version = $v | .plugins[0].version = $v')
+
+# Push the update
+ENCODED=$(echo "$UPDATED" | base64 -w0)
+gh api "repos/${REPO}/contents/${FILE_PATH}" \
+  --method PUT \
+  -f message="chore: Bump claude-workflow to ${VERSION}" \
+  -f content="${ENCODED}" \
+  -f sha="${SHA}"
 ```
 
 **Both `metadata.version` and `plugins[0].version` must match the plugin repo's `plugin.json` version.**
-
-### 7. Commit and Push the Marketplace Repo
-
-```bash
-git add .claude-plugin/marketplace.json
-git commit -m "chore: Bump claude-workflow to X.Y.Z"
-git push origin master
-```
 
 ---
 
@@ -109,7 +107,7 @@ Once the marketplace repo is pushed:
   ```
 - **Fresh install**: New users installing for the first time will get the latest version automatically.
 
-The update flow is:
+The update flow:
 
 ```
 Marketplace repo pushed
@@ -145,11 +143,11 @@ Release claude-workflow version X.Y.Z.
 
 1. Read RELEASING.md for the full process
 2. Bump version in .claude-plugin/plugin.json to X.Y.Z
-3. Add a CHANGELOG.md entry for X.Y.Z with the changes from this branch
+3. Add a CHANGELOG.md entry for X.Y.Z with the changes since last release
 4. Commit and push to master on create-claude-workflow
 5. Tag vX.Y.Z and create a GitHub release
-6. Clone claude-workflow-marketplace, bump both version fields
-   in .claude-plugin/marketplace.json to X.Y.Z, commit, push
+6. Use gh api to bump both version fields in
+   ParkerM2/claude-workflow-marketplace marketplace.json to X.Y.Z
 ```
 
 ---
