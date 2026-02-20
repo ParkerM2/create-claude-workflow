@@ -152,19 +152,38 @@ Before spawning each agent, estimate context usage (see `CONTEXT-BUDGET-GUIDE.md
 - If over threshold (~18K tokens): consider splitting the task
 - Record the estimate in the progress file
 
-### Step 6: Spawn
+### Step 6: Pre-Digest Rules for Each Task
+Before spawning, extract 5-10 specific rules from `the project rules file` and `the architecture file` that apply to each task. Include these in the spawn prompt's "Rules That Apply" section. This replaces redundant file reads by each agent (~1,500-4,500 tokens saved per agent).
+
+### Step 7: Spawn
 For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-SPAWN-TEMPLATES.md`. This includes:
 - The 4-phase mandatory workflow (Load Rules → Write Plan → Execute → Self-Review)
 - The Error Recovery Protocol
 - All task context (description, acceptance criteria, file scope, QA checklist)
+- Pre-digested rules (the 5-10 rules you extracted in Step 6)
 - Context budget note (estimated tokens, guidance if running low)
+
+**Model routing**: Coding agents use `model: "sonnet"`, QA agents use `model: "haiku"`, Guardian uses `model: "sonnet"`. The Team Leader stays on the user's chosen model (typically Opus) for complex reasoning.
+
+**Background execution**: Spawn coding agents with `run_in_background: true` to continue coordinating while they work.
 
 NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 
-### Step 7: Monitor
+### Step 8: Monitor
 - Track progress via the progress file and agent messages
 - Resolve blockers when agents report issues
 - If an agent fails after max QA rounds (per workflow mode), intervene or escalate to the user
+
+### Agent Health Monitoring
+
+- If a teammate has been idle for >5 minutes with a task `in_progress`:
+  1. Send a health-check message: "Status update on Task #N?"
+  2. Wait 2 minutes for response
+  3. If no response: mark the task as `pending` (unclaim it) so another teammate can pick it up
+  4. Note the timeout in the progress file
+- If a teammate reports the same error 3+ times:
+  1. Reassign the task to a different teammate
+  2. Include the error context in the new assignment
 
 </task-decomposition>
 

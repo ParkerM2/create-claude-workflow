@@ -15,17 +15,14 @@ Use this for any specialist coding agent.
 Task tool parameters:
   description: "<3-5 word summary>"
   subagent_type: general-purpose
+  model: "sonnet"
   team_name: "<team-name>"
   name: "<agent-role>"
   mode: bypassPermissions
+  run_in_background: true
 </spawn-parameters>
 
 Prompt:
-
-You are the **<Agent Role>** on team "<team-name>".
-Your task is **Task #<N>: <task name>**.
-Your workbranch is **work/<feature-name>/<task-slug>**.
-Your worktree path is **<worktreeDir>/<feature-name>/<task-slug>**.
 
 ═══════════════════════════════════════════════════════════════
   MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING
@@ -40,15 +37,14 @@ Your worktree path is **<worktreeDir>/<feature-name>/<task-slug>**.
 
 ## PHASE 0: LOAD RULES [BLOCKING — do NOT write code yet]
 
-Read these files completely. Do not skim. Do not skip. Do not summarize.
-You will need specific rules from each file in Phase 1.
+Read these files. Do not skim. Do not skip.
 
-1. Read `the project rules file` — project rules and conventions
-2. Read `the architecture file` — system architecture
-3. Read your agent definition at `agents/<your-agent>.md`
-4. Read `prompts/implementing-features/README.md` — the implementation playbook
+1. Read `the project rules file` — project rules and conventions (if it exists)
+2. Read your agent definition at `agents/<your-agent>.md`
 
-> **Defensive check**: Before reading each file, verify it exists. If `the project rules file` or `the architecture file` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+> **Defensive check**: If `the project rules file` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
+>
+> **Note**: Architecture rules and playbook details that apply to your task are pre-digested in the "Rules That Apply" section below. You do NOT need to read the architecture file or playbook separately.
 
 Then verify your workbranch:
 ```bash
@@ -57,6 +53,11 @@ cd <worktreeDir>/<feature-name>/<task-slug> 2>/dev/null && git log --oneline -3 
 ```
 
 </phase>
+
+You are the **<Agent Role>** on team "<team-name>".
+Your task is **Task #<N>: <task name>**.
+Your workbranch is **work/<feature-name>/<task-slug>**.
+Your worktree path is **<worktreeDir>/<feature-name>/<task-slug>**.
 
 <phase name="execution-plan" blocking="true">
 
@@ -240,6 +241,16 @@ When you encounter ANY error:
 ## Files to Read for Context
 - <path> — <why>
 
+## Rules That Apply (Pre-Digested by Team Leader)
+
+> These rules were extracted from the project rules file, architecture file, and playbook
+> specifically for this task. You do not need to read those files separately.
+
+- <Rule 1: quoted rule text from project rules, with section reference>
+- <Rule 2: quoted architecture constraint>
+- <Rule 3: specific convention that applies to this task>
+- <Rule 4: etc.>
+
 ## Dependencies
 - Blocked by: <Task #X or "none">
 - Blocks: <Task #Y or "none">
@@ -275,6 +286,7 @@ The coding agent spawns this AFTER completing its work. It runs on the SAME work
 Task tool parameters:
   description: "QA review Task #<N>"
   subagent_type: general-purpose
+  model: "haiku"
   team_name: "<team-name>"
   name: "qa-task-<N>"
   mode: bypassPermissions
@@ -488,6 +500,7 @@ The Team Leader spawns this AFTER all workbranches are merged to the feature bra
 Task tool parameters:
   description: "Guardian check for <feature>"
   subagent_type: general-purpose
+  model: "sonnet"
   team_name: "<team-name>"
   name: "guardian"
   mode: bypassPermissions

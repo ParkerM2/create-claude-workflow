@@ -158,14 +158,21 @@ Create one worktree per task in this wave.
 
 Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 
-- Full initialization protocol (project rules, architecture, agent definition, playbook)
 - Task description + acceptance criteria
 - File scope (what to create/modify)
+- Pre-digested rules (5-10 rules from project rules + architecture that apply to this task)
 - Filled QA checklist (use `QA-CHECKLIST-AUTO-FILL-RULES.md` to pre-select sections by role)
 - Context budget note (see `CONTEXT-BUDGET-GUIDE.md` — estimate before spawning, split if over threshold)
 - Instructions to commit on workbranch and spawn QA when done
 - Worktree path: `<worktreeDir>/<feature-name>/<task-slug>` — agent must work from this directory
 - Instructions: "Your working directory is `<worktreeDir>/<feature-name>/<task-slug>`. Run all commands from this directory."
+
+**Model routing** (see `CONTEXT-BUDGET-GUIDE.md` for cost details):
+- Coding agents: `model: "sonnet"` — focused file-scope work
+- QA agents: `model: "haiku"` — read-only review work
+- Guardian: `model: "sonnet"` — cross-module analysis
+
+**Background execution**: Spawn coding agents with `run_in_background: true`. The Team Leader continues coordinating (setting up next worktrees, updating progress) while agents work. Check results via agent messages or `TaskOutput`.
 
 ### 6c. Monitor & Collect Results
 
