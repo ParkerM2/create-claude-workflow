@@ -2,7 +2,7 @@
 description: "Automated test generation — identifies targets, spawns test engineer, QA verifies coverage"
 ---
 
-# /generate-tests — Focused Test Generation Workflow
+# /new-tests — Focused Test Generation Workflow
 
 > Invoke this skill to generate tests for specific files or coverage gaps. Spawns a test-engineer agent, then QA verifies test quality and coverage.
 

@@ -2,19 +2,19 @@
 description: "Unified creation entry point — create a feature, plan, task, phase, agent, or idea from a single command"
 ---
 
-# /claude-new — Unified Creation Entry Point
+# /new — Unified Creation Entry Point
 
 > Invoke this skill to create any new workflow artifact: feature, phase, task, plan, agent, or idea. Parses your intent, loads context, and routes to the appropriate creation sub-flow.
 >
-> **Usage**: `/claude-new <type> <description>` or `/claude-new <bare description>` (type inferred)
+> **Usage**: `/new <type> <description>` or `/new <bare description>` (type inferred)
 >
 > **Examples**:
-> - `/claude-new feature user authentication`
-> - `/claude-new task add password validation to auth service`
-> - `/claude-new idea real-time collaboration`
-> - `/claude-new agent database-engineer`
-> - `/claude-new plan notification system redesign`
-> - `/claude-new phase add caching layer to user-settings`
+> - `/new feature user authentication`
+> - `/new task add password validation to auth service`
+> - `/new idea real-time collaboration`
+> - `/new agent database-engineer`
+> - `/new plan notification system redesign`
+> - `/new phase add caching layer to user-settings`
 
 ---
 
@@ -26,10 +26,10 @@ description: "Unified creation entry point — create a feature, plan, task, pha
 - You're unsure which specific command to invoke
 
 ### Don't Use When
-- Resuming existing work → use `/resume-feature`
+- Resuming existing work → use `/resume`
 - Checking status → use `/status`
 - Reviewing a PR → use `/review-pr`
-- Running a full implementation → use `/implement-feature` directly
+- Running a full implementation → use `/new-feature` directly
 
 ---
 
@@ -111,7 +111,7 @@ Before executing any sub-flow, load shared context:
 
 ## Phase 3: Create Feature (sub-flow)
 
-> Triggered by: `/claude-new feature <name>` or inferred feature type
+> Triggered by: `/new feature <name>` or inferred feature type
 
 ### Step 1: Validate Feature Name
 - Convert description to kebab-case for branch name
@@ -155,28 +155,28 @@ created: <YYYY-MM-DD>
 
 ## Technical Approach
 
-<to be determined — run `/create-feature-plan` for deep analysis>
+<to be determined — run `/new-plan` for deep analysis>
 
 ## Task Decomposition
 
-<to be determined — run `/implement-feature` to decompose and execute>
+<to be determined — run `/new-feature` to decompose and execute>
 ```
 
 ### Step 5: Next Steps
 Report what was created and suggest:
-- Run `/create-feature-plan "<feature-name>"` for deep technical analysis
-- Run `/implement-feature "<feature-name>"` to decompose and execute immediately
+- Run `/new-plan "<feature-name>"` for deep technical analysis
+- Run `/new-feature "<feature-name>"` to decompose and execute immediately
 
 ---
 
 ## Phase 4: Add Phase (sub-flow)
 
-> Triggered by: `/claude-new phase <description>` or inferred phase type
+> Triggered by: `/new phase <description>` or inferred phase type
 
 ### Step 1: Find Active Feature
 - Scan the progress directory for a feature with status `IN_PROGRESS`
 - If multiple active features: ask user which one
-- If no active feature: error — suggest `/claude-new feature` first
+- If no active feature: error — suggest `/new feature` first
 
 ### Step 2: Read Progress File
 - Read the progress file for the active feature
@@ -190,7 +190,7 @@ Append a new wave/task group to the progress file:
 
 ## Wave <N+1>: <Phase Description>
 
-> Added via /claude-new phase
+> Added via /new phase
 
 | Task | Agent Role | Files | Status | Dependencies |
 |------|-----------|-------|--------|-------------|
@@ -206,14 +206,14 @@ Add the new wave to the dependency graph section of the progress file.
 
 ### Step 5: Next Steps
 Suggest:
-- Decompose the phase into specific tasks with `/claude-new task`
-- Or let `/implement-feature` handle decomposition automatically
+- Decompose the phase into specific tasks with `/new task`
+- Or let `/new-feature` handle decomposition automatically
 
 ---
 
 ## Phase 5: Add Task (sub-flow)
 
-> Triggered by: `/claude-new task <description>` or inferred task type
+> Triggered by: `/new task <description>` or inferred task type
 
 ### Step 1: Find Active Feature
 - Same as Phase 4 Step 1
@@ -277,7 +277,7 @@ Confirm the task was added and suggest reviewing the wave plan.
 
 ## Phase 6: Create Plan (sub-flow)
 
-> Triggered by: `/claude-new plan <description>` or inferred plan type
+> Triggered by: `/new plan <description>` or inferred plan type
 
 ### Step 1: Create Design Doc
 Create a design doc in the progress directory:
@@ -308,13 +308,13 @@ created: <YYYY-MM-DD>
 ```
 
 ### Step 2: Next Steps
-Suggest running `/create-feature-plan "<name>"` for deep technical analysis with codebase scanning.
+Suggest running `/new-plan "<name>"` for deep technical analysis with codebase scanning.
 
 ---
 
 ## Phase 7: Scaffold Agent (sub-flow)
 
-> Triggered by: `/claude-new agent <role>` or inferred agent type
+> Triggered by: `/new agent <role>` or inferred agent type
 
 ### Step 1: Pre-fill Role Info
 From the description, extract:
@@ -328,11 +328,11 @@ Read existing agent definitions in `.claude/agents/`:
 - Check if file scopes would overlap with existing agents
 - If conflicts found, warn the user
 
-### Step 3: Delegate to /scaffold-agent
-Pass the pre-filled information to `/scaffold-agent`:
+### Step 3: Delegate to /new agent
+Pass the pre-filled information to the `/new agent` sub-flow:
 
 ```
-Invoke /scaffold-agent with pre-filled context:
+Invoke /new agent with pre-filled context:
 - Role: <role-name>
 - Suggested scope: <inferred file scope>
 - Existing agents: <list of current agents>
@@ -343,7 +343,7 @@ Invoke /scaffold-agent with pre-filled context:
 
 ## Phase 8: Log Idea (sub-flow)
 
-> Triggered by: `/claude-new idea <description>` or inferred idea type
+> Triggered by: `/new idea <description>` or inferred idea type
 
 ### Step 1: Create Backlog if First Use
 If the progress directory does not contain `ideas-backlog.md`, create it using the template from `prompts/implementing-features/IDEAS-BACKLOG-TEMPLATE.md`.
@@ -396,12 +396,12 @@ After any sub-flow completes, provide a type-conditional summary:
 
 | Type Created | Follow-Up Suggestions |
 |-------------|----------------------|
-| Feature | `/create-feature-plan` for analysis, `/implement-feature` to execute |
-| Phase | `/claude-new task` to decompose, `/implement-feature` to execute |
+| Feature | `/new-plan` for analysis, `/new-feature` to execute |
+| Phase | `/new task` to decompose, `/new-feature` to execute |
 | Task | `/status` to see updated plan, wait for Team Leader to assign |
-| Plan | `/create-feature-plan` for deep analysis |
-| Agent | `/audit-agents` to verify scopes, `/discover-agents` to check coverage |
-| Idea | `/claude-new idea` to log more, review backlog periodically |
+| Plan | `/new-plan` for deep analysis |
+| Agent | `/settings` to verify scopes, `/new` (discover mode) to check coverage |
+| Idea | `/new idea` to log more, review backlog periodically |
 
 Always show:
 1. What was created (files, branches, entries)

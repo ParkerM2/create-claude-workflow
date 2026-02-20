@@ -2,15 +2,15 @@
 description: "Deep technical planning — analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering"
 ---
 
-# /create-feature-plan — Deep Technical Planning for /implement-feature
+# /new-plan — Deep Technical Planning for /new-feature
 
-> Invoke this skill to produce an in-depth technical plan for a feature before handing it off to `/implement-feature`. Uses brainstorming, codebase analysis, and architectural thinking to create a design document that the Team Leader can execute directly — no interpretation needed.
+> Invoke this skill to produce an in-depth technical plan for a feature before handing it off to `/new-feature`. Uses brainstorming, codebase analysis, and architectural thinking to create a design document that the Team Leader can execute directly — no interpretation needed.
 
 ---
 
 ## When to Use
 
-- Before running `/implement-feature` on a complex or ambiguous feature
+- Before running `/new-feature` on a complex or ambiguous feature
 - When you have a feature idea but need to refine requirements and design
 - When you want the Team Leader to receive a ready-made decomposition plan
 - When the feature touches unfamiliar parts of the codebase and needs deep analysis first
@@ -18,9 +18,9 @@ description: "Deep technical planning — analyzes codebase, designs architectur
 
 ## When NOT to Use
 
-- The feature is small and well-defined (just run `/implement-feature` directly)
+- The feature is small and well-defined (just run `/new-feature` directly)
 - You already have a complete design document
-- The task is a bug fix (use `/hotfix`) or restructuring (use `/refactor`)
+- The task is a bug fix (use `/new-hotfix`) or restructuring (use `/new-refactor`)
 
 ---
 
@@ -365,7 +365,7 @@ For each identified risk:
 
 ## Phase 7: Generate Design Document
 
-Compile everything into a single design document saved to disk. This is the artifact that `/implement-feature` will consume.
+Compile everything into a single design document saved to disk. This is the artifact that `/new-feature` will consume.
 
 ### Output Location
 
@@ -376,7 +376,7 @@ Save to the progress directory as `<feature-name>-design.md`.
 ```markdown
 # Feature Design: <Feature Name>
 
-**Author**: /create-feature-plan
+**Author**: /new-plan
 **Created**: <YYYY-MM-DD>
 **Status**: READY FOR IMPLEMENTATION
 **Workflow Mode**: <strict|standard|fast>
@@ -496,21 +496,21 @@ After saving the design document, present a summary to the user:
 
   To implement this feature, run:
 
-    /implement-feature "<feature name>"
+    /new-feature "<feature name>"
 
   The Team Leader will read the design document and
   use it as the decomposition plan — skipping the
-  analysis work because /create-feature-plan already did it.
+  analysis work because /new-plan already did it.
 ═══════════════════════════════════════════════════════════
 ```
 
-### Updating /implement-feature to Use the Design Doc
+### Updating /new-feature to Use the Design Doc
 
-The design document is automatically discovered by `/implement-feature` Phase 1:
+The design document is automatically discovered by `/new-feature` Phase 1:
 
 > "If a design document or spec exists for this feature, read it too."
 
-The Team Leader reads the design doc during Phase 0 (Load Rules) and uses it as its decomposition plan in Phase 1 (Write Decomposition Plan) — skipping the analysis work because `/create-feature-plan` already did it.
+The Team Leader reads the design doc during Phase 0 (Load Rules) and uses it as its decomposition plan in Phase 1 (Write Decomposition Plan) — skipping the analysis work because `/new-plan` already did it.
 
 The Team Leader SHOULD:
 1. Read the design doc

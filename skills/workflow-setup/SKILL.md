@@ -109,6 +109,6 @@ Tell the user:
 - Configuration saved to `.claude/workflow.json`
 - Progress directory created at `<progressDir>`
 - They can re-run `/workflow-setup` at any time to update settings
-- They can now use any workflow command (e.g., `/implement-feature`)
+- They can now use any workflow command (e.g., `/new-feature`)
 
 Change anytime by editing `.claude/workflow.json` or asking Claude to adjust.

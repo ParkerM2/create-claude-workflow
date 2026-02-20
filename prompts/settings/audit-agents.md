@@ -2,7 +2,7 @@
 description: "Scan all agent definitions, validate scopes against project structure, flag issues"
 ---
 
-# /audit-agents — Review Agent Definitions Against Codebase
+# /settings — Review Agent Definitions Against Codebase
 
 > Invoke this skill to scan agent definitions, compare their scopes against the current project structure, and identify stale paths, overlapping scopes, and uncovered directories.
 
@@ -203,7 +203,7 @@ FIX: component-engineer and hook-engineer overlap on src/components/**/use*.ts
 FIX: src/workers/ has no agent coverage (5 source files)
 
   Option A: Create a new agent
-    → Run /scaffold-agent to create worker-engineer
+    → Run /new agent to create worker-engineer
   Option B: Expand an existing agent's scope
     → Add src/workers/** to service-engineer's scope
 ```
@@ -213,5 +213,5 @@ Reference the agent creation guide:
 ```
 For guidance on creating or updating agents, see:
   .claude/docs/customize-quick-start/CREATING-AGENTS.md
-  Or run /scaffold-agent to create a new agent interactively
+  Or run /new agent to create a new agent interactively
 ```

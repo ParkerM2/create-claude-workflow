@@ -131,10 +131,10 @@ The pre-flight results are recorded in the progress file so crash recovery sessi
 
 ## Post-Feature Comparison
 
-After the feature is complete (Phase 8 of `/implement-feature`), compare against the pre-flight baseline:
+After the feature is complete (Phase 8 of `/new-feature`), compare against the pre-flight baseline:
 
 - **Tests**: Should have the same count or more (new tests added)
 - **Lint/typecheck**: Should still be clean (no regressions)
 - **Build**: Should still succeed
 
-This comparison is particularly useful for `/refactor` — verifying that restructuring didn't break anything that was working before.
+This comparison is particularly useful for `/new-refactor` — verifying that restructuring didn't break anything that was working before.

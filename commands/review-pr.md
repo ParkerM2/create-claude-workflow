@@ -12,7 +12,7 @@ description: "QA reviewer + Codebase Guardian analysis on a pull request, posts 
 
 - Reviewing a PR from a human contributor
 - Reviewing a PR from another tool or CI pipeline
-- Running the same QA + Guardian checks used in `/implement-feature` against external changes
+- Running the same QA + Guardian checks used in `/new-feature` against external changes
 - Second opinion on a PR before merging
 
 ---

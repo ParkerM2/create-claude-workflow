@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Multi-agent workflow orchestration plugins for Claude Code",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {
@@ -14,8 +14,8 @@
         "source": "url",
         "url": "https://github.com/ParkerM2/create-claude-workflow.git"
       },
-      "description": "Multi-agent workflow orchestration — branch-per-task development with automated QA, codebase guardian, crash recovery, and 14 workflow commands",
-      "version": "1.1.0",
+      "description": "Multi-agent workflow orchestration — branch-per-task development with automated QA, codebase guardian, crash recovery, and 11 workflow commands",
+      "version": "1.2.0",
       "strict": true
     }
   ]

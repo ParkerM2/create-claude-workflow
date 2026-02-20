@@ -239,7 +239,7 @@ Recommended skills to install:
   npx skills add vercel-labs/agent-skills
   npx skills add anthropics/skills
 
-Run /implement-feature to start orchestrated development.
+Run /new-feature to start orchestrated development.
 ```
 
 ## Phase 6: Superpowers Plugin Check (Standalone — Final Step)
@@ -287,7 +287,7 @@ Then output this EXACT message — do NOT continue with any other operations aft
     - Verification-before-completion checks
     - Implementation planning & code review skills
 
-  Run /implement-feature after restarting to begin.
+  Run /new-feature after restarting to begin.
 ```
 
 ### 6.4 If declined
@@ -299,7 +299,7 @@ You can install it later with:
   /plugin marketplace add obra/superpowers-marketplace
   /plugin install superpowers@superpowers-marketplace
 
-Run /implement-feature to start orchestrated development.
+Run /new-feature to start orchestrated development.
 ```
 
 **IMPORTANT**: Phase 6 is the LAST thing that happens. Do not run any other operations after the Superpowers install prompt. The user must restart their CLI before any superpowers-dependent features will work.

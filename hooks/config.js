@@ -24,6 +24,16 @@ const BRANCHING_DEFAULTS = {
 };
 
 // ---------------------------------------------------------------------------
+// Guard defaults — controls which PreToolUse guards are active
+// ---------------------------------------------------------------------------
+
+const GUARDS_DEFAULTS = {
+  branchGuard: true,
+  destructiveGuard: true,
+  configGuard: true
+};
+
+// ---------------------------------------------------------------------------
 // Repo root resolution (worktree-aware, cached)
 // ---------------------------------------------------------------------------
 
@@ -88,6 +98,9 @@ function getWorkflowConfig() {
       config.branching.protectedBranches = BRANCHING_DEFAULTS.protectedBranches;
     }
 
+    // Deep-merge guards section with defaults
+    config.guards = { ...GUARDS_DEFAULTS, ...(config.guards || {}) };
+
     return config;
   } catch {
     return {
@@ -104,6 +117,15 @@ function getWorkflowConfig() {
  */
 function getBranchingConfig() {
   return getWorkflowConfig().branching;
+}
+
+/**
+ * Return the guards config section, merged with defaults.
+ * Controls which PreToolUse guards are active.
+ */
+function getGuardsConfig() {
+  const config = getWorkflowConfig();
+  return { ...GUARDS_DEFAULTS, ...(config.guards || {}) };
 }
 
 // ---------------------------------------------------------------------------
@@ -211,9 +233,11 @@ function getEffectiveBranch(command) {
 
 module.exports = {
   BRANCHING_DEFAULTS,
+  GUARDS_DEFAULTS,
   getRepoRoot,
   getWorkflowConfig,
   getBranchingConfig,
+  getGuardsConfig,
   isProtectedBranch,
   isFeatureBranch,
   isWorkBranch,

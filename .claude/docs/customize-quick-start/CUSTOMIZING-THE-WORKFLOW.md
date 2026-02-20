@@ -103,7 +103,7 @@ For short-lived feature branches:
 
 1. Set a convention that feature branches live for at most 1-2 days
 2. Reduce waves to 1-2 (smaller features)
-3. Consider using `/hotfix` for single-task changes instead of `/implement-feature`
+3. Consider using `/new-hotfix` for single-task changes instead of `/new-feature`
 
 ---
 
@@ -302,6 +302,6 @@ Set the mode in `the project rules file`:
 Mode: standard
 ```
 
-Or per invocation when calling `/implement-feature` or `/hotfix`.
+Or per invocation when calling `/new-feature` or `/new-hotfix`.
 
 The Team Leader reads the mode and adjusts behavior accordingly. Other agents do not need to know the mode — the Team Leader handles the differences.

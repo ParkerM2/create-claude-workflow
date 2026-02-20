@@ -129,6 +129,11 @@ git add <specific files from your plan>
 git commit -m "<type>: <description>"
 ```
 
+Then emit a tracking event:
+```
+/track task.completed "Task #<N>: <summary>" --task <N> --files <changed-files>
+```
+
 If working in a worktree, all git commands run from your worktree directory automatically.
 All file paths are relative to the worktree root.
 
@@ -573,6 +578,10 @@ git commit -m "fix: structural cleanup for <feature>"
 ```
 
 For non-trivial issues, report them for the Team Leader to assign.
+
+After completing your report, emit a tracking event:
+- On PASS: `/track checkpoint "guardian-passed"`
+- On FAIL: `/track error.encountered "guardian-failed: <summary of issues>"`
 
 </phase>
 

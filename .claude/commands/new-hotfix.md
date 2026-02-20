@@ -2,7 +2,7 @@
 description: "Streamlined single-agent urgent fix with automatic QA verification"
 ---
 
-# /hotfix — Streamlined Urgent Fix Workflow
+# /new-hotfix — Streamlined Urgent Fix Workflow
 
 > Invoke this skill for urgent, small-scope fixes that don't need full team orchestration. Single agent, single QA round, minimal ceremony. Still enforces the planning gate — even urgent fixes need a plan.
 
@@ -12,13 +12,13 @@ description: "Streamlined single-agent urgent fix with automatic QA verification
 
 - Fixing a bug that touches 1–3 files
 - Urgent production issue that needs a quick turnaround
-- Any fix too small for `/implement-feature` but too important to skip QA
+- Any fix too small for `/new-feature` but too important to skip QA
 
 ## When NOT to Use
 
-- Fix touches more than 3 files → use `/implement-feature` instead
-- Fix requires multiple specialist agents → use `/implement-feature` instead
-- Fix involves restructuring or refactoring → use `/refactor` instead
+- Fix touches more than 3 files → use `/new-feature` instead
+- Fix requires multiple specialist agents → use `/new-feature` instead
+- Fix involves restructuring or refactoring → use `/new-refactor` instead
 
 ---
 
@@ -61,8 +61,8 @@ If files to change ≤ 3:
 If files to change > 3:
   → Warn the user:
     "This fix touches <N> files, which is beyond hotfix scope (max 3).
-     Consider using /implement-feature instead for better coordination."
-  → Ask user to confirm proceeding as hotfix or switching to /implement-feature
+     Consider using /new-feature instead for better coordination."
+  → Ask user to confirm proceeding as hotfix or switching to /new-feature
 ```
 
 3. Identify which agent role is best suited for this fix
@@ -116,7 +116,7 @@ The agent follows the full phased workflow:
 - Phase 3: Self-review
 - Phase 4: Spawn QA
 
-Key differences from `/implement-feature`:
+Key differences from `/new-feature`:
 - **No team creation** — single agent, no team overhead
 - **No wave planning** — single task, single wave
 - **Workbranch is the hotfix branch itself** — no separate workbranch needed

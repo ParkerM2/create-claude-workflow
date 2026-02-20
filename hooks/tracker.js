@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 'use strict';
 
-// Core JSONL progress tracker — event emitter, renderers, and PostToolUse hook.
+// Core JSONL progress tracker — event emitter and renderers.
 // Emits structured events to <progressDir>/<feature>/events.jsonl
 // Renders current.md, history.md, and index.md from event streams.
-// When invoked as a PostToolUse hook (stdin), emits file.modified/file.created events.
-// Non-blocking — always exits 0 when running as hook.
+// Used by the /track command. Not a standalone hook.
 
 const fs = require('fs');
 const path = require('path');
@@ -568,35 +567,7 @@ function renderIndex(progressDir) {
 }
 
 // ---------------------------------------------------------------------------
-// PostToolUse hook mode — stdin processing (Edit/Write tools)
-// ---------------------------------------------------------------------------
-
-function runAsHook() {
-  let input = '';
-  process.stdin.setEncoding('utf8');
-  process.stdin.on('data', (chunk) => { input += chunk; });
-  process.stdin.on('end', () => {
-    try {
-      const data = JSON.parse(input);
-      const toolName = data.tool_name || 'unknown';
-      const filePath = (data.tool_input && (data.tool_input.file_path || data.tool_input.path)) || 'unknown';
-
-      const eventType = (toolName === 'Write') ? 'file.created' : 'file.modified';
-
-      emitEvent(eventType, {
-        tool: toolName,
-        file: filePath,
-        message: `${eventType}: ${filePath}`
-      });
-    } catch {
-      // Non-blocking — always exit 0
-    }
-    process.exit(0);
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Module exports / hook entry point
+// Module exports
 // ---------------------------------------------------------------------------
 
 module.exports = {
@@ -606,8 +577,3 @@ module.exports = {
   renderHistoryMd,
   renderIndex
 };
-
-// When executed directly (as a hook), run stdin processing
-if (require.main === module) {
-  runAsHook();
-}

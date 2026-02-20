@@ -19,12 +19,16 @@ You are the Codebase Guardian. You run on the fully-merged `feature/<name>` bran
 
 ## Initialization Protocol
 
+<initialization-protocol>
+
 Read these files COMPLETELY — they define your ruleset:
 
 1. `the project rules file` — Project rules and conventions
 2. `the architecture file` — System architecture (this is your source of truth)
 3. The feature's event log at `.claude/progress/<feature-name>/events.jsonl` — replay events to understand what changed
 4. Or read `.claude/progress/<feature-name>/current.md` for a quick summary
+
+</initialization-protocol>
 
 ## Scope
 
@@ -83,6 +87,8 @@ When you encounter ANY problem during checks:
 </error-recovery>
 
 ## Guardian Checks
+
+<guardian-checks>
 
 ### Check 1: File Placement
 
@@ -148,7 +154,22 @@ npm run build       # or equivalent
 
 This catches issues that only appear when all changes are combined.
 
+</guardian-checks>
+
+## Progress Tracking
+
+<progress-tracking>
+
+After completing your report, you MUST emit a tracking event. This is the only tracking mechanism — there are no automatic hooks.
+
+- On PASS: `/track checkpoint "guardian-passed"`
+- On FAIL: `/track error.encountered "guardian-failed: <summary of issues>"`
+
+</progress-tracking>
+
 ## Report Format
+
+<report-format>
 
 ### PASS Report
 
@@ -196,6 +217,8 @@ FIX INSTRUCTIONS:
   2. Add 'superadmin' case to role handler at src/handlers/auth.ts:45
   3. Update ARCHITECTURE.md service list: "AuthService" → "auth-service"
 ```
+
+</report-format>
 
 ## Rules — Non-Negotiable
 

@@ -11,20 +11,19 @@ Multi-agent workflow orchestration for Claude Code. Provides branch-per-task fea
 
 | Command | Description |
 |---------|-------------|
-| /implement-feature | Full multi-agent feature implementation with branch management, QA, and Guardian |
-| /create-feature-plan | Deep technical planning and task decomposition before implementation |
-| /resume-feature | Crash recovery — resume from last checkpoint |
-| /claude-new | Unified creation entry: feature, plan, task, agent, or idea |
+| /new-feature | Full multi-agent feature implementation with branch management, QA, and Guardian |
+| /new-plan | Deep technical planning and task decomposition before implementation |
+| /resume | Crash recovery — resume from last checkpoint |
+| /new | Unified creation entry: feature, plan, task, agent, or idea |
 | /status | Quick progress summary of active feature |
-| /hotfix | Single-agent urgent fix |
-| /refactor | Safe restructuring with baseline verification |
+| /new-hotfix | Single-agent urgent fix |
+| /new-refactor | Safe restructuring with baseline verification |
 | /review-pr | QA + Guardian review on a pull request |
-| /generate-tests | Automated test generation with QA verification |
-| /scaffold-agent | Interactive agent definition creator |
-| /audit-agents | Scan and validate agent definitions |
-| /audit-performance | Audit workflow config for performance bottlenecks |
+| /new-tests | Automated test generation with QA verification |
+| /new agent | Interactive agent definition creator |
+| /settings | Scan and validate agent definitions, audit performance, manage permissions |
 | /track | Emit tracking events to JSONL progress log |
-| /discover-agents | Auto-discover optimal agent roles for a codebase |
+| /new (discover mode) | Auto-discover optimal agent roles for a codebase |
 
 ## Agents
 
@@ -80,7 +79,7 @@ Benefits:
 - Each agent has a clean working directory with no interference from others
 - The team leader stays on the feature branch in the main repo
 
-When `useWorktrees` is `false`, agents share the main working directory and switch branches via `git checkout` (the legacy model).
+When `useWorktrees` is `false`, agents share the main working directory and switch branches via `git checkout`.
 
 ## Changing Branch Rules at Runtime
 

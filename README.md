@@ -45,31 +45,28 @@ git clone https://github.com/ParkerM2/create-claude-workflow.git
 
 1. Open any project in Claude Code
 2. Run `/workflow-setup` to configure project paths (project rules file, architecture file, progress directory)
-3. Run `/implement-feature "Add user authentication"`
+3. Run `/new-feature "Add user authentication"`
 4. The plugin handles: planning, branching, agent spawning, QA, merge, and cleanup
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `/implement-feature` | Full multi-agent feature implementation with branch-per-task isolation, QA cycles, and Codebase Guardian verification |
-| `/create-feature-plan` | Deep technical planning -- analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering |
-| `/resume-feature` | Crash recovery -- scans progress files, detects errors and blockers, auto-resumes or presents options to user |
-| `/claude-new` | Unified creation entry point -- create a feature, plan, task, phase, agent, or idea from a single command |
-| `/status` | Quick progress summary -- shows completion percentage, task states, branch status, and active blockers |
-| `/hotfix` | Streamlined single-agent urgent fix with automatic QA verification |
-| `/refactor` | Safe restructuring with mandatory baseline verification, wave execution, and before/after comparison |
+| `/new` | Unified creation entry point -- create a feature, plan, task, phase, agent, or idea from a single command |
+| `/new-feature` | Full multi-agent feature implementation with branch-per-task isolation, QA cycles, and Codebase Guardian verification |
+| `/new-plan` | Deep technical planning -- analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering |
+| `/new-hotfix` | Streamlined single-agent urgent fix with automatic QA verification |
+| `/new-refactor` | Safe restructuring with mandatory baseline verification, wave execution, and before/after comparison |
+| `/new-tests` | Automated test generation -- identifies targets, spawns test engineer, QA verifies coverage |
+| `/resume` | Crash recovery -- scans progress files, detects errors and blockers, auto-resumes or presents options to user |
+| `/settings` | Workflow settings hub -- guard permissions, agent audit, and performance audit |
 | `/review-pr` | QA reviewer + Codebase Guardian analysis on a pull request, posts combined results as PR comment |
-| `/generate-tests` | Automated test generation -- identifies targets, spawns test engineer, QA verifies coverage |
-| `/scaffold-agent` | Interactive Q&A to create a new specialist agent definition |
-| `/audit-agents` | Scan all agent definitions, validate scopes against project structure, flag issues |
-| `/audit-performance` | Audit workflow configuration for performance bottlenecks — file sizes, hook overhead, context budget, progress file growth |
-| `/track` | Emit a tracking event to the JSONL progress log — records checkpoints, task state, errors, blockers, and QA results |
-| `/discover-agents` | Analyze codebase to auto-discover optimal agent roles and generate definitions |
+| `/status` | Quick progress summary -- shows completion percentage, task states, branch status, and active blockers |
+| `/track` | Emit a tracking event to the JSONL progress log -- records checkpoints, task state, errors, blockers, and QA results |
 
 ## Agents
 
-The plugin ships with three built-in agents. Additional agents can be generated with `/discover-agents` or `/scaffold-agent`.
+The plugin ships with three built-in agents. Additional agents can be generated with `/new agent` or discovered automatically via `/new`.
 
 | Agent | Role |
 |-------|------|
@@ -94,6 +91,11 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
     "protectedBranches": ["main", "master"],
     "useWorktrees": true,
     "worktreeDir": ".worktrees"
+  },
+  "guards": {
+    "branchGuard": true,
+    "destructiveGuard": true,
+    "configGuard": true
   }
 }
 ```
@@ -110,6 +112,9 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
 | `branching.protectedBranches` | `["main", "master"]` | Branches protected from direct commits |
 | `branching.useWorktrees` | `true` | Use git worktrees for agent isolation |
 | `branching.worktreeDir` | `.worktrees` | Directory for worktree checkouts |
+| `guards.branchGuard` | `true` | Enable/disable branch protection hook |
+| `guards.destructiveGuard` | `true` | Enable/disable destructive command blocking |
+| `guards.configGuard` | `true` | Enable/disable workflow file protection |
 
 ## Workflow Modes
 
@@ -125,7 +130,7 @@ Three modes control how much ceremony the workflow applies. Set in your project 
 | Wave fence | Full verify | Quick verify | No fence |
 | Context budget check | Yes | Yes | No |
 
-Override per-invocation: `/implement-feature "Add auth" -- mode: fast`
+Override per-invocation: `/new-feature "Add auth" -- mode: fast`
 
 ## How It Works
 
@@ -156,11 +161,8 @@ Six hooks run automatically to protect against common mistakes:
 | Hook | Trigger | Protection |
 |------|---------|------------|
 | `session-start` | Session start/resume | Loads workflow context, branching config, and active feature status |
-| `branch-guard` | Before Bash commands | Configurable branch protection (`warn`/`block`/`off`), worktree-aware |
-| `destructive-guard` | Before Bash commands | Blocks destructive operations (`rm -rf`, `git reset --hard`, etc.) |
+| `safety-guard` | Before Bash commands | Blocks destructive operations (`rm -rf`, `git reset --hard`, etc.) |
 | `config-guard` | Before Edit/Write | Prevents modification of workflow config files |
-| `tracker` | After Edit/Write | Emits file modification events to JSONL progress log |
-| `git-tracker` | After Bash | Detects git and worktree operations, emits events to JSONL progress log |
 
 ## Project Structure
 
@@ -180,36 +182,33 @@ claude-workflow/
 │           ├── events.jsonl     # Append-only event log
 │           ├── current.md       # Active task state
 │           └── history.md       # Unified timeline
-├── commands/                    # 14 slash commands (loaded on /invoke)
-│   ├── implement-feature.md
-│   ├── create-feature-plan.md
-│   ├── resume-feature.md
-│   ├── claude-new.md
-│   ├── status.md
-│   ├── hotfix.md
-│   ├── refactor.md
+├── commands/                    # 11 slash commands (loaded on /invoke)
+│   ├── new.md                  # Unified creation entry point
+│   ├── new-feature.md          # Full multi-agent implementation
+│   ├── new-plan.md             # Deep technical planning
+│   ├── new-hotfix.md           # Streamlined urgent fix
+│   ├── new-refactor.md         # Safe restructuring
+│   ├── new-tests.md            # Automated test generation
+│   ├── resume.md               # Crash recovery
+│   ├── settings.md             # Guard permissions + audits hub
 │   ├── review-pr.md
-│   ├── generate-tests.md
-│   ├── scaffold-agent.md
-│   ├── audit-agents.md
-│   ├── audit-performance.md
-│   ├── discover-agents.md
+│   ├── status.md
 │   └── track.md
 ├── agents/                      # Agent definitions (loaded on spawn)
 │   ├── team-leader.md
 │   ├── qa-reviewer.md
 │   └── codebase-guardian.md
 ├── prompts/                     # Reference docs and templates
-│   └── implementing-features/   # Playbook, QA templates, workflow modes
+│   ├── implementing-features/   # Playbook, QA templates, workflow modes
+│   ├── new/                     # Sub-flows for /new (scaffold-agent, discover-agents)
+│   └── settings/                # Sub-flows for /settings (guards, audits)
 ├── hooks/                       # Enforcement hooks
 │   ├── hooks.json
 │   ├── config.js               # Shared config reader (repo root, branching)
 │   ├── session-start.js
-│   ├── branch-guard.js
-│   ├── destructive-guard.js
+│   ├── safety-guard.js          # Combined branch + destructive guard
 │   ├── config-guard.js
-│   ├── tracker.js
-│   └── git-tracker.js
+│   └── tracker.js
 ├── skills/                      # Internal skills
 │   ├── workflow-setup/
 │   └── using-workflow/

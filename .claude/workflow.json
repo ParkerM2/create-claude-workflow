@@ -7,8 +7,16 @@
     "featurePrefix": "feature",
     "workPrefix": "work",
     "enforce": "warn",
-    "protectedBranches": ["main", "master"],
+    "protectedBranches": [
+      "main",
+      "master"
+    ],
     "useWorktrees": true,
     "worktreeDir": ".worktrees"
+  },
+  "guards": {
+    "branchGuard": true,
+    "destructiveGuard": true,
+    "configGuard": true
   }
 }

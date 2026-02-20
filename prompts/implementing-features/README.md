@@ -162,7 +162,7 @@ Update the progress file after EVERY significant state change:
 | Workbranch merged | Branch status (Merged = YES), merge log |
 | Integration complete | Overall status → COMPLETE |
 
-Events are emitted via `/track` commands or automatically by PostToolUse hooks (tracker.js, git-tracker.js).
+Events are emitted via `/track` commands at key checkpoints. Agents MUST call `/track` at each required checkpoint — there are no automatic hooks.
 
 ### Branch Status Table
 
@@ -618,7 +618,7 @@ Full details: [`WAVE-FENCE-PROTOCOL.md`](./WAVE-FENCE-PROTOCOL.md)
 
 ## 13. Pre-Flight Checks
 
-In `strict` mode, verify the codebase baseline (lint, typecheck, test, build) before spawning agents. Mandatory for `/refactor` regardless of mode.
+In `strict` mode, verify the codebase baseline (lint, typecheck, test, build) before spawning agents. Mandatory for `/new-refactor` regardless of mode.
 
 Full details: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
 

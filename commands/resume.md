@@ -2,7 +2,7 @@
 description: "Crash recovery — scans progress files, detects errors and blockers, auto-resumes or presents options to user"
 ---
 
-# /resume-feature — Resume an In-Progress Feature
+# /resume — Resume an In-Progress Feature
 
 > Invoke this skill to find and resume a previously started (or crashed) feature implementation. Scans progress files, shows status, and picks up where the last session left off.
 
@@ -10,7 +10,7 @@ description: "Crash recovery — scans progress files, detects errors and blocke
 
 ## When to Use
 
-- Your terminal closed or timed out during `/implement-feature`
+- Your terminal closed or timed out during `/new-feature`
 - You want to continue a feature started in a previous session
 - You're unsure if a feature was completed or left in-progress
 
@@ -56,7 +56,7 @@ If `current.md` exists, read it for a quick summary. Otherwise, scan events.json
 No in-progress features found in the progress directory.
 
 To start a new feature, run:
-  /implement-feature "your feature description"
+  /new-feature "your feature description"
 ```
 
 Stop here.
@@ -80,7 +80,7 @@ Resume this feature?
 
 Use AskUserQuestion:
 - "Yes, resume" — proceed to Phase 3
-- "No, start fresh" — suggest `/implement-feature`
+- "No, start fresh" — suggest `/new-feature`
 
 ### Multiple in-progress features found
 
@@ -102,7 +102,7 @@ Use AskUserQuestion with multiSelect: false to let the user pick one.
 All features in the progress directory are marked COMPLETE.
 
 To start a new feature, run:
-  /implement-feature "your feature description"
+  /new-feature "your feature description"
 ```
 
 Stop here.
@@ -200,7 +200,7 @@ If the team no longer exists but tasks remain:
 
 ### 4b. Load Context
 
-Read the same files as `/implement-feature` Phase 1:
+Read the same files as `/new-feature` Phase 1:
 
 ```
 1. the project rules file
@@ -238,4 +238,4 @@ Add a recovery note:
 - State on recovery: <brief description of git/team state>
 ```
 
-Then follow the `/implement-feature` workflow from the appropriate phase (Phase 6, 7, 8, or 9).
+Then follow the `/new-feature` workflow from the appropriate phase (Phase 6, 7, 8, or 9).

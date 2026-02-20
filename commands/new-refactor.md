@@ -2,7 +2,7 @@
 description: "Safe restructuring with mandatory baseline verification, wave execution, and before/after comparison"
 ---
 
-# /refactor — Structured Codebase Refactoring
+# /new-refactor — Structured Codebase Refactoring
 
 > Invoke this skill to refactor code with safety guarantees. Establishes a baseline, proposes a plan, executes in waves, and verifies no regressions. All existing tests must pass before AND after the refactoring.
 
@@ -18,8 +18,8 @@ description: "Safe restructuring with mandatory baseline verification, wave exec
 
 ## When NOT to Use
 
-- Adding new functionality → use `/implement-feature`
-- Fixing a bug → use `/hotfix`
+- Adding new functionality → use `/new-feature`
+- Fixing a bug → use `/new-hotfix`
 - Small rename in 1-2 files → just do it directly
 
 ---
@@ -51,7 +51,7 @@ Determine workflow mode. Default for refactoring is `strict` (pre-flight is crit
 
 ## Phase 2: Pre-Flight Baseline (MANDATORY — All Modes)
 
-> **Pre-flight is mandatory for /refactor regardless of workflow mode.** Refactoring on a broken codebase is dangerous — you won't know if breakage is from your changes or pre-existing.
+> **Pre-flight is mandatory for /new-refactor regardless of workflow mode.** Refactoring on a broken codebase is dangerous — you won't know if breakage is from your changes or pre-existing.
 
 Run the full baseline:
 
@@ -77,7 +77,7 @@ npm run build         # or equivalent
   tests:     PASS (142 passing)
   build:     FAIL
 
-Fix these issues first, then re-run /refactor.
+Fix these issues first, then re-run /new-refactor.
 ```
 
 **If all checks pass**: Record the baseline:
@@ -213,7 +213,7 @@ Create a progress file in the progress directory:
 
 ## Phase 6: Execute Waves
 
-Follow the same wave execution pattern as `/implement-feature` Phase 6:
+Follow the same wave execution pattern as `/new-feature` Phase 6:
 
 1. **Create workbranches** from `refactor/<scope-name>` HEAD
 2. **Spawn agents** using the Standard Coding Agent template

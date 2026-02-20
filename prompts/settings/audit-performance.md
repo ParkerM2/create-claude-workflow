@@ -2,7 +2,7 @@
 description: "Audit workflow configuration for performance bottlenecks — file sizes, hook overhead, context budget, progress file growth"
 ---
 
-# /audit-performance — Diagnose Workflow Performance Bottlenecks
+# /settings — Diagnose Workflow Performance Bottlenecks
 
 > Invoke this skill to scan the workflow plugin configuration and identify performance bottlenecks — large Phase 0 reads, hook accumulation, progress file bloat, context budget risks, and oversized prompt assets.
 
@@ -307,7 +307,7 @@ RECOMMENDATION: Archive completed feature logs
   Metric: XXX events → Target: < 150 events
   Fix:    Archive completed features: move finished feature directories to
           a <progressDir>/archive/ subdirectory
-  Impact: Faster JSONL reads during /status and /resume-feature
+  Impact: Faster JSONL reads during /status and /resume
 ```
 
 **Missing QA automation rules:**

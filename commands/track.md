@@ -1,10 +1,10 @@
 ---
-description: "Emit a tracking event to the JSONL progress log — records checkpoints, task state, errors, blockers, and QA results"
+description: "Emit a tracking event to the JSONL progress log — the sole mechanism for recording checkpoints, task state, errors, blockers, and QA results"
 ---
 
 # /track — Emit a Tracking Event
 
-> Emit a structured event to the feature's JSONL progress log. Feature is auto-detected from the current git branch.
+> The sole tracking mechanism for the workflow. Emits a structured event to the feature's JSONL progress log. Feature is auto-detected from the current git branch. Agents MUST call `/track` at each required checkpoint — there are no automatic hooks.
 
 ---
 

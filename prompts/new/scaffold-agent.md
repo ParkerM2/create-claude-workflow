@@ -2,7 +2,7 @@
 description: "Interactive Q&A to create a new specialist agent definition"
 ---
 
-# /scaffold-agent — Interactive Agent Definition Creator
+# /new agent — Interactive Agent Definition Creator
 
 > Invoke this skill to create a new specialist agent definition through interactive Q&A. Generates a fully structured `.claude/agents/<role>.md` file with the phased workflow, scoping, and domain rules.
 
@@ -272,6 +272,6 @@ Agent Summary:
 Next steps:
   1. Review the generated file and customize as needed
   2. Test the agent: spawn it on a small task to verify it follows the workflow
-  3. Run /audit-agents to verify no scope overlaps with existing agents
-  4. The Team Leader can now assign tasks to this agent in /implement-feature
+  3. Run /settings to verify no scope overlaps with existing agents
+  4. The Team Leader can now assign tasks to this agent in /new-feature
 ```

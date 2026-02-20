@@ -1,7 +1,7 @@
 {
   "name": "claude-workflow",
   "description": "Multi-agent workflow orchestration for Claude Code — branch-per-task development with automated QA, codebase guardian, and crash recovery",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": {
     "name": "ParkerM2"
   },

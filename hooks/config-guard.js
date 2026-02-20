@@ -3,6 +3,9 @@
 
 // PreToolUse hook: Block agents from modifying .claude/ workflow files during execution.
 // Protects: commands, agents, prompts, hooks, and settings.json
+// Respects guards.configGuard setting from .claude/workflow.json.
+
+const { getGuardsConfig } = require('./config.js');
 
 let input = '';
 process.stdin.setEncoding('utf8');
@@ -10,6 +13,13 @@ process.stdin.on('data', (chunk) => { input += chunk; });
 process.stdin.on('end', () => {
   try {
     const data = JSON.parse(input);
+
+    // Check if config guard is enabled
+    const guards = getGuardsConfig();
+    if (!guards.configGuard) {
+      process.exit(0);
+    }
+
     const filePath = (data.tool_input && (data.tool_input.file_path || data.tool_input.path)) || '';
 
     // Normalize path separators for cross-platform support

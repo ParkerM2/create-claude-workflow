@@ -1,13 +1,13 @@
 # Ideas Backlog
 
-> A lightweight backlog for capturing ideas that aren't ready for implementation yet. Created by `/claude-new idea`. Review periodically to promote ideas to features.
+> A lightweight backlog for capturing ideas that aren't ready for implementation yet. Created by `/new idea`. Review periodically to promote ideas to features.
 
 ---
 
 ## Backlog
 
-<!-- Entries are appended below by /claude-new idea -->
-<!-- To promote an idea: change status to PROMOTED, then run /claude-new feature <idea> -->
+<!-- Entries are appended below by /new idea -->
+<!-- To promote an idea: change status to PROMOTED, then run /new feature <idea> -->
 
 <!-- ENTRY FORMAT:
 ### <Idea Title>
@@ -22,6 +22,6 @@
 <!-- Statuses:
   NEW       — Just logged, not evaluated
   EXPLORING — Being investigated or discussed
-  PROMOTED  — Converted to a feature via /claude-new feature
+  PROMOTED  — Converted to a feature via /new feature
   DROPPED   — Decided not to pursue (add reason in Notes)
 -->

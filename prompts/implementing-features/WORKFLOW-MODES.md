@@ -38,10 +38,10 @@ If no mode is specified, the default is `strict`.
 
 ### Per-Invocation Override
 
-When invoking `/implement-feature`, `/hotfix`, or `/refactor`, the user can specify a mode:
+When invoking `/new-feature`, `/new-hotfix`, or `/new-refactor`, the user can specify a mode:
 
 ```
-/implement-feature "Add user settings" — mode: fast
+/new-feature "Add user settings" — mode: fast
 ```
 
 The per-invocation mode overrides the project default for that feature only.
@@ -105,7 +105,7 @@ Context budget:      CHECK — estimate context, split if over threshold
 
 ### Fast Mode
 
-Use for: prototyping, spikes, small changes, non-critical code, `/hotfix`.
+Use for: prototyping, spikes, small changes, non-critical code, `/new-hotfix`.
 
 ```
 Planning gate:       REQUIRED — abbreviated plan (task summary + files + steps only)
@@ -146,7 +146,7 @@ Context budget:      SKIP
 - One agent, one QA round
 - No need for Guardian or wave fences
 
-### Scenario: "/hotfix critical security bug" — use `fast` (default for /hotfix)
+### Scenario: "/new-hotfix critical security bug" — use `fast` (default for /new-hotfix)
 - Urgency requires speed
 - Still enforces planning gate (even urgent fixes need a plan)
 - Single QA round for safety

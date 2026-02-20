@@ -277,7 +277,7 @@ The Team Leader handles changes to off-limits files directly, or creates a speci
 
 If you discover two agents claiming the same files:
 
-1. Run `/audit-agents` to identify overlaps
+1. Run `/settings` to identify overlaps
 2. Decide which agent is the natural owner
 3. Update the other agent's scope to exclude those files
 4. Add explicit `NEVER modify` entries for clarity
@@ -371,7 +371,7 @@ Agent definitions are living documents. After each feature:
 1. Review QA reports for patterns in failures
 2. Check the performance log for recurring issues
 3. Update the agent definition to address common problems
-4. Run `/audit-agents` periodically to catch scope drift
+4. Run `/settings` periodically to catch scope drift
 
 ---
 

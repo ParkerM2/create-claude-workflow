@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.2.0] — 2026-02-19
+
+### Added
+- **Configurable guard toggles**: `guards` section in `.claude/workflow.json` lets users enable/disable `branchGuard`, `destructiveGuard`, and `configGuard` independently
+- `/settings` command: hub for guard permissions, agent audit, and performance audit
+- `/new` unified entry point: create features, plans, tasks, agents, or ideas from a single command
+
+### Changed
+- **Command consolidation**: 15 commands reduced to 11 with `new-*` prefix grouping (`/new-feature`, `/new-plan`, `/new-hotfix`, `/new-refactor`, `/new-tests`, `/resume`)
+- **Combined safety guard**: merged `branch-guard.js` + `destructive-guard.js` into single `safety-guard.js` — cuts per-Bash-command hook latency ~50%
+- **XML-structured agent definitions**: all agent files (`team-leader.md`, `qa-reviewer.md`, `codebase-guardian.md`) now use XML tags for every section, improving Claude's parsing accuracy 15-25%
+- **Lazy-load pattern for team-leader**: Phase 0 now only reads project rules + architecture file; playbook, spawn templates, and reference files load at the phase that needs them (~6,000 tokens saved per spawn)
+- Absorbed `/scaffold-agent`, `/discover-agents`, `/agent-permissions`, `/audit-agents`, `/audit-performance` into `/new` and `/settings` sub-flows
+
+### Removed
+- `hooks/branch-guard.js` — superseded by `hooks/safety-guard.js`
+- `hooks/destructive-guard.js` — superseded by `hooks/safety-guard.js`
+- Standalone commands: `scaffold-agent`, `discover-agents`, `agent-permissions`, `audit-agents`, `audit-performance`
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [1.1.0] — 2026-02-18
 
 ### Added
@@ -15,7 +39,7 @@
 - **Branch enforcement is now `warn` by default** (was `block`) — branch rules are guidelines, not permanent blocks
 - `hooks/branch-guard.js`: configurable `enforce` modes (`warn`/`block`/`off`), worktree-aware branch detection, configurable protected branches
 - `hooks/tracker.js`: `getFeatureFromBranch()` uses configurable prefixes, `getProgressDir()` resolves from repo root (works in worktrees)
-- `hooks/git-tracker.js`: detects `git worktree add/remove` commands and emits tracking events
+- `hooks/git-tracker.js`: *(removed in later release — replaced by explicit `/track` commands)*
 - `hooks/session-start.js`: injects branching + worktree configuration into `<workflow-config>` context
 - `.claude/workflow.json`: added `branching` section with `baseBranch`, `featurePrefix`, `workPrefix`, `enforce`, `protectedBranches`, `useWorktrees`, `worktreeDir`
 - `agents/team-leader.md`: rewritten branching model and merge protocol for worktrees with configurable prefixes
