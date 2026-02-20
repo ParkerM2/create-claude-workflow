@@ -145,6 +145,29 @@ This data helps calibrate the estimation table over time.
 
 ---
 
+## Model Routing & Cost
+
+The Team Leader assigns models to agents based on task complexity:
+
+| Agent Role | Model | Input/Output per 1M tokens | vs Opus Savings |
+|-----------|-------|---------------------------|-----------------|
+| Team Leader | Opus (user's model) | $15 / $75 | baseline |
+| Coding Agent | Sonnet | $3 / $15 | **80% cheaper** |
+| QA Reviewer | Haiku | $1 / $5 | **93% cheaper** |
+| Codebase Guardian | Sonnet | $3 / $15 | **80% cheaper** |
+
+### Cost Example (6-agent feature)
+
+| Setup | Cost Estimate |
+|-------|--------------|
+| All Opus | 1 lead + 3 coding + 1 QA + 1 guardian = 6 × $15 avg = ~$90 |
+| Model routed | 1 Opus($15) + 3 Sonnet($3) + 1 Haiku($1) + 1 Sonnet($3) = ~$28 |
+| **Savings** | **~69% reduction** |
+
+Set model in spawn template Task tool parameters: `model: "sonnet"` or `model: "haiku"`.
+
+---
+
 ## Mode Interaction
 
 | Mode | Context Budget Check |
