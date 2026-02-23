@@ -69,7 +69,8 @@ process.stdin.on('end', () => {
 
     // Guardian agents: require gate 7_all_waves_complete
     if (isGuardian) {
-      if (!gates['7_all_waves_complete']) {
+      const gate7 = gates['7_all_waves_complete'];
+      if (!gate7 || !gate7.passed) {
         const result = {
           decision: 'block',
           reason: 'Workflow gate: Cannot spawn Guardian — Gate 7 (All Waves Complete) not passed. Complete all waves first.',
@@ -81,7 +82,8 @@ process.stdin.on('end', () => {
     }
 
     // Coding agents (anything else with matching team_name): require gate 3_branch_team_ready
-    if (!gates['3_branch_team_ready']) {
+    const gate3 = gates['3_branch_team_ready'];
+    if (!gate3 || !gate3.passed) {
       const result = {
         decision: 'block',
         reason: 'Workflow gate: Cannot spawn coding agents — Gate 3 (Branch + Team Ready) not passed. Create the feature branch, team, and tasks first. Read PHASE-GATE-PROTOCOL.md.',
