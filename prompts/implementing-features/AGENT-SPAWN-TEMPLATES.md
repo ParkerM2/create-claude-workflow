@@ -6,6 +6,20 @@
 
 ---
 
+## Workflow State File
+
+The Team Leader maintains a workflow state file at:
+`.claude/progress/<feature>/workflow-state.json`
+
+This file tracks which phase gates have passed. PreToolUse hooks enforce these gates —
+coding agents cannot be spawned until Gate 3 (Branch + Team Ready) passes, and the
+Guardian cannot be spawned until Gate 7 (All Waves Complete) passes.
+
+**Coding agents do NOT need to read or manage this file** — the Team Leader and hooks
+handle it. Coding agents focus on their task scope only.
+
+---
+
 ## Standard Coding Agent Spawn
 
 Use this for any specialist coding agent.
@@ -635,6 +649,8 @@ When starting a new feature, the Team Leader follows this sequence:
  7. SET dependencies:
       TaskUpdate with addBlockedBy for each task
  8. UPDATE progress file with task list + dependency graph
+    - [ ] Initialize `workflow-state.json` — gates 1-3 should be passed before spawning
+    - [ ] Verify gate 3 in `workflow-state.json` before spawning any coding agents
  9. For each wave (in order):
       a. CREATE worktrees from feature/ HEAD:
            git checkout <featurePrefix>/<feature-name>
@@ -650,6 +666,7 @@ When starting a new feature, the Team Leader follows this sequence:
          - REMOVE worktree: git worktree remove <worktreeDir>/<feature-name>/<task-slug>
          - DELETE workbranch
          - Check if next-wave tasks are unblocked
+         - [ ] Update `workflow-state.json` with current gate status
       b. On QA FAIL (round < 3):
          - Agent handles re-work automatically
       c. On QA FAIL (round 3):
@@ -660,6 +677,7 @@ When starting a new feature, the Team Leader follows this sequence:
          - UPDATE progress file status to COMPLETE
          - COMMIT final state
          - CREATE PR (if requested)
+         - [ ] Update `workflow-state.json` with current gate status
       c. If Guardian FAILS:
          - Fix or assign fixes
          - Re-run Guardian
