@@ -17,6 +17,7 @@
 | `CONTEXT-BUDGET-GUIDE.md` | Step 5 | — | — | — |
 | `WORKFLOW-MODES.md` | Phase 1 | — | — | — |
 | `PROGRESS-FILE-TEMPLATE.md` | Phase 4 | — | — | — |
+| `PHASE-GATE-PROTOCOL.md` | Phase 0 (first!) | — | — | — |
 | `WAVE-FENCE-PROTOCOL.md` | Phase 6e | — | — | — |
 | Agent definition (`agents/*.md`) | — | Phase 0 | Phase 0 | Phase 0 |
 
@@ -34,6 +35,7 @@
 | `QA-CHECKLIST-AUTO-FILL-RULES.md` | Rules for pre-selecting QA sections by agent role | ~80 lines |
 | `CONTEXT-BUDGET-GUIDE.md` | Token estimation formula, size limits, splitting protocol | ~155 lines |
 | `WORKFLOW-MODES.md` | Strict/Standard/Fast mode definitions | ~170 lines |
+| `PHASE-GATE-PROTOCOL.md` | Workflow state machine — 9 sequential gates with binary conditions for phase enforcement | ~97 lines |
 | `PROGRESS-FILE-TEMPLATE.md` | Template for progress markdown files | ~50 lines |
 | `WAVE-FENCE-PROTOCOL.md` | Inter-wave verification protocol | ~40 lines |
 | `REFERENCE-INDEX.md` | This file | ~50 lines |

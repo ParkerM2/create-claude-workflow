@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
-const { getRepoRoot, getBranchingConfig, getEffectiveBranch } = require('./config.js');
+const { getRepoRoot, getBranchingConfig, getEffectiveBranch, updateWorkflowState } = require('./config.js');
 
 // ---------------------------------------------------------------------------
 // Session identity — generated once per module load
@@ -204,6 +204,107 @@ function isProcessAlive(pid) {
 }
 
 // ---------------------------------------------------------------------------
+// Workflow state auto-updater
+// ---------------------------------------------------------------------------
+
+/**
+ * Map a tracking event to workflow state updates.
+ * Called automatically by emitEvent for significant events.
+ * Never throws — all errors are swallowed.
+ */
+function updateWorkflowStateFromEvent(feature, event) {
+  try {
+    const type = event.type;
+    const data = event.data || {};
+    const ts = event.ts;
+
+    switch (type) {
+      case 'session.start':
+        // Initialize workflow state
+        updateWorkflowState(feature, {
+          feature: feature,
+          mode: data.mode || 'strict',
+          startedAt: ts,
+          currentPhase: 1,
+          teamCreated: false,
+          tasksCreated: 0,
+          gates: {
+            '1_context_loaded': { passed: false },
+            '2_plan_complete': { passed: false },
+            '3_branch_team_ready': { passed: false },
+            '7_all_waves_complete': { passed: false },
+            '8_guardian_passed': { passed: false },
+            '9_feature_complete': { passed: false }
+          },
+          waves: {}
+        });
+        break;
+
+      case 'plan.created':
+        updateWorkflowState(feature, {
+          currentPhase: 2,
+          gates: { '2_plan_complete': { passed: true, ts: ts } }
+        });
+        break;
+
+      case 'task.started':
+        if (data.task) {
+          updateWorkflowState(feature, {
+            currentPhase: Math.max(4, 4), // At least in wave execution phase
+          });
+        }
+        break;
+
+      case 'task.completed':
+        // Just update current phase — wave tracking is coarser
+        break;
+
+      case 'qa.passed':
+        // Track at wave level via checkpoint events
+        break;
+
+      case 'branch.merged':
+        // Track at wave level via checkpoint events
+        break;
+
+      case 'checkpoint':
+        if (data.message) {
+          // Match "wave-N-complete" pattern
+          const waveMatch = data.message.match(/wave-(\d+)-complete/);
+          if (waveMatch) {
+            const waveNum = waveMatch[1];
+            const waveKey = waveNum;
+            updateWorkflowState(feature, {
+              waves: { [waveKey]: { status: 'complete', completedAt: ts } }
+            });
+          }
+          // Match "guardian-passed"
+          if (data.message === 'guardian-passed') {
+            updateWorkflowState(feature, {
+              currentPhase: 8,
+              gates: { '8_guardian_passed': { passed: true, ts: ts } }
+            });
+          }
+        }
+        break;
+
+      case 'session.end':
+        updateWorkflowState(feature, {
+          currentPhase: 9,
+          gates: { '9_feature_complete': { passed: true, ts: ts } }
+        });
+        break;
+
+      default:
+        // Unknown event type — no state update needed
+        break;
+    }
+  } catch {
+    // Never crash emitEvent — swallow all errors from state updates
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Core event emitter
 // ---------------------------------------------------------------------------
 
@@ -249,6 +350,9 @@ function emitEvent(type, data, options) {
 
     const eventFile = path.join(featureDir, 'events.jsonl');
     fs.appendFileSync(eventFile, JSON.stringify(envelope) + '\n');
+
+    // Auto-update workflow state for significant events
+    updateWorkflowStateFromEvent(feature, envelope);
 
     // Trigger markdown renders for significant events
     if (RENDER_TRIGGERS.has(type)) {

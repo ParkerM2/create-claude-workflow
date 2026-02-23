@@ -95,7 +95,8 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
   "guards": {
     "branchGuard": true,
     "destructiveGuard": true,
-    "configGuard": true
+    "configGuard": true,
+    "workflowGate": true
   }
 }
 ```
@@ -115,6 +116,7 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
 | `guards.branchGuard` | `true` | Enable/disable branch protection hook |
 | `guards.destructiveGuard` | `true` | Enable/disable destructive command blocking |
 | `guards.configGuard` | `true` | Enable/disable workflow file protection |
+| `guards.workflowGate` | `true` | Enable/disable phase gate enforcement (blocks agent spawning before prerequisites pass) |
 
 ## Workflow Modes
 
@@ -156,13 +158,15 @@ Branch prefixes, base branch, enforcement mode, and worktree usage are all confi
 
 ## Enforcement Hooks
 
-Six hooks run automatically to protect against common mistakes:
+Eight hooks run automatically to protect against common mistakes:
 
 | Hook | Trigger | Protection |
 |------|---------|------------|
 | `session-start` | Session start/resume | Loads workflow context, branching config, and active feature status |
+| `compact-reinject` | After context compaction | Re-injects Phase Gate Protocol and workflow state after compaction |
 | `safety-guard` | Before Bash commands | Blocks destructive operations (`rm -rf`, `git reset --hard`, etc.) |
 | `config-guard` | Before Edit/Write | Prevents modification of workflow config files |
+| `workflow-gate` | Before Task tool calls | Blocks agent spawning when prerequisite phase gates haven't passed |
 
 ## Project Structure
 
@@ -208,6 +212,8 @@ claude-workflow/
 │   ├── session-start.js
 │   ├── safety-guard.js          # Combined branch + destructive guard
 │   ├── config-guard.js
+│   ├── workflow-gate.js         # Phase gate enforcement (blocks premature agent spawning)
+│   ├── compact-reinject.js      # Re-injects phase gates after context compaction
 │   └── tracker.js
 ├── skills/                      # Internal skills
 │   ├── workflow-setup/
