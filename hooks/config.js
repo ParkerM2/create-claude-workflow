@@ -30,7 +30,8 @@ const BRANCHING_DEFAULTS = {
 const GUARDS_DEFAULTS = {
   branchGuard: true,
   destructiveGuard: true,
-  configGuard: true
+  configGuard: true,
+  workflowGate: true  // NEW — enables phase gate enforcement hooks
 };
 
 // ---------------------------------------------------------------------------
@@ -228,6 +229,187 @@ function getEffectiveBranch(command) {
 }
 
 // ---------------------------------------------------------------------------
+// Workflow state utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the workflow state file for a feature.
+ * Returns parsed JSON object or null if file doesn't exist or cannot be read.
+ * MUST fail gracefully — never throws.
+ *
+ * @param {string} feature - Feature name (maps to progress dir subdirectory)
+ * @returns {object|null}
+ */
+function getWorkflowState(feature) {
+  try {
+    const config = getWorkflowConfig();
+    const progressDir = config.progressDir || '.claude/progress';
+    const statePath = path.join(getRepoRoot(), progressDir, feature, 'workflow-state.json');
+    const raw = fs.readFileSync(statePath, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Recursively deep-merge `source` into `target`.
+ * For each key: if both values are plain objects, recurse; otherwise overwrite.
+ * Returns a new object — does not mutate inputs.
+ *
+ * @param {object} target
+ * @param {object} source
+ * @returns {object}
+ */
+function deepMerge(target, source) {
+  const result = Object.assign({}, target);
+  for (const key of Object.keys(source)) {
+    const srcVal = source[key];
+    const tgtVal = result[key];
+    if (
+      srcVal !== null &&
+      typeof srcVal === 'object' &&
+      !Array.isArray(srcVal) &&
+      tgtVal !== null &&
+      typeof tgtVal === 'object' &&
+      !Array.isArray(tgtVal)
+    ) {
+      result[key] = deepMerge(tgtVal, srcVal);
+    } else {
+      result[key] = srcVal;
+    }
+  }
+  return result;
+}
+
+/**
+ * Deep-merge updates into the workflow state file for a feature.
+ * Writes atomically: write to .tmp file first, then fs.renameSync to actual path.
+ * MUST fail gracefully — never throws.
+ *
+ * @param {string} feature - Feature name
+ * @param {object} updates - Partial state to merge in
+ */
+function updateWorkflowState(feature, updates) {
+  try {
+    const config = getWorkflowConfig();
+    const progressDir = config.progressDir || '.claude/progress';
+    const featureDir = path.join(getRepoRoot(), progressDir, feature);
+    const statePath = path.join(featureDir, 'workflow-state.json');
+    const tmpPath = statePath + '.tmp';
+
+    // Ensure feature directory exists
+    fs.mkdirSync(featureDir, { recursive: true });
+
+    // Read existing state or start fresh
+    const existing = getWorkflowState(feature) || {};
+
+    // Deep-merge updates into existing state
+    const merged = deepMerge(existing, updates);
+
+    // Atomic write: write to .tmp, then rename
+    fs.writeFileSync(tmpPath, JSON.stringify(merged, null, 2));
+    fs.renameSync(tmpPath, statePath);
+  } catch {
+    // Fail gracefully — never throw
+  }
+}
+
+/**
+ * Detect the active feature from git branch or progress directory scan.
+ * Returns feature name string or null.
+ *
+ * Detection order:
+ * 1. Git branch — matches work/<feature>/<task> or feature/<feature> patterns
+ * 2. Progress dir scan — finds a feature with events.jsonl whose last event
+ *    is NOT a session.end event (i.e. an active session)
+ *
+ * MUST fail gracefully — never throws.
+ *
+ * @returns {string|null}
+ */
+function getActiveFeature() {
+  try {
+    // Step 1: Try to detect from git branch
+    try {
+      const branch = execSync('git branch --show-current', {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      }).trim();
+
+      if (branch) {
+        const config = getBranchingConfig();
+        const workPrefix = config.workPrefix;
+        const featurePrefix = config.featurePrefix;
+
+        // work/<feature>/<task> pattern — second segment is the feature
+        if (workPrefix && branch.startsWith(workPrefix + '/')) {
+          const parts = branch.split('/');
+          if (parts.length >= 3) {
+            return parts[1];
+          }
+        }
+
+        // feature/<feature> pattern — second segment is the feature
+        if (featurePrefix && branch.startsWith(featurePrefix + '/')) {
+          const parts = branch.split('/');
+          if (parts.length >= 2 && parts[1]) {
+            return parts[1];
+          }
+        }
+      }
+    } catch {
+      // Branch detection failed — continue to progress dir scan
+    }
+
+    // Step 2: Scan progress dir for active features
+    try {
+      const config = getWorkflowConfig();
+      const progressDir = config.progressDir || '.claude/progress';
+      const absProgressDir = path.join(getRepoRoot(), progressDir);
+
+      if (!fs.existsSync(absProgressDir)) {
+        return null;
+      }
+
+      const entries = fs.readdirSync(absProgressDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+
+        const eventFile = path.join(absProgressDir, entry.name, 'events.jsonl');
+
+        if (!fs.existsSync(eventFile)) continue;
+
+        try {
+          const raw = fs.readFileSync(eventFile, 'utf8');
+          const lines = raw.split('\n').filter(Boolean);
+
+          if (lines.length === 0) continue;
+
+          // Check if the last event is NOT a session.end (meaning session still active)
+          const lastLine = lines[lines.length - 1];
+          const lastEvent = JSON.parse(lastLine);
+
+          if (lastEvent.type !== 'session.end') {
+            return entry.name;
+          }
+        } catch {
+          // Malformed events file — skip this feature
+          continue;
+        }
+      }
+    } catch {
+      // Progress dir scan failed
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -241,5 +423,8 @@ module.exports = {
   isProtectedBranch,
   isFeatureBranch,
   isWorkBranch,
-  getEffectiveBranch
+  getEffectiveBranch,
+  getWorkflowState,
+  updateWorkflowState,
+  getActiveFeature
 };
