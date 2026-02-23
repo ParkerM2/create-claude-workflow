@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.3.0] — 2026-02-22
+
+### Added
+- **Phase Gate Protocol** (`PHASE-GATE-PROTOCOL.md`): 97-line workflow state machine with 9 sequential gates — replaces 2000+ lines of prose for phase transitions
+- **Workflow state file** (`workflow-state.json`): on-disk JSON tracking gate progress, survives context compaction and session crashes
+- **`workflow-gate.js` hook**: PreToolUse hook on Task tool — blocks agent spawning when prerequisite gates haven't passed (Gate 3 for coding agents, Gate 7 for Guardian)
+- **`compact-reinject.js` hook**: SessionStart hook re-injecting Phase Gate Protocol and current workflow state after context compaction
+- **`guards.workflowGate`** config toggle: enable/disable phase gate enforcement in `.claude/workflow.json`
+- Auto-sync of workflow state via `tracker.js` — significant events automatically update `workflow-state.json`
+- Context Recovery section in `team-leader.md` for post-compaction resume
+- Gate check reminders at 5 phase boundaries in the playbook README
+- Section 16 (Phase Gate Protocol) in the playbook README
+
+### Changed
+- `hooks/config.js`: added `getWorkflowState()`, `updateWorkflowState()`, `getActiveFeature()` utilities
+- `commands/new-feature.md`: PHASE-GATE-PROTOCOL.md as first mandatory read, gate check markers between phases, progressive disclosure for spawn templates
+- `agents/team-leader.md`: Phase Gate Protocol in Phase 0 reads, state file management at each gate, non-negotiable rule #11
+- `prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md`: Workflow State File awareness section for Team Leader checklist
+- `hooks/hooks.json`: registered 2 new hooks (compact-reinject, workflow-gate)
+
+### Fixed
+- Gate object truthiness check in `workflow-gate.js` — objects are always truthy in JS, now correctly checks `.passed` property
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [1.2.0] — 2026-02-19
 
 ### Added
