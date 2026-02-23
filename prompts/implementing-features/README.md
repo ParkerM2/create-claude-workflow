@@ -21,8 +21,10 @@
 13. [Wave Fence Protocol](#13-wave-fence-protocol)
 14. [Pre-Flight Checks](#14-pre-flight-checks)
 15. [Context Budget Management](#15-context-budget-management)
+16. [Phase Gate Protocol](#16-phase-gate-protocol)
 
 For the QA Checklist Template, see: [`QA-CHECKLIST-TEMPLATE.md`](./QA-CHECKLIST-TEMPLATE.md)
+For the Phase Gate Protocol, see: [`PHASE-GATE-PROTOCOL.md`](./PHASE-GATE-PROTOCOL.md)
 For the Progress File Template, see: [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md)
 For Agent Spawn Templates, see: [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
 For Workflow Modes, see: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
@@ -182,6 +184,8 @@ This tells a recovering session exactly which branches exist, what state they're
 
 ---
 
+> **GATE CHECK**: Verify gate 1 (Context Loaded) in `workflow-state.json`. See [PHASE-GATE-PROTOCOL.md](./PHASE-GATE-PROTOCOL.md).
+
 ## 4. Task Decomposition
 
 ### Principles
@@ -220,6 +224,8 @@ Task #5: Build UI components              [Wave 4, blocked by #3, #4]
 ```
 
 ---
+
+> **GATE CHECK**: Verify gate 2 (Plan Complete) in `workflow-state.json`. See [PHASE-GATE-PROTOCOL.md](./PHASE-GATE-PROTOCOL.md).
 
 ## 5. Agent Teams Setup
 
@@ -268,6 +274,8 @@ Parallel-safe tasks (can run simultaneously if they touch different files):
 - Multiple UI components (#6a, #6b) — different component files
 
 ---
+
+> **GATE CHECK**: Verify gate 3 (Branch + Team Ready) in `workflow-state.json`. See [PHASE-GATE-PROTOCOL.md](./PHASE-GATE-PROTOCOL.md).
 
 ## 6. Agent Enforcement Protocol
 
@@ -498,6 +506,8 @@ git branch -d work/<feature-name>/<task-slug>
 
 ---
 
+> **GATE CHECK**: Verify gate 7 (All Waves Complete) in `workflow-state.json`. See [PHASE-GATE-PROTOCOL.md](./PHASE-GATE-PROTOCOL.md).
+
 ## 9. Codebase Guardian — Final Gate
 
 ### When to Run
@@ -529,6 +539,8 @@ The Codebase Guardian runs on the fully-merged feature branch and checks:
 ### Spawn template: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
 
 ---
+
+> **GATE CHECK**: Verify gate 8 (Guardian Passed) in `workflow-state.json`. See [PHASE-GATE-PROTOCOL.md](./PHASE-GATE-PROTOCOL.md).
 
 ## 10. Visual QA — Final Verification
 
@@ -679,3 +691,18 @@ Full details: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
 Before spawning each agent, estimate context usage: `8,000 base + (files × 1,000) + 3,000 margin`. If a task touches 13+ files, split it.
 
 Full details: [`CONTEXT-BUDGET-GUIDE.md`](./CONTEXT-BUDGET-GUIDE.md)
+
+---
+
+## 16. Phase Gate Protocol
+
+The workflow is enforced by a 9-gate state machine defined in [`PHASE-GATE-PROTOCOL.md`](./PHASE-GATE-PROTOCOL.md). Before each phase transition, verify the current gate in `.claude/progress/<feature>/workflow-state.json`.
+
+**Key gates:**
+- **Gate 3** (Branch + Team Ready): Must pass before spawning any coding agents
+- **Gate 7** (All Waves Complete): Must pass before spawning Guardian
+- **Gate 8** (Guardian Passed): Must pass before completion
+
+**Enforcement:** The `workflow-gate.js` hook blocks Task tool calls when prerequisite gates haven't passed. The `compact-reinject.js` hook re-injects the protocol and current workflow state after context compaction.
+
+All other gates are verified by reading the state file. The Team Leader updates the state file after each gate transition.
