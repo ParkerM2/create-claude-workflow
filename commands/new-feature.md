@@ -30,10 +30,10 @@ Before anything else, read these files to understand the system:
 
 ```
 MANDATORY READS:
-1. the project rules file                                              — Project rules
-2. the architecture file                                               — System architecture
-3. prompts/implementing-features/README.md                     — THE FULL PLAYBOOK
-4. prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md      — How to spawn agents
+1. prompts/implementing-features/PHASE-GATE-PROTOCOL.md        — THE WORKFLOW STATE MACHINE (this defines every gate you must pass)
+2. the project rules file                                       — Project rules
+3. the architecture file                                        — System architecture
+4. prompts/implementing-features/README.md                     — THE FULL PLAYBOOK
 5. prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md      — QA checklist per task
 6. prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md     — Progress tracking format
 7. prompts/implementing-features/WORKFLOW-MODES.md             — Workflow mode definitions
@@ -62,6 +62,9 @@ If workflow mode is `strict`, run pre-flight checks before proceeding (see `PRE-
 - Verify build, lint, typecheck, and tests pass on the base branch
 - Record the baseline in the progress file
 - If baseline is broken: warn the user and do not proceed until resolved
+
+**After completing Phase 1, update the state file:**
+Set `"1_context_loaded": true` in `.claude/progress/<feature>/workflow-state.json`.
 
 ---
 
@@ -92,6 +95,20 @@ If a feature directory exists in the progress directory with an `events.jsonl` f
 
 ---
 
+```
+═══════════════════════════════════════════
+GATE CHECK: Verify gate 1 before proceeding
+Read: .claude/progress/<feature>/workflow-state.json
+Required:
+  - Project rules file read
+  - Architecture file read
+  - prompts/implementing-features/README.md read
+  - Workflow mode resolved (strict/standard/fast) and recorded
+  - Branching config read from <workflow-config> (baseBranch, featurePrefix, workPrefix, worktreeDir)
+Update state file after passing this gate.
+═══════════════════════════════════════════
+```
+
 ## Phase 3: Plan & Decompose
 
 1. **Understand the feature** — Read requirements, design docs, and all referenced files
@@ -110,7 +127,24 @@ If a feature directory exists in the progress directory with an `events.jsonl` f
    ```
 5. **Identify parallel opportunities** — Tasks within a wave that touch different files
 
+**After completing Phase 3, update the state file:**
+Set `"2_plan_complete": true` in `.claude/progress/<feature>/workflow-state.json`.
+
 ---
+
+```
+═══════════════════════════════════════════
+GATE CHECK: Verify gate 2 before proceeding
+Read: .claude/progress/<feature>/workflow-state.json
+Required:
+  - Written decomposition plan produced (feature summary, rules cited, task list)
+  - Each task has: agent role, file scope, acceptance criteria, QA checklist
+  - Dependency map defined (which tasks block which)
+  - Wave plan finalized (tasks grouped by dependency layer)
+  - Context budget checked per task (8,000 + files × 1,000 + 3,000)
+Update state file after passing this gate.
+═══════════════════════════════════════════
+```
 
 ## Phase 4: Create Feature Branch & Progress File
 
@@ -122,12 +156,30 @@ git checkout -b <featurePrefix>/<feature-name>
 
 Create the feature's progress directory and initialize tracking:
 1. Create `.claude/progress/<feature-name>/` directory
-2. Emit `session.start` event to `events.jsonl` via `/track session.start`
-3. The `current.md` and `history.md` files are rendered when `/track` is called for significant events
+2. Initialize `workflow-state.json` in the progress directory
+3. Emit `session.start` event to `events.jsonl` via `/track session.start`
+4. The `current.md` and `history.md` files are rendered when `/track` is called for significant events
 
 The `events.jsonl` file is your **crash-recovery artifact**. Events are appended via `/track` commands at key checkpoints.
 
+**After completing Phase 4, update the state file:**
+Set `"3_branch_team_ready": true` in `.claude/progress/<feature>/workflow-state.json` after the team is also set up in Phase 5.
+
 ---
+
+```
+═══════════════════════════════════════════
+GATE CHECK: Verify gate 3 before proceeding
+Read: .claude/progress/<feature>/workflow-state.json
+Required:
+  - Feature branch created from configured base branch
+  - TeamCreate called with feature name
+  - TaskCreate called for ALL tasks with full descriptions and blockedBy dependencies
+  - Progress file initialized: .claude/progress/<feature>/events.jsonl exists
+  - session.start event emitted via /track
+Update state file after passing this gate.
+═══════════════════════════════════════════
+```
 
 ## Phase 5: Set Up Team & Tasks
 
@@ -141,6 +193,8 @@ The `events.jsonl` file is your **crash-recovery artifact**. Events are appended
 ---
 
 ## Phase 6: Execute Waves (Core Loop)
+
+Read `AGENT-SPAWN-TEMPLATES.md` NOW (deferred until needed — this reduces initial context consumption).
 
 For each wave, in dependency order:
 
@@ -220,6 +274,19 @@ If the fence check passes:
 
 ---
 
+```
+═══════════════════════════════════════════
+GATE CHECK: Verify gate 7 before proceeding
+Read: .claude/progress/<feature>/workflow-state.json
+Required:
+  - Gate 4-5-6 cycle completed for every planned wave
+  - Wave status table shows all waves COMPLETE
+  - No open workbranches: git branch --list "work/<feature>/*" returns empty
+  - Feature branch contains all merged work and is stable
+Update state file after passing this gate.
+═══════════════════════════════════════════
+```
+
 ## Phase 7: Codebase Guardian Check
 
 When ALL tasks have QA PASS and all workbranches are merged:
@@ -248,6 +315,19 @@ npm run build
 All must pass. If any fail, investigate and fix before proceeding.
 
 ---
+
+```
+═══════════════════════════════════════════
+GATE CHECK: Verify gate 8 before proceeding
+Read: .claude/progress/<feature>/workflow-state.json
+Required:
+  - Codebase Guardian spawned on <featurePrefix>/ branch
+  - Guardian completed all 7 structural integrity checks
+  - Guardian reported PASS (or trivial fixes committed and re-verified)
+  - Full verification run: lint, typecheck, test, build all pass
+Update state file after passing this gate.
+═══════════════════════════════════════════
+```
 
 ## Phase 9: Completion & Cleanup
 
