@@ -34,6 +34,7 @@
 | `QA-CHECKLIST-AUTO-FILL-RULES.md` | Rules for pre-selecting QA sections by agent role | ~80 lines |
 | `CONTEXT-BUDGET-GUIDE.md` | Token estimation formula, size limits, splitting protocol | ~155 lines |
 | `WORKFLOW-MODES.md` | Strict/Standard/Fast mode definitions | ~170 lines |
+| `PHASE-GATE-PROTOCOL.md` | Workflow state machine — 9 sequential gates with binary conditions for phase enforcement |
 | `PROGRESS-FILE-TEMPLATE.md` | Template for progress markdown files | ~50 lines |
 | `WAVE-FENCE-PROTOCOL.md` | Inter-wave verification protocol | ~40 lines |
 | `REFERENCE-INDEX.md` | This file | ~50 lines |

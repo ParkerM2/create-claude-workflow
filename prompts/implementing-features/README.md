@@ -20,6 +20,7 @@
 12. [Wave Fence Protocol](#12-wave-fence-protocol)
 13. [Pre-Flight Checks](#13-pre-flight-checks)
 14. [Context Budget Management](#14-context-budget-management)
+16. [Phase Gate Protocol](#16-phase-gate-protocol)
 
 For the QA Checklist Template, see: [`QA-CHECKLIST-TEMPLATE.md`](./QA-CHECKLIST-TEMPLATE.md)
 For the Progress File Template, see: [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md)
@@ -71,6 +72,8 @@ PLAN ──▶ BRANCH ──▶ TRACK ──▶ ASSIGN ──▶ BUILD ──▶
 ```
 
 ---
+
+> **GATE CHECK**: Verify gate 1 (Context Loaded) in workflow-state.json
 
 ## 2. Branching Strategy
 
@@ -218,6 +221,8 @@ Task #5: Build UI components              [Wave 4, blocked by #3, #4]
 
 ---
 
+> **GATE CHECK**: Verify gate 2 (Plan Complete) in workflow-state.json
+
 ## 5. Agent Teams Setup
 
 ### Creating the Team
@@ -264,6 +269,8 @@ Parallel-safe tasks (can run simultaneously if they touch different files):
 - Multiple UI components (#6a, #6b) — different component files
 
 ---
+
+> **GATE CHECK**: Verify gate 3 (Branch + Team Ready) in workflow-state.json
 
 ## 6. Agent Enforcement Protocol
 
@@ -486,6 +493,8 @@ git branch -d work/<feature-name>/<task-slug>
 
 ---
 
+> **GATE CHECK**: Verify gate 7 (All Waves Complete) in workflow-state.json
+
 ## 9. Codebase Guardian — Final Gate
 
 ### When to Run
@@ -608,6 +617,8 @@ Full details: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
 
 ---
 
+> **GATE CHECK**: Verify gate 8 (Guardian Passed) in workflow-state.json
+
 ## 12. Wave Fence Protocol
 
 The wave fence is a synchronization check between waves — it verifies the feature branch is stable before the next wave starts. Fence strictness follows the workflow mode (full verify / lint only / skip).
@@ -629,3 +640,27 @@ Full details: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
 Before spawning each agent, estimate context usage: `8,000 base + (files × 1,000) + 3,000 margin`. If a task touches 13+ files, split it.
 
 Full details: [`CONTEXT-BUDGET-GUIDE.md`](./CONTEXT-BUDGET-GUIDE.md)
+
+---
+
+## 16. Phase Gate Protocol
+
+The Phase Gate Protocol (`PHASE-GATE-PROTOCOL.md`) defines 9 sequential gates that the
+Team Leader must pass during feature implementation. Each gate has 3-5 binary verifiable
+conditions and maps to a state key in `workflow-state.json`.
+
+**Why it exists**: Claude Code can lose track of the multi-step workflow after context
+compaction or when processing long feature implementations. The Phase Gate Protocol
+provides a compact (~97 line) state machine that survives compaction re-injection and
+is enforced by PreToolUse hooks.
+
+**Key gates**:
+- **Gate 3** (Branch + Team Ready): Must pass before spawning any coding agents
+- **Gate 7** (All Waves Complete): Must pass before spawning Guardian
+- **Gate 8** (Guardian Passed): Must pass before completion
+
+**Enforcement**: The `workflow-gate.js` hook blocks Task tool calls when prerequisite
+gates haven't passed. The `compact-reinject.js` hook re-injects the protocol and
+current workflow state after context compaction.
+
+See `PHASE-GATE-PROTOCOL.md` for the full gate definitions and conditions.
