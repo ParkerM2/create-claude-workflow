@@ -39,7 +39,12 @@ Before starting ANY task, read these files using the lazy-load pattern below.
 
 Do NOT read deferred files during Phase 0. Read each one at the moment its phase begins. This saves ~6,000 tokens of upfront context.
 
-If a design document exists for the feature, read it during Phase 1.
+If a design document exists for the feature (created by `/new-plan`), read it during Phase 1.
+The design doc consolidates project rules, architecture, task breakdown, wave plan, and QA strategy.
+When a design doc is present, skip reading: README.md, project rules file, architecture file,
+QA-CHECKLIST-TEMPLATE.md, and PROGRESS-FILE-TEMPLATE.md — they are already consolidated in the doc.
+Only read PHASE-GATE-PROTOCOL.md (always needed) and WORKFLOW-MODES.md (if mode not in doc).
+Defer AGENT-SPAWN-TEMPLATES.md to Phase 2 (spawning).
 
 </initialization-protocol>
 
@@ -223,7 +228,7 @@ git checkout <featurePrefix>/<feature-name>
 git merge --no-ff <workPrefix>/<feature-name>/<task-slug> -m "Merge <task-slug>: <summary>"
 
 # 4. Emit merge tracking event
-/track branch.merged "Merged <task-slug> to <featurePrefix>/<feature-name>"
+/claude-workflow:track branch.merged "Merged <task-slug> to <featurePrefix>/<feature-name>"
 
 # 5. Remove worktree
 git worktree remove <worktreeDir>/<feature-name>/<task-slug>
@@ -247,7 +252,7 @@ git checkout <featurePrefix>/<feature-name>
 git merge --no-ff <workPrefix>/<feature-name>/<task-slug> -m "Merge <task-slug>: <summary>"
 
 # 4. Emit merge tracking event
-/track branch.merged "Merged <task-slug> to <featurePrefix>/<feature-name>"
+/claude-workflow:track branch.merged "Merged <task-slug> to <featurePrefix>/<feature-name>"
 
 # 5. Delete workbranch
 git branch -d <workPrefix>/<feature-name>/<task-slug>
@@ -267,28 +272,64 @@ git branch -d <workPrefix>/<feature-name>/<task-slug>
 
 <progress-tracking>
 
-Track progress via `.claude/progress/<feature-name>/events.jsonl` — an append-only JSONL event log. You MUST call `/track` at each checkpoint listed below. This is the **only** tracking mechanism — there are no automatic hooks.
+Track progress via `.claude/progress/<feature-name>/events.jsonl` — an append-only JSONL event log. You MUST call `/claude-workflow:track` at each checkpoint listed below. This is the **only** tracking mechanism — there are no automatic hooks.
 
 | When | Command |
 |------|---------|
-| Feature starts | `/track session.start "Starting <feature>"` |
-| Plan finalized | `/track plan.created "<summary>"` |
-| Task begins | `/track task.started "<summary>" --task N` |
-| Task completes | `/track task.completed "<summary>" --task N --files f1,f2` |
-| QA passes | `/track qa.passed "Task #N, round M" --task N` |
-| QA fails | `/track qa.failed "Task #N, issues..." --task N` |
-| Wave complete | `/track checkpoint "wave-N-complete"` |
-| Branch merged | `/track branch.merged "Merged <task-slug> to feature/<name>"` |
-| Blocker found | `/track blocker.reported "description"` |
-| Feature complete | `/track session.end "Feature complete"` |
+| Feature starts | `/claude-workflow:track session.start "Starting <feature>"` |
+| Plan finalized | `/claude-workflow:track plan.created "<summary>"` |
+| Task begins | `/claude-workflow:track task.started "<summary>" --task N` |
+| Task completes | `/claude-workflow:track task.completed "<summary>" --task N --files f1,f2` |
+| QA passes | `/claude-workflow:track qa.passed "Task #N, round M" --task N` |
+| QA fails | `/claude-workflow:track qa.failed "Task #N, issues..." --task N` |
+| Wave complete | `/claude-workflow:track checkpoint "wave-N-complete"` |
+| Branch merged | `/claude-workflow:track branch.merged "Merged <task-slug> to feature/<name>"` |
+| Blocker found | `/claude-workflow:track blocker.reported "description"` |
+| Feature complete | `/claude-workflow:track session.end "Feature complete"` |
 
-The `current.md` and `history.md` files are rendered from JSONL events when `/track` is called for significant events.
+The `current.md` and `history.md` files are rendered from JSONL events when `/claude-workflow:track` is called for significant events.
 
 ### Concurrency
 
 The JSONL log uses append-only writes (`fs.appendFileSync` with `O_APPEND`) — safe for parallel instances writing lines under 4KB. Each Claude session gets a unique session ID (`sid`) so interleaved writes are distinguishable. Lock files protect only the rendered markdown files (`current.md`, `history.md`, `index.md`).
 
 </progress-tracking>
+
+## Progress Display Protocol
+
+<progress-display>
+
+After calling `/claude-workflow:track` for significant events, output a formatted progress
+table directly as inline text. This renders as a clean table in the CLI — NOT a file diff.
+
+### When to Display
+
+Display after: session.start, task.completed, qa.passed/failed, branch.merged,
+checkpoint (wave complete), session.end.
+
+### Table Format
+
+Output this exact structure (adapt content to current state):
+
+  ## Feature Progress: <feature-name>
+  | # | Task | Status | QA | Wave |
+  |---|------|--------|----|------|
+  | 1 | <name> | DONE | PASS | 1 |
+  | 2 | <name> | IN_PROGRESS | -- | 2 |
+  | 3 | <name> | PENDING | -- | 3 |
+
+  **Wave**: <current>/<total> | **Mode**: <mode> | **Blockers**: <count or "none">
+
+### Status Values
+DONE, QA_PASS, QA_FAIL, IN_PROGRESS, PENDING, BLOCKED
+
+### Rules
+1. Reconstruct table from your in-memory task state after each /claude-workflow:track call
+2. Output as plain text (renders as markdown table in CLI)
+3. The current.md file write still happens for persistence — this is supplementary
+4. Do NOT use Write/Edit tool for the table display — just output it as text
+
+</progress-display>
 
 ## Error Recovery Protocol
 
@@ -348,6 +389,50 @@ After each feature completes, review the performance log at `the progress direct
 Performance tracking is active in `strict` mode only.
 
 </performance-tracking>
+
+## Workflow Integrity — Anti-Shortcutting Rules
+
+<workflow-integrity mandatory="true">
+
+The structured workflow exists for a reason. Skipping steps to "move faster" produces
+broken features, missed bugs, and wasted user time. These rules are NON-NEGOTIABLE:
+
+### Never Rush Agents
+- Do NOT spam-check agents to see if they pushed a commit
+- Do NOT shut down agents early just because they committed code
+- Let agents complete their FULL 4-phase workflow: Load Rules → Plan → Execute → Self-Review
+- An agent that committed code but hasn't self-reviewed is NOT done
+- Wait for the agent to send you a completion message before proceeding
+
+### Never Skip QA
+- Every task MUST go through QA review before merge — no exceptions
+- Do NOT merge a workbranch just because the agent committed
+- Do NOT merge "to keep things moving" — merge only after QA PASS
+- If QA fails, the agent fixes and resubmits — do NOT skip the fix cycle
+
+### Never Skip Steps to "Save Time"
+- Do NOT skip the self-review phase to merge faster
+- Do NOT skip wave fence checks between waves
+- Do NOT skip the Codebase Guardian check at the end
+- Do NOT combine or skip phases — they are sequential and blocking for a reason
+- Do NOT shut down agents between tasks just to restart them — let idle agents pick up new work
+
+### Never Cut Corners on Merges
+- Always rebase before merge (prevents silent conflicts)
+- Always use --no-ff (preserves branch history)
+- Always delete merged workbranches (keeps branch list clean)
+- Never force-push or drop commits to resolve conflicts
+
+### The Goal Is Quality, Not Speed
+- There are NO deadlines. There is NO rush. Allow the workflow to control the pace.
+- A feature completed correctly in 30 minutes beats a broken feature in 10 minutes
+- The user chose a structured workflow because they want reliable, predictable results
+- If you feel the urge to skip a step, that is exactly when the step is most needed
+- Do NOT optimize for speed — optimize for correctness
+- Let each phase complete naturally. Do NOT poll, hurry, or compress the timeline
+- The workflow phases exist as quality gates — rushing past them produces the exact failures they prevent
+
+</workflow-integrity>
 
 ## Coordination Rules — Non-Negotiable
 

@@ -191,8 +191,8 @@ This log entry is appended after EVERY QA report (both PASS and FAIL), not just 
 
 You MUST emit a tracking event for the QA result. This is the only tracking mechanism — there are no automatic hooks.
 
-- On PASS: `/track qa.passed "Task #N, round M, all criteria met" --task N`
-- On FAIL: `/track qa.failed "Task #N, round M, <issue summary>" --task N`
+- On PASS: `/claude-workflow:track qa.passed "Task #N, round M, all criteria met" --task N`
+- On FAIL: `/claude-workflow:track qa.failed "Task #N, round M, <issue summary>" --task N`
 
 ### Phase 6: QA Report
 

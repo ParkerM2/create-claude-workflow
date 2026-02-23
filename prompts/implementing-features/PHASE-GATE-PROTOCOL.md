@@ -35,7 +35,7 @@ Prereq: Gate 2
 - [ ] `TeamCreate` called with feature name
 - [ ] `TaskCreate` called for ALL tasks with full descriptions and blockedBy dependencies
 - [ ] Progress file initialized: `.claude/progress/<feature>/events.jsonl` exists
-- [ ] `session.start` event emitted via `/track`
+- [ ] `session.start` event emitted via `/claude-workflow:track`
 State key: `"3_branch_team_ready": true`
 Next: `PROGRESS-FILE-TEMPLATE.md` for progress file format
 
@@ -91,6 +91,6 @@ Prereq: Gate 8
 - [ ] PR created with screenshots, verification checklist, and change summary
 - [ ] All agents shut down via `shutdown_request`
 - [ ] Team deleted via `TeamDelete`
-- [ ] `session.end` event emitted via `/track session.end "Feature complete"`
+- [ ] `session.end` event emitted via `/claude-workflow:track session.end "Feature complete"`
 State key: `"9_feature_complete": true`
 Next: none — feature is done

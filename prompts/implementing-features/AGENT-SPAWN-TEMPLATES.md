@@ -146,7 +146,7 @@ git commit -m "<type>: <description>"
 
 Then emit a tracking event:
 ```
-/track task.completed "Task #<N>: <summary>" --task <N> --files <changed-files>
+/claude-workflow:track task.completed "Task #<N>: <summary>" --task <N> --files <changed-files>
 ```
 
 If working in a worktree, all git commands run from your worktree directory automatically.
@@ -607,8 +607,8 @@ git commit -m "fix: structural cleanup for <feature>"
 For non-trivial issues, report them for the Team Leader to assign.
 
 After completing your report, emit a tracking event:
-- On PASS: `/track checkpoint "guardian-passed"`
-- On FAIL: `/track error.encountered "guardian-failed: <summary of issues>"`
+- On PASS: `/claude-workflow:track checkpoint "guardian-passed"`
+- On FAIL: `/claude-workflow:track error.encountered "guardian-failed: <summary of issues>"`
 
 </phase>
 
