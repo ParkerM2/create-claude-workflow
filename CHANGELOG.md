@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.1] — 2026-02-23
+
+### Fixed
+- `/track` skill resolution for subagents — use fully-qualified `/claude-workflow:track` in all agent/command files (10 files, ~40 replacements)
+- Progress display now renders as inline markdown table in CLI instead of file diffs
+
+### Added
+- Progress Display Protocol in `team-leader.md` — formatted task table after each tracking event
+- Two-path context loading in `new-feature.md` — Path A (design doc) reads 3 files, Path B (no doc) lazy-loads by phase (~5K-8K tokens saved)
+- Workflow Integrity anti-shortcutting rules in `team-leader.md` — prevents rushing agents, skipping QA, and cutting merge corners
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [1.3.0] — 2026-02-22
 
 ### Added
