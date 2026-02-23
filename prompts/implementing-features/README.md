@@ -15,11 +15,12 @@
 7. [QA Verification Workflow](#7-qa-verification-workflow)
 8. [Merge Protocol](#8-merge-protocol)
 9. [Codebase Guardian — Final Gate](#9-codebase-guardian--final-gate)
-10. [Crash Recovery](#10-crash-recovery)
-11. [Workflow Modes](#11-workflow-modes)
-12. [Wave Fence Protocol](#12-wave-fence-protocol)
-13. [Pre-Flight Checks](#13-pre-flight-checks)
-14. [Context Budget Management](#14-context-budget-management)
+10. [Visual QA — Final Verification](#10-visual-qa--final-verification)
+11. [Crash Recovery](#11-crash-recovery)
+12. [Workflow Modes](#12-workflow-modes)
+13. [Wave Fence Protocol](#13-wave-fence-protocol)
+14. [Pre-Flight Checks](#14-pre-flight-checks)
+15. [Context Budget Management](#15-context-budget-management)
 
 For the QA Checklist Template, see: [`QA-CHECKLIST-TEMPLATE.md`](./QA-CHECKLIST-TEMPLATE.md)
 For the Progress File Template, see: [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md)
@@ -38,22 +39,23 @@ For Performance Logging, see: [`AGENT-PERFORMANCE-LOG-TEMPLATE.md`](./AGENT-PERF
 Every feature passes through these phases. No phase may be skipped.
 
 ```
-PLAN ──▶ BRANCH ──▶ TRACK ──▶ ASSIGN ──▶ BUILD ──▶ QA ──▶ MERGE ──▶ GUARDIAN ──▶ PR
-  │         │         │          │          │        │        │          │           │
-  │         │         │          │          │        │        │          │           └─ Create PR from
-  │         │         │          │          │        │        │          │              feature/ to main
+PLAN ──▶ BRANCH ──▶ TRACK ──▶ ASSIGN ──▶ BUILD ──▶ QA ──▶ MERGE ──▶ GUARDIAN ──▶ VISUAL QA ──▶ PR
+  │         │         │          │          │        │        │          │            │            │
+  │         │         │          │          │        │        │          │            │            └─ Create PR with
+  │         │         │          │          │        │        │          │            │               screenshots
+  │         │         │          │          │        │        │          │            │
+  │         │         │          │          │        │        │          │            └─ MCP Electron tests
+  │         │         │          │          │        │        │          │               running app, captures
+  │         │         │          │          │        │        │          │               screenshots for PR
   │         │         │          │          │        │        │          │
   │         │         │          │          │        │        │          └─ Codebase Guardian
-  │         │         │          │          │        │        │             runs on merged
-  │         │         │          │          │        │        │             feature branch
+  │         │         │          │          │        │        │             structural check
   │         │         │          │          │        │        │
   │         │         │          │          │        │        └─ Rebase workbranch
   │         │         │          │          │        │           on feature/, merge
-  │         │         │          │          │        │           --no-ff, delete branch
   │         │         │          │          │        │
   │         │         │          │          │        └─ QA reviews code on
-  │         │         │          │          │           workbranch. On PASS:
-  │         │         │          │          │           updates docs, commits.
+  │         │         │          │          │           workbranch
   │         │         │          │          │
   │         │         │          │          └─ Agent works + commits
   │         │         │          │             on workbranch
@@ -61,8 +63,7 @@ PLAN ──▶ BRANCH ──▶ TRACK ──▶ ASSIGN ──▶ BUILD ──▶
   │         │         │          └─ TeamCreate, TaskCreate,
   │         │         │             spawn agents on workbranches
   │         │         │
-  │         │         └─ Create progress file at
-  │         │            the progress directory/<feature>-progress.md
+  │         │         └─ Create progress file
   │         │
   │         └─ Create feature/<name> from main
   │
@@ -118,13 +119,13 @@ git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<featu
 
 ### Conflict Prevention (5 Layers)
 
-| Layer | Mechanism | How It Works |
-|-------|-----------|-------------|
-| 1 | File scoping | No two agents edit the same file |
-| 2 | Wave ordering | Dependency-based execution: schema → service → UI |
-| 3 | Pre-merge rebase | Workbranch rebased on `feature/` before merge |
-| 4 | Sequential merges | One workbranch merged at a time, never parallel |
-| 5 | Escalation | Unresolvable conflicts surfaced to user |
+| Layer | Mechanism         | How It Works                                      |
+| ----- | ----------------- | ------------------------------------------------- |
+| 1     | File scoping      | No two agents edit the same file                  |
+| 2     | Wave ordering     | Dependency-based execution: schema → service → UI |
+| 3     | Pre-merge rebase  | Workbranch rebased on `feature/` before merge     |
+| 4     | Sequential merges | One workbranch merged at a time, never parallel   |
+| 5     | Escalation        | Unresolvable conflicts surfaced to user           |
 
 ---
 
@@ -139,6 +140,7 @@ Claude Code sessions can terminate unexpectedly (terminal close, timeout, proces
 **Location**: `.claude/progress/<feature-name>/events.jsonl` (source of truth)
 
 **Rendered summaries**:
+
 - `.claude/progress/<feature-name>/current.md` — active task state
 - `.claude/progress/<feature-name>/history.md` — full timeline
 - `.claude/progress/index.md` — dashboard across all features
@@ -153,14 +155,14 @@ The Team Leader MUST create this file BEFORE spawning any agents.
 
 Update the progress file after EVERY significant state change:
 
-| Event | What to Update |
-|-------|---------------|
-| Team + tasks created | Task list, dependency graph |
-| Workbranch created | Branch status table, agent registry |
-| Agent completes work | Task status, files created/modified |
-| QA cycle (pass/fail) | QA results section, task QA status |
-| Workbranch merged | Branch status (Merged = YES), merge log |
-| Integration complete | Overall status → COMPLETE |
+| Event                | What to Update                          |
+| -------------------- | --------------------------------------- |
+| Team + tasks created | Task list, dependency graph             |
+| Workbranch created   | Branch status table, agent registry     |
+| Agent completes work | Task status, files created/modified     |
+| QA cycle (pass/fail) | QA results section, task QA status      |
+| Workbranch merged    | Branch status (Merged = YES), merge log |
+| Integration complete | Overall status → COMPLETE               |
 
 Events are emitted via `/track` commands at key checkpoints. Agents MUST call `/track` at each required checkpoint — there are no automatic hooks.
 
@@ -169,11 +171,11 @@ Events are emitted via `/track` commands at key checkpoints. Agents MUST call `/
 The progress file includes a **branch status table** — the key crash-recovery data:
 
 ```markdown
-| Branch | Task | Agent | Status | Merged to Feature? |
-|--------|------|-------|--------|---------------------|
-| work/<feature>/schema | #1 | schema-designer | COMPLETE | YES |
-| work/<feature>/service | #2 | service-eng | QA_PASS | NO |
-| work/<feature>/ui | #3 | component-eng | IN_PROGRESS | NO |
+| Branch                 | Task | Agent           | Status      | Merged to Feature? |
+| ---------------------- | ---- | --------------- | ----------- | ------------------ |
+| work/<feature>/schema  | #1   | schema-designer | COMPLETE    | YES                |
+| work/<feature>/service | #2   | service-eng     | QA_PASS     | NO                 |
+| work/<feature>/ui      | #3   | component-eng   | IN_PROGRESS | NO                 |
 ```
 
 This tells a recovering session exactly which branches exist, what state they're in, and which still need to be merged.
@@ -185,6 +187,7 @@ This tells a recovering session exactly which branches exist, what state they're
 ### Principles
 
 Each task MUST:
+
 - Be assignable to exactly ONE agent
 - Have a clear file scope (specific files to create/modify)
 - Have explicit acceptance criteria
@@ -259,6 +262,7 @@ TaskUpdate:
 ```
 
 Parallel-safe tasks (can run simultaneously if they touch different files):
+
 - Types (#1) + Database migrations (#1b)
 - State (#4) + Service (#2) — different files, both depend on types
 - Multiple UI components (#6a, #6b) — different component files
@@ -270,6 +274,7 @@ Parallel-safe tasks (can run simultaneously if they touch different files):
 ### The Problem
 
 Agents tend to:
+
 1. Receive their prompt and immediately start coding (skipping planning)
 2. Hit an error and chase it down rabbit holes, forgetting their original task
 3. Run out of context and lose track of rules and guidelines
@@ -329,11 +334,13 @@ This prevents the "adventure" behavior where agents see an error and spend 20 mi
 The Team Leader MUST use the complete spawn templates from [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md). These templates embed the phased workflow and error recovery directly into the agent's prompt.
 
 **NEVER** spawn an agent with a minimal prompt like:
+
 ```
 "Implement the auth service in src/services/auth.ts"
 ```
 
 **ALWAYS** use the full template which includes:
+
 - All 4 phases with blocking gates
 - Error Recovery Protocol
 - Task context (description, acceptance criteria, file scope)
@@ -342,11 +349,11 @@ The Team Leader MUST use the complete spawn templates from [`AGENT-SPAWN-TEMPLAT
 
 ### What Each Agent Type Plans
 
-| Agent Type | Phase 1 Plan Includes |
-|---|---|
-| **Coding Agent** | Task summary, applicable rules (cited by section), files to create/modify/avoid, step-by-step implementation order, acceptance criteria mapping, risk assessment |
-| **QA Reviewer** | What to review, specific rules to enforce (cited by section), review order per file, automated checks to run, coding agent's plan (for verification) |
-| **Codebase Guardian** | Feature scope (all changed files), structural rules to enforce (cited by section), check mapping (which files for each of the 7 checks) |
+| Agent Type            | Phase 1 Plan Includes                                                                                                                                            |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Coding Agent**      | Task summary, applicable rules (cited by section), files to create/modify/avoid, step-by-step implementation order, acceptance criteria mapping, risk assessment |
+| **QA Reviewer**       | What to review, specific rules to enforce (cited by section), review order per file, automated checks to run, coding agent's plan (for verification)             |
+| **Codebase Guardian** | Feature scope (all changed files), structural rules to enforce (cited by section), check mapping (which files for each of the 7 checks)                          |
 
 ### Full spawn templates: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
 
@@ -355,20 +362,24 @@ The Team Leader MUST use the complete spawn templates from [`AGENT-SPAWN-TEMPLAT
 These guards apply to ALL agents and ALL commands. Follow them automatically.
 
 #### File Existence
+
 - Before reading `the project rules file`: if it doesn't exist, warn the user and continue with project conventions you can infer from the codebase. Do NOT stop.
 - Before reading `the architecture file`: if it doesn't exist, skip it. Infer architecture from the codebase directly.
 - Before reading any `prompts/` file: if it doesn't exist, the workflow is not fully installed. Warn the user and continue with defaults.
 
 #### Git State
+
 - Before any branch operation, detect the primary branch:
   `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|.*/||'` — if this fails, try `git branch -l main master 2>/dev/null | head -1 | tr -d '* '` — if both fail, ask the user.
 - Before `git checkout -b <branch>`: check if the branch already exists with `git branch --list "<branch>"`. If it exists, ask the user whether to resume or overwrite.
 - Before any git operation: verify the repo is initialized (`git rev-parse --git-dir`) and has at least one commit (`git log -1`). If not, inform the user.
 
 #### Progress Directory
+
 - Before writing to `the progress directory/`: create it if it doesn't exist (`mkdir -p the progress directory`).
 
 #### Tool Detection
+
 - Do NOT assume `npm run lint`, `npm run test`, etc. exist.
 - In Phase 0, determine the project's toolchain: check for `package.json` (npm/yarn/pnpm/bun), `Makefile`, `pyproject.toml`, `Cargo.toml`, `go.mod`, etc.
 - Adapt all check commands to the detected toolchain. If no toolchain is detected, skip automated checks and note this in the progress file.
@@ -439,6 +450,7 @@ Every task includes a filled QA checklist from [`QA-CHECKLIST-TEMPLATE.md`](./QA
 ### When to Merge
 
 Merge a workbranch to `feature/` when:
+
 1. The coding agent reports QA PASS
 2. QA has committed doc updates on the workbranch
 3. No other merge is in progress (sequential only)
@@ -506,19 +518,53 @@ The Codebase Guardian runs on the fully-merged feature branch and checks:
 
 ### Guardian vs Per-Task QA
 
-| | Per-Task QA | Codebase Guardian |
-|---|---|---|
-| **Scope** | One workbranch | Entire feature branch |
-| **Runs when** | After each task | After all tasks merged |
-| **Catches** | Code quality, bugs, missing tests | Cross-cutting issues, structural problems |
-| **Modifies files** | Docs only | May fix trivial structural issues |
-| **Required** | Yes, per task | Yes, once per feature |
+|                    | Per-Task QA                       | Codebase Guardian                         |
+| ------------------ | --------------------------------- | ----------------------------------------- |
+| **Scope**          | One workbranch                    | Entire feature branch                     |
+| **Runs when**      | After each task                   | After all tasks merged                    |
+| **Catches**        | Code quality, bugs, missing tests | Cross-cutting issues, structural problems |
+| **Modifies files** | Docs only                         | May fix trivial structural issues         |
+| **Required**       | Yes, per task                     | Yes, once per feature                     |
 
 ### Spawn template: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
 
 ---
 
-## 10. Crash Recovery
+## 10. Visual QA — Final Verification
+
+After Codebase Guardian passes, perform visual verification using MCP Electron tools.
+
+### Prerequisites
+
+1. **Application running** — User must start with `npm run dev`
+2. **MCP Electron server active** — Configured in `.mcp.json`
+
+### What It Does
+
+The Visual QA Agent:
+
+1. Connects to the running app via MCP Electron
+2. Navigates to routes/pages affected by the feature
+3. Tests user flows (clicking, filling forms, etc.)
+4. Captures screenshots as evidence
+5. Checks console for errors
+6. Reports PASS/FAIL with screenshots for PR
+
+### Visual QA vs Codebase Guardian
+
+|              | Codebase Guardian     | Visual QA                       |
+| ------------ | --------------------- | ------------------------------- |
+| **Scope**    | Code structure        | Running application             |
+| **Checks**   | Files, imports, types | UI, interactions, flows         |
+| **Tools**    | Git, file system      | MCP Electron                    |
+| **Output**   | Structural report     | Screenshots + flow report       |
+| **Required** | Yes                   | Yes (can skip if app won't run) |
+
+### Spawn template: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
+
+---
+
+## 11. Crash Recovery
 
 > See also: [`RESUME-PROTOCOL.md`](./RESUME-PROTOCOL.md) for the full JSONL-based recovery flow.
 
@@ -578,11 +624,15 @@ ls ~/.claude/teams/
 │  Create from updated feature/ → spawn → QA → merge    │
 ├──────────────────────────────────────────────────────┤
 │  FINAL: Codebase Guardian                             │
-│  Runs on merged feature/ → structural check → PR      │
+│  Runs on merged feature/ → structural check           │
+├──────────────────────────────────────────────────────┤
+│  FINAL: Visual QA (requires running app)              │
+│  MCP Electron → test flows → screenshots → PR         │
 └──────────────────────────────────────────────────────┘
 ```
 
 Each wave:
+
 1. Team Leader creates workbranches from `feature/` HEAD
 2. Agents work + commit on workbranches
 3. Agents spawn QA → QA reviews → QA updates docs → QA approves
@@ -592,15 +642,15 @@ Each wave:
 
 ---
 
-## 11. Workflow Modes
+## 12. Workflow Modes
 
 Three modes control ceremony level. The Team Leader resolves the mode at feature start and records it in the progress file.
 
-| Mode | QA Rounds | Guardian | Pre-Flight | Wave Fence |
-|------|-----------|----------|------------|------------|
-| **strict** (default) | 3 | Yes | Yes | Full verify |
-| **standard** | 2 | Yes (auto-fix trivial) | No | Lint only |
-| **fast** | 1 | No | No | Skip |
+| Mode                 | QA Rounds | Guardian               | Pre-Flight | Wave Fence  |
+| -------------------- | --------- | ---------------------- | ---------- | ----------- |
+| **strict** (default) | 3         | Yes                    | Yes        | Full verify |
+| **standard**         | 2         | Yes (auto-fix trivial) | No         | Lint only   |
+| **fast**             | 1         | No                     | No         | Skip        |
 
 **Resolution priority**: per-invocation override → `the project rules file` setting → default (strict).
 
@@ -608,7 +658,7 @@ Full details: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
 
 ---
 
-## 12. Wave Fence Protocol
+## 13. Wave Fence Protocol
 
 The wave fence is a synchronization check between waves — it verifies the feature branch is stable before the next wave starts. Fence strictness follows the workflow mode (full verify / lint only / skip).
 
@@ -616,7 +666,7 @@ Full details: [`WAVE-FENCE-PROTOCOL.md`](./WAVE-FENCE-PROTOCOL.md)
 
 ---
 
-## 13. Pre-Flight Checks
+## 14. Pre-Flight Checks
 
 In `strict` mode, verify the codebase baseline (lint, typecheck, test, build) before spawning agents. Mandatory for `/new-refactor` regardless of mode.
 
@@ -624,7 +674,7 @@ Full details: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
 
 ---
 
-## 14. Context Budget Management
+## 15. Context Budget Management
 
 Before spawning each agent, estimate context usage: `8,000 base + (files × 1,000) + 3,000 margin`. If a task touches 13+ files, split it.
 
