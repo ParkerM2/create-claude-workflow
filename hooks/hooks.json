@@ -10,6 +10,16 @@
             "timeout": 10000
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/compact-reinject.js",
+            "timeout": 10000
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -39,6 +49,16 @@
           {
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/config-guard.js",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/workflow-gate.js",
             "timeout": 10000
           }
         ]
