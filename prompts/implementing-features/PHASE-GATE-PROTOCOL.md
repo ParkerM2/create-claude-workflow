@@ -1,96 +1,65 @@
-═══════════════════════════════════════════════════════════════
-STOP — THIS FILE IS THE WORKFLOW STATE MACHINE
-Do NOT proceed past any gate without verifying ALL conditions.
+================================================================
+STOP -- THIS FILE IS THE WORKFLOW STATE MACHINE (FSM v2)
+Do NOT proceed past any phase without verifying conditions.
 After context compaction, re-read this file and the state file at:
   .claude/progress/<feature>/workflow-state.json
-═══════════════════════════════════════════════════════════════
+================================================================
 
-State keys map to: `.claude/progress/<feature>/workflow-state.json`
+## State Schema
 
----
+```json
+{
+  "feature": "<name>",
+  "mode": "strict|standard|fast",
+  "startedAt": "<ISO>",
+  "phase": "plan|setup|wave|guardian|done",
+  "setupComplete": true|false,
+  "guardianPassed": true|false,
+  "currentWave": 2,
+  "totalWaves": 0,
+  "waves": { "1": "complete", "2": "active" }
+}
+```
 
-## GATE 1: Context Loaded
-Prereq: none
-- [ ] Project rules file read
-- [ ] Architecture file read
-- [ ] `prompts/implementing-features/README.md` read
-- [ ] Workflow mode resolved (strict/standard/fast) and recorded
-- [ ] Branching config read from `<workflow-config>` (baseBranch, featurePrefix, workPrefix, worktreeDir)
-State key: `"1_context_loaded": true`
-Next: `WORKFLOW-MODES.md` for mode definitions, `PRE-FLIGHT-CHECKS.md` if strict mode
+## State Transitions
 
-## GATE 2: Plan Complete
-Prereq: Gate 1
-- [ ] Written decomposition plan produced (feature summary, rules cited, task list)
-- [ ] Each task has: agent role, file scope, acceptance criteria, QA checklist
-- [ ] Dependency map defined (which tasks block which)
-- [ ] Wave plan finalized (tasks grouped by dependency layer)
-- [ ] Context budget checked per task (`8,000 + files × 1,000 + 3,000`)
-State key: `"2_plan_complete": true`
-Next: `AGENT-SPAWN-TEMPLATES.md`, `QA-CHECKLIST-AUTO-FILL-RULES.md`, `CONTEXT-BUDGET-GUIDE.md`
+All transitions are event-driven via `/claude-workflow:track`.
 
-## GATE 3: Branch + Team Ready
-Prereq: Gate 2
-- [ ] Feature branch created from configured base branch
-- [ ] `TeamCreate` called with feature name
-- [ ] `TaskCreate` called for ALL tasks with full descriptions and blockedBy dependencies
-- [ ] Progress file initialized: `.claude/progress/<feature>/events.jsonl` exists
-- [ ] `session.start` event emitted via `/claude-workflow:track`
-State key: `"3_branch_team_ready": true`
-Next: `PROGRESS-FILE-TEMPLATE.md` for progress file format
+| Current Phase | Event / Checkpoint | Next Phase | Key State Changes |
+|---|---|---|---|
+| (none) | `session.start` | plan | Initialize all fields |
+| plan | `plan.created` | setup | -- |
+| setup | `checkpoint "setup-complete"` | wave | `setupComplete=true`, wave 1 active |
+| wave | `checkpoint "wave-N-complete"` | wave | Wave N=complete, next wave active |
+| wave | `checkpoint "all-waves-complete"` | guardian | -- |
+| guardian | `checkpoint "guardian-passed"` | guardian | `guardianPassed=true` |
+| any | `session.end` | done | -- |
 
-## GATE 4: Wave N Spawned
-Prereq: Gate 3 (Wave 1) or Gate 6 from previous wave (Wave 2+)
-- [ ] Previous wave's fence check passed (skip for Wave 1)
-- [ ] Worktrees created from current `<featurePrefix>/` HEAD for each task in wave
-- [ ] Each agent spawned using FULL template from `AGENT-SPAWN-TEMPLATES.md` (no minimal prompts)
-- [ ] Context budget verified before each spawn; oversized tasks split
-- [ ] Agents spawned with `run_in_background: true`
-State key: `"4_wave_N_spawned": true`
-Next: `AGENT-SPAWN-TEMPLATES.md` for full spawn template, `CONTEXT-BUDGET-GUIDE.md`
+## Phase Entry Conditions
 
-## GATE 5: Wave N QA Complete
-Prereq: Gate 4 (same wave)
-- [ ] All coding agents in wave reported work complete and committed
-- [ ] All QA agents in wave reported QA PASS (max rounds per mode: strict=3, standard=2, fast=1)
-- [ ] QA doc updates committed on each workbranch
-- [ ] No task stuck at QA FAIL after max rounds (escalate to user if so)
-State key: `"5_wave_N_qa_complete": true`
-Next: `QA-CHECKLIST-TEMPLATE.md` to review QA criteria if issues arise
+**plan**: Session started. Read project rules, architecture, and PHASE-GATE-PROTOCOL.md.
 
-## GATE 6: Wave N Merged
-Prereq: Gate 5 (same wave)
-- [ ] All workbranches rebased on `<featurePrefix>/` before merge
-- [ ] All workbranches merged with `--no-ff` sequentially (one at a time)
-- [ ] All worktrees removed and workbranches deleted
-- [ ] Wave fence check passed per mode (strict=full verify, standard=lint, fast=skip)
-State key: `"6_wave_N_merged": true`
-Next: `WAVE-FENCE-PROTOCOL.md` for fence check procedure
+**setup**: Written decomposition plan produced. Each task has agent role, file scope, acceptance criteria, QA checklist. Wave plan finalized.
 
-## GATE 7: All Waves Complete
-Prereq: Gate 6 for every wave
-- [ ] Gate 4-5-6 cycle completed for every planned wave
-- [ ] Wave status table shows all waves COMPLETE
-- [ ] No open workbranches: `git branch --list "work/<feature>/*"` returns empty
-- [ ] Feature branch contains all merged work and is stable
-State key: `"7_all_waves_complete": true`
-Next: `AGENT-SPAWN-TEMPLATES.md` Guardian section
+**wave**: Feature branch created, team created, all tasks created with dependencies, `session.start` event emitted. `setupComplete` is true. Agents may now be spawned.
 
-## GATE 8: Guardian Passed
-Prereq: Gate 7
-- [ ] Codebase Guardian spawned on `<featurePrefix>/` branch
-- [ ] Guardian completed all 7 structural integrity checks
-- [ ] Guardian reported PASS (or trivial fixes committed and re-verified)
-- [ ] Full verification run: lint, typecheck, test, build all pass
-State key: `"8_guardian_passed": true`
-Next: `AGENT-SPAWN-TEMPLATES.md` Visual QA section
+**guardian**: All waves complete. No open workbranches. Feature branch contains all merged work. Guardian agent may now be spawned.
 
-## GATE 9: Feature Complete
-Prereq: Gate 8
-- [ ] Visual QA agent run (or user explicitly skipped)
-- [ ] PR created with screenshots, verification checklist, and change summary
-- [ ] All agents shut down via `shutdown_request`
-- [ ] Team deleted via `TeamDelete`
-- [ ] `session.end` event emitted via `/claude-workflow:track session.end "Feature complete"`
-State key: `"9_feature_complete": true`
-Next: none — feature is done
+**done**: Guardian passed, agents shut down, team deleted, `session.end` emitted.
+
+## Hook Enforcement Summary
+
+- **workflow-gate.js** (PreToolUse on Task): Blocks coding agent spawns unless `setupComplete === true`. Blocks Guardian spawn unless `phase === "guardian"` or `phase === "done"`.
+- **team-leader-gate.js** (PreToolUse on Bash/SendMessage/TaskStop): Blocks merges without QA pass. Blocks shutdown requests and TaskStop unless `guardianPassed === true`.
+- **compact-reinject.js** (SessionStart): Re-injects this protocol and current state after context compaction. Rebuilds state from events if state file is missing.
+
+## Checkpoints the Team Leader Must Emit
+
+| When | Command |
+|------|---------|
+| Plan finalized | `/claude-workflow:track plan.created "<summary>"` |
+| Branch + team + tasks ready | `/claude-workflow:track checkpoint "setup-complete"` |
+| Each wave merged | `/claude-workflow:track checkpoint "wave-N-complete"` |
+| All waves done | `/claude-workflow:track checkpoint "all-waves-complete"` |
+| Guardian passes | `/claude-workflow:track checkpoint "guardian-passed"` |
+| Feature complete | `/claude-workflow:track session.end "Feature complete"` |

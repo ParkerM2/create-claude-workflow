@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.5.0] — 2026-02-23
+
+### Changed
+- **Simplified FSM replaces 9-gate system** — workflow state now uses `phase` field (`plan`→`setup`→`wave`→`guardian`→`done`) instead of 9 individual gates. All transitions are event-driven via `/claude-workflow:track` checkpoints.
+- **Rebuild state from events (CQRS)** — new `rebuildState(feature)` function replays `events.jsonl` to reconstruct `workflow-state.json`. Used defensively by `compact-reinject.js` when state file is missing.
+- **Self-contained QA loop** — removed team leader QA micromanagement (Agent Health Monitoring subsection). Coding agents handle QA internally; team leader only intervenes on max-round failures.
+- **Worker isolation** — explicit `<communication-rules>` section in spawn templates: agents communicate only with their QA sub-agent and the Team Leader, never peer agents.
+- `hooks/tracker.js`: `updateWorkflowStateFromEvent()` rewritten for FSM v2 (~60 lines replacing ~90 lines)
+- `hooks/config.js`: added `migrateV1State()` for transparent v1→v2 state migration on read; `getWorkflowState()` now calls migration automatically
+- `hooks/workflow-gate.js`: checks `state.setupComplete` and `state.phase` instead of `gates['3_branch_team_ready']` and `gates['7_all_waves_complete']`
+- `hooks/team-leader-gate.js`: checks `state.guardianPassed` instead of `gates['8_guardian_passed']`
+- `hooks/compact-reinject.js`: defensively rebuilds state from events when state file is missing; references `phase` field instead of `currentPhase`
+- `PHASE-GATE-PROTOCOL.md`: full rewrite from 97-line gate checklist to ~55-line FSM state transition table
+- `agents/team-leader.md`: checkpoint emissions replace direct `workflow-state.json` writes; Rule #11 updated
+- `commands/new-feature.md`: gate checks replaced with FSM phase checks and checkpoint emission guidance
+
+### Added
+- Two new checkpoints: `"setup-complete"` and `"all-waves-complete"` (team leader must emit these)
+- `rebuildState(feature)` exported from `hooks/tracker.js`
+- `migrateV1State(parsed)` in `hooks/config.js` — detects old 9-gate format and translates to FSM fields
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [1.4.0] — 2026-02-23
 
 ### Added

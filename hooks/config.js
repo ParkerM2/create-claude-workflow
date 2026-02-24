@@ -234,7 +234,54 @@ function getEffectiveBranch(command) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Migrate v1 (9-gate) workflow state to v2 (phase-based FSM) format.
+ * Detects old format by presence of `gates` without `phase`.
+ * Returns the migrated state object (does not write to disk — caller handles that).
+ *
+ * @param {object} parsed - The parsed workflow-state.json contents
+ * @returns {object} - Migrated state in v2 format
+ */
+function migrateV1State(parsed) {
+  if (!parsed || !parsed.gates || parsed.phase) {
+    return parsed; // Already v2 or empty — no migration needed
+  }
+
+  const gates = parsed.gates || {};
+  const g = (key) => !!(gates[key] && gates[key].passed);
+
+  // Determine phase from gates
+  let phase = 'plan';
+  if (g('9_feature_complete')) phase = 'done';
+  else if (g('8_guardian_passed')) phase = 'guardian';
+  else if (g('7_all_waves_complete')) phase = 'guardian';
+  else if (g('3_branch_team_ready')) phase = 'wave';
+  else if (g('2_plan_complete')) phase = 'setup';
+
+  // Migrate wave data
+  const oldWaves = parsed.waves || {};
+  const newWaves = {};
+  for (const [key, val] of Object.entries(oldWaves)) {
+    newWaves[key] = (val && val.status === 'complete') ? 'complete' : 'active';
+  }
+
+  const migrated = {
+    feature: parsed.feature || null,
+    mode: parsed.mode || 'strict',
+    startedAt: parsed.startedAt || null,
+    phase: phase,
+    setupComplete: g('3_branch_team_ready'),
+    guardianPassed: g('8_guardian_passed'),
+    currentWave: parsed.currentWave || 0,
+    totalWaves: parsed.totalWaves || 0,
+    waves: newWaves
+  };
+
+  return migrated;
+}
+
+/**
  * Read the workflow state file for a feature.
+ * Transparently migrates v1 (9-gate) format to v2 (phase-based FSM).
  * Returns parsed JSON object or null if file doesn't exist or cannot be read.
  * MUST fail gracefully — never throws.
  *
@@ -247,7 +294,8 @@ function getWorkflowState(feature) {
     const progressDir = config.progressDir || '.claude/progress';
     const statePath = path.join(getRepoRoot(), progressDir, feature, 'workflow-state.json');
     const raw = fs.readFileSync(statePath, 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return migrateV1State(parsed);
   } catch {
     return null;
   }

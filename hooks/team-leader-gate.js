@@ -107,13 +107,11 @@ function checkShutdownGate(toolInput) {
   const state = getWorkflowState(feature);
   if (!state) return;
 
-  const gates = state.gates || {};
-  const gate8 = gates['8_guardian_passed'];
-  if (gate8 && gate8.passed) return;
+  if (state.guardianPassed) return;
 
   const result = {
     decision: 'block',
-    reason: 'Shutdown gate: Cannot shut down agents before Gate 8 (Guardian Passed). Let agents complete their full workflow.'
+    reason: 'Shutdown gate: Cannot shut down agents before Guardian passes. Let agents complete their full workflow.'
   };
   process.stdout.write(JSON.stringify(result));
   process.exit(0);
@@ -168,13 +166,11 @@ function checkTaskStopGate() {
   const state = getWorkflowState(feature);
   if (!state) return;
 
-  const gates = state.gates || {};
-  const gate8 = gates['8_guardian_passed'];
-  if (gate8 && gate8.passed) return;
+  if (state.guardianPassed) return;
 
   const result = {
     decision: 'block',
-    reason: 'TaskStop gate: Cannot stop background agents before Gate 8. Let agents complete their work.'
+    reason: 'TaskStop gate: Cannot stop background agents before Guardian passes. Let agents complete their work.'
   };
   process.stdout.write(JSON.stringify(result));
   process.exit(0);

@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
-const { getRepoRoot, getBranchingConfig, getEffectiveBranch, updateWorkflowState } = require('./config.js');
+const { getRepoRoot, getBranchingConfig, getEffectiveBranch, getWorkflowState, updateWorkflowState } = require('./config.js');
 
 // ---------------------------------------------------------------------------
 // Session identity — generated once per module load
@@ -208,9 +208,20 @@ function isProcessAlive(pid) {
 // ---------------------------------------------------------------------------
 
 /**
- * Map a tracking event to workflow state updates.
+ * Map a tracking event to workflow state updates (FSM v2).
+ * Replaces the 9-gate system with a phase-based FSM.
+ * All transitions are event-driven via /claude-workflow:track.
  * Called automatically by emitEvent for significant events.
  * Never throws — all errors are swallowed.
+ *
+ * Phase transitions:
+ *   (none)    → plan      on session.start
+ *   plan      → setup     on plan.created
+ *   setup     → wave      on checkpoint "setup-complete"
+ *   wave      → wave      on checkpoint "wave-N-complete"
+ *   wave      → guardian   on checkpoint "all-waves-complete"
+ *   guardian  → guardian   on checkpoint "guardian-passed" (sets guardianPassed)
+ *   any       → done      on session.end
  */
 function updateWorkflowStateFromEvent(feature, event) {
   try {
@@ -220,87 +231,119 @@ function updateWorkflowStateFromEvent(feature, event) {
 
     switch (type) {
       case 'session.start':
-        // Initialize workflow state
         updateWorkflowState(feature, {
           feature: feature,
           mode: data.mode || 'strict',
           startedAt: ts,
-          currentPhase: 1,
-          teamCreated: false,
-          tasksCreated: 0,
-          gates: {
-            '1_context_loaded': { passed: false },
-            '2_plan_complete': { passed: false },
-            '3_branch_team_ready': { passed: false },
-            '7_all_waves_complete': { passed: false },
-            '8_guardian_passed': { passed: false },
-            '9_feature_complete': { passed: false }
-          },
+          phase: 'plan',
+          setupComplete: false,
+          guardianPassed: false,
+          currentWave: 0,
+          totalWaves: 0,
           waves: {}
         });
         break;
 
       case 'plan.created':
-        updateWorkflowState(feature, {
-          currentPhase: 2,
-          gates: { '2_plan_complete': { passed: true, ts: ts } }
-        });
+        updateWorkflowState(feature, { phase: 'setup' });
         break;
 
       case 'task.started':
-        if (data.task) {
-          updateWorkflowState(feature, {
-            currentPhase: Math.max(4, 4), // At least in wave execution phase
-          });
-        }
+        // No phase transition — informational only
         break;
 
       case 'task.completed':
-        // Just update current phase — wave tracking is coarser
+        // No phase transition — informational only
         break;
 
       case 'qa.passed':
-        // Track at wave level via checkpoint events
+        // No phase transition — tracked at wave level via checkpoints
         break;
 
       case 'branch.merged':
-        // Track at wave level via checkpoint events
+        // No phase transition — tracked at wave level via checkpoints
         break;
 
       case 'checkpoint':
         if (data.message) {
-          // Match "wave-N-complete" pattern
-          const waveMatch = data.message.match(/wave-(\d+)-complete/);
-          if (waveMatch) {
-            const waveNum = waveMatch[1];
-            const waveKey = waveNum;
+          const msg = data.message;
+
+          if (msg === 'setup-complete') {
             updateWorkflowState(feature, {
-              waves: { [waveKey]: { status: 'complete', completedAt: ts } }
+              phase: 'wave',
+              setupComplete: true,
+              currentWave: 1,
+              waves: { '1': 'active' }
             });
-          }
-          // Match "guardian-passed"
-          if (data.message === 'guardian-passed') {
-            updateWorkflowState(feature, {
-              currentPhase: 8,
-              gates: { '8_guardian_passed': { passed: true, ts: ts } }
-            });
+          } else if (msg === 'all-waves-complete') {
+            updateWorkflowState(feature, { phase: 'guardian' });
+          } else if (msg === 'guardian-passed') {
+            updateWorkflowState(feature, { guardianPassed: true });
+          } else {
+            // Match "wave-N-complete" pattern
+            const waveMatch = msg.match(/^wave-(\d+)-complete$/);
+            if (waveMatch) {
+              const completedWave = parseInt(waveMatch[1], 10);
+              const nextWave = completedWave + 1;
+              // Read current state to advance wave counter
+              const current = getWorkflowState(feature) || {};
+              const waves = Object.assign({}, current.waves || {});
+              waves[String(completedWave)] = 'complete';
+              waves[String(nextWave)] = 'active';
+              updateWorkflowState(feature, {
+                currentWave: nextWave,
+                waves: waves
+              });
+            }
           }
         }
         break;
 
       case 'session.end':
-        updateWorkflowState(feature, {
-          currentPhase: 9,
-          gates: { '9_feature_complete': { passed: true, ts: ts } }
-        });
+        updateWorkflowState(feature, { phase: 'done' });
         break;
 
       default:
-        // Unknown event type — no state update needed
         break;
     }
   } catch {
     // Never crash emitEvent — swallow all errors from state updates
+  }
+}
+
+// ---------------------------------------------------------------------------
+// State rebuilder — replay events to reconstruct workflow state (CQRS)
+// ---------------------------------------------------------------------------
+
+/**
+ * Rebuild the workflow state for a feature by replaying all events.
+ * Deletes the existing state file first to avoid deep-merge contamination,
+ * then replays every event through updateWorkflowStateFromEvent().
+ * Returns the rebuilt state object, or null on failure.
+ *
+ * @param {string} feature - Feature name
+ * @returns {object|null}
+ */
+function rebuildState(feature) {
+  try {
+    const config = require('./config.js');
+    const wcfg = config.getWorkflowConfig();
+    const progressDir = wcfg.progressDir || '.claude/progress';
+    const featureDir = path.join(config.getRepoRoot(), progressDir, feature);
+    const statePath = path.join(featureDir, 'workflow-state.json');
+
+    // Delete existing state to avoid deep-merge contamination
+    try { fs.unlinkSync(statePath); } catch { /* may not exist */ }
+
+    // Read and replay all events
+    const events = readEvents(featureDir);
+    for (const evt of events) {
+      updateWorkflowStateFromEvent(feature, evt);
+    }
+
+    return config.getWorkflowState(feature);
+  } catch {
+    return null;
   }
 }
 
@@ -611,6 +654,7 @@ function renderIndex(progressDir) {
 module.exports = {
   emitEvent,
   getFeatureFromBranch,
+  rebuildState,
   renderCurrentMd,
   renderIndex
 };

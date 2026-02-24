@@ -97,8 +97,7 @@ Read ONLY the Phase 0 files from the Initialization Protocol:
 2. `the architecture file`
 Do NOT read the playbook, spawn templates, or other reference files yet — they load at the phase that needs them.
 
-After completing Phase 0, update workflow state:
-- Write `workflow-state.json`: set `"1_context_loaded": { "passed": true, "ts": "<now>" }`
+Phase transition: automatic via `session.start` event (emitted by `/claude-workflow:track session.start`).
 
 ### PHASE 1: Write Decomposition Plan
 First, read the playbook: `prompts/implementing-features/README.md` and `prompts/implementing-features/WORKFLOW-MODES.md`.
@@ -113,15 +112,13 @@ Then, before spawning any agents or creating any branches, produce a written pla
 
 Output this plan BEFORE creating branches, teams, or tasks. This plan is your operating contract.
 
-After completing Phase 1, update workflow state:
-- Write `workflow-state.json`: set `"2_plan_complete": { "passed": true, "ts": "<now>" }`
+After completing Phase 1, emit: `/claude-workflow:track plan.created "<summary>"`
 
 ### PHASE 2: Execute Plan
 First, read the spawn templates: `prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md`.
 Then follow your decomposition plan step by step. For each task you spawn, use the FULL Standard Coding Agent template — this enforces the 4-phase workflow on every agent.
 
-After creating team and tasks, update workflow state:
-- Write `workflow-state.json`: set `"3_branch_team_ready": { "passed": true, "ts": "<now>" }`
+After creating branch, team, and tasks, emit: `/claude-workflow:track checkpoint "setup-complete"`
 
 </planning-gate>
 
@@ -171,7 +168,7 @@ Before spawning each agent, estimate context usage (see `CONTEXT-BUDGET-GUIDE.md
 Before spawning, extract 5-10 specific rules from `the project rules file` and `the architecture file` that apply to each task. Include these in the spawn prompt's "Rules That Apply" section. This replaces redundant file reads by each agent (~1,500-4,500 tokens saved per agent).
 
 ### Step 7: Spawn
-Before spawning any agent: Read `.claude/progress/<feature>/workflow-state.json`. Verify gate 3 (`3_branch_team_ready`) is passed. If NOT passed, STOP — complete gates 1-3 first.
+Before spawning any agent: Read `.claude/progress/<feature>/workflow-state.json`. Verify `setupComplete` is `true`. If NOT, STOP — complete setup first (emit `checkpoint "setup-complete"`).
 
 For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-SPAWN-TEMPLATES.md`. This includes:
 - The 4-phase mandatory workflow (Load Rules → Write Plan → Execute → Self-Review)
@@ -187,21 +184,7 @@ For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-
 NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 
 ### Step 8: Monitor
-- Track progress via the progress file and agent messages
-- Resolve blockers when agents report issues
-- If an agent fails after max QA rounds (per workflow mode), intervene or escalate to the user
-- After QA passes for all tasks in a wave, update `workflow-state.json` wave status before merging.
-
-### Agent Health Monitoring
-
-- If a teammate has been idle for >5 minutes with a task `in_progress`:
-  1. Send a health-check message: "Status update on Task #N?"
-  2. Wait 2 minutes for response
-  3. If no response: mark the task as `pending` (unclaim it) so another teammate can pick it up
-  4. Note the timeout in the progress file
-- If a teammate reports the same error 3+ times:
-  1. Reassign the task to a different teammate
-  2. Include the error context in the new assignment
+Wait for agents to complete. Agents handle their own QA cycle internally (coding agent spawns QA sub-agent, handles retries up to max rounds). On QA PASS notification: merge the workbranch. On QA FAIL after max rounds: escalate to the user with the QA report.
 
 </task-decomposition>
 
@@ -299,35 +282,80 @@ The JSONL log uses append-only writes (`fs.appendFileSync` with `O_APPEND`) — 
 
 <progress-display>
 
-After calling `/claude-workflow:track` for significant events, output a formatted progress
-table directly as inline text. This renders as a clean table in the CLI — NOT a file diff.
+After calling `/claude-workflow:track` for significant events, output a box-drawn progress
+card as inline text inside a fenced code block. This renders as a fixed-width monospace box in
+the CLI — NOT a file diff, NOT a markdown table.
 
 ### When to Display
 
 Display after: session.start, task.completed, qa.passed/failed, branch.merged,
 checkpoint (wave complete), session.end.
 
-### Table Format
+### Box Format
 
-Output this exact structure (adapt content to current state):
+Output inside a fenced code block (triple backticks). The box uses Unicode box-drawing
+characters with rounded corners. **Every line between the top and bottom border MUST be
+right-padded with spaces to the same width as the border line**, so that all `│` characters
+on the right edge align perfectly.
 
-  ## Feature Progress: <feature-name>
-  | # | Task | Status | QA | Wave |
-  |---|------|--------|----|------|
-  | 1 | <name> | DONE | PASS | 1 |
-  | 2 | <name> | IN_PROGRESS | -- | 2 |
-  | 3 | <name> | PENDING | -- | 3 |
+**Fixed box width**: 60 characters total (╭/╰ + 58 dashes/spaces + ╮/╯).
 
-  **Wave**: <current>/<total> | **Mode**: <mode> | **Blockers**: <count or "none">
+**Column layout** (within the 58-char inner width):
 
-### Status Values
-DONE, QA_PASS, QA_FAIL, IN_PROGRESS, PENDING, BLOCKED
+| Column | Width | Alignment | Notes |
+|--------|-------|-----------|-------|
+| Left margin | 3 | — | Always 3 spaces |
+| # | 4 | right | Task number |
+| Task | 18 | left | **Truncate at 18 chars** — use ".." suffix if longer |
+| Status | 10 | left | Includes symbol prefix |
+| QA | 4 | center | Pass, Fail, or -- |
+| Wave | 4 | center | Wave number |
+| Right pad | 15 | — | Fill remaining to width 58 |
+
+**Status symbols** (Unicode, not emoji):
+
+| Symbol | Meaning |
+|--------|---------|
+| `✓` | Done — task complete and merged |
+| `▶` | Active — agent working |
+| `·` | Queued — waiting for wave |
+| `✗` | Failed — QA failed max rounds |
+| `⊘` | Blocked — dependency not met |
+
+**Progress bar**: 28 characters using `━` (heavy horizontal, filled) and `─` (light
+horizontal, empty) — both are box-drawing characters guaranteed single-width in monospace.
+Do NOT use `█` or `░` — they render as double-width in some terminals.
+
+### Template
+
+Reproduce this structure exactly, substituting values. Every line MUST be exactly 60 chars
+total (╭/╰ + 58 inner + ╮/╯). Pad every content line to 58 chars before adding `│`:
+
+````
+```
+╭─ user-auth ────────────────────────────── strict · W2/3 ─╮
+│                                                          │
+│    #   Task                Status       QA    Wv         │
+│   ──   ──────────────────  ──────────  ────   ──         │
+│    1   Add auth types      ✓ Done      Pass    1         │
+│    2   Auth service        ▶ Active     --     2         │
+│    3   Auth middleware     · Queued     --     2         │
+│    4   Login page          · Queued     --     3         │
+│                                                          │
+│   ━━━━━━━─────────────────────   25%  · 1/4 tasks        │
+│   Blockers: none                                         │
+╰──────────────────────────────────────────────────────────╯
+```
+````
 
 ### Rules
-1. Reconstruct table from your in-memory task state after each /claude-workflow:track call
-2. Output as plain text (renders as markdown table in CLI)
-3. The current.md file write still happens for persistence — this is supplementary
-4. Do NOT use Write/Edit tool for the table display — just output it as text
+
+1. Reconstruct from your in-memory task state after each `/claude-workflow:track` call
+2. Output inside a fenced code block — this ensures monospace alignment in the CLI
+3. **Right-pad every line** to exactly 58 inner chars so right-edge `│` characters align
+4. **Truncate task names** at 18 characters — append ".." if truncated (e.g. "Implement middlew..")
+5. The `current.md` file write still happens for persistence — this display is supplementary
+6. Do NOT use Write/Edit tool for the box display — just output it as text
 
 </progress-display>
 
@@ -365,8 +393,8 @@ If your context was compacted (the compact-reinject hook will inject a `<workflo
 
 1. Read `.claude/progress/<feature>/workflow-state.json` — this is your current state
 2. Read `prompts/implementing-features/PHASE-GATE-PROTOCOL.md` (re-injected by the hook)
-3. Determine your current phase from the state file's `currentPhase` field
-4. Continue from that phase — do NOT restart from Phase 0
+3. Determine your current phase from the state file's `phase` field
+4. Continue from that phase — do NOT restart from the beginning
 5. Check active worktrees: `git worktree list`
 6. Check active workbranches: `git branch --list "work/<feature>/*"`
 7. Read the progress file: `.claude/progress/<feature>/current.md`
@@ -421,6 +449,6 @@ To disable: set `guards.teamLeaderGate: false` in `.claude/workflow.json`.
 8. **Always write your decomposition plan first** — no action without a plan
 9. **Always check context budget before spawning** — split large tasks proactively
 10. **Always use QA auto-fill** — pre-select checklist sections by agent role
-11. **Always update workflow-state.json** — after passing each gate, update the state file immediately. This is your crash-recovery and compaction-recovery artifact.
+11. **Always emit checkpoint events** — after completing each phase, emit the corresponding tracking event immediately. The state file is updated automatically. This is your crash-recovery and compaction-recovery artifact.
 
 </rules>

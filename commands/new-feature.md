@@ -92,8 +92,7 @@ If workflow mode is `strict`, run pre-flight checks before proceeding (see `PRE-
 - Record the baseline in the progress file
 - If baseline is broken: warn the user and do not proceed until resolved
 
-**After completing Phase 1, update the state file:**
-Set `"1_context_loaded": true` in `.claude/progress/<feature>/workflow-state.json`.
+**Phase 1 transition is automatic** — the `session.start` event (emitted in Phase 4) initializes the FSM in `plan` phase.
 
 ---
 
@@ -126,14 +125,12 @@ If a feature directory exists in the progress directory with an `events.jsonl` f
 
 ```
 ═══════════════════════════════════════════
-GATE CHECK: Verify gate 1 before proceeding
-Read: .claude/progress/<feature>/workflow-state.json
+PHASE CHECK: Verify context loaded before proceeding
 Required:
   Path A (design doc): PHASE-GATE-PROTOCOL.md read, design doc read
   Path B (no design doc): PHASE-GATE-PROTOCOL.md read, project rules file read, architecture file read
   - Workflow mode resolved (strict/standard/fast) and recorded
-  - Branching config read from <workflow-config> (baseBranch, featurePrefix, workPrefix, worktreeDir)
-Update state file after passing this gate.
+  - Branching config read from <workflow-config>
 ═══════════════════════════════════════════
 ```
 
@@ -155,22 +152,21 @@ Update state file after passing this gate.
    ```
 5. **Identify parallel opportunities** — Tasks within a wave that touch different files
 
-**After completing Phase 3, update the state file:**
-Set `"2_plan_complete": true` in `.claude/progress/<feature>/workflow-state.json`.
+**After completing Phase 3, emit:** `/claude-workflow:track plan.created "<summary>"`
+This transitions the FSM from `plan` → `setup`.
 
 ---
 
 ```
 ═══════════════════════════════════════════
-GATE CHECK: Verify gate 2 before proceeding
-Read: .claude/progress/<feature>/workflow-state.json
+PHASE CHECK: Verify plan complete before proceeding
 Required:
   - Written decomposition plan produced (feature summary, rules cited, task list)
   - Each task has: agent role, file scope, acceptance criteria, QA checklist
   - Dependency map defined (which tasks block which)
   - Wave plan finalized (tasks grouped by dependency layer)
   - Context budget checked per task (8,000 + files × 1,000 + 3,000)
-Update state file after passing this gate.
+  - `plan.created` event emitted
 ═══════════════════════════════════════════
 ```
 
@@ -190,22 +186,22 @@ Create the feature's progress directory and initialize tracking:
 
 The `events.jsonl` file is your **crash-recovery artifact**. Events are appended via `/claude-workflow:track` commands at key checkpoints.
 
-**After completing Phase 4, update the state file:**
-Set `"3_branch_team_ready": true` in `.claude/progress/<feature>/workflow-state.json` after the team is also set up in Phase 5.
+**After completing Phase 4 + Phase 5 (branch, team, tasks ready), emit:**
+`/claude-workflow:track checkpoint "setup-complete"`
+This transitions the FSM from `setup` → `wave` and sets `setupComplete=true`.
 
 ---
 
 ```
 ═══════════════════════════════════════════
-GATE CHECK: Verify gate 3 before proceeding
-Read: .claude/progress/<feature>/workflow-state.json
+PHASE CHECK: Verify setup complete before spawning agents
 Required:
   - Feature branch created from configured base branch
   - TeamCreate called with feature name
   - TaskCreate called for ALL tasks with full descriptions and blockedBy dependencies
   - Progress file initialized: .claude/progress/<feature>/events.jsonl exists
   - session.start event emitted via /claude-workflow:track
-Update state file after passing this gate.
+  - checkpoint "setup-complete" emitted
 ═══════════════════════════════════════════
 ```
 
@@ -296,22 +292,24 @@ After all workbranches in the current wave are merged, run the wave fence check 
 - **Fast mode**: skip fence, proceed immediately
 
 If the fence check passes:
-- Update the wave status table in the progress file
+- Emit: `/claude-workflow:track checkpoint "wave-N-complete"` (where N is the completed wave number)
 - Create next wave's workbranches from updated `feature/` HEAD
 - Spawn next wave's agents
+
+When ALL waves are complete:
+- Emit: `/claude-workflow:track checkpoint "all-waves-complete"`
+  This transitions the FSM from `wave` → `guardian`.
 
 ---
 
 ```
 ═══════════════════════════════════════════
-GATE CHECK: Verify gate 7 before proceeding
-Read: .claude/progress/<feature>/workflow-state.json
+PHASE CHECK: Verify all waves complete before Guardian
 Required:
-  - Gate 4-5-6 cycle completed for every planned wave
-  - Wave status table shows all waves COMPLETE
+  - All wave checkpoints emitted (wave-1-complete, wave-2-complete, etc.)
+  - checkpoint "all-waves-complete" emitted
   - No open workbranches: git branch --list "work/<feature>/*" returns empty
   - Feature branch contains all merged work and is stable
-Update state file after passing this gate.
 ═══════════════════════════════════════════
 ```
 
@@ -346,14 +344,13 @@ All must pass. If any fail, investigate and fix before proceeding.
 
 ```
 ═══════════════════════════════════════════
-GATE CHECK: Verify gate 8 before proceeding
-Read: .claude/progress/<feature>/workflow-state.json
+PHASE CHECK: Verify Guardian passed before completion
 Required:
   - Codebase Guardian spawned on <featurePrefix>/ branch
   - Guardian completed all 7 structural integrity checks
   - Guardian reported PASS (or trivial fixes committed and re-verified)
   - Full verification run: lint, typecheck, test, build all pass
-Update state file after passing this gate.
+  - checkpoint "guardian-passed" emitted (sets guardianPassed=true)
 ═══════════════════════════════════════════
 ```
 

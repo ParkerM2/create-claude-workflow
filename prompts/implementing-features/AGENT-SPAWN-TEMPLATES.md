@@ -203,6 +203,17 @@ If QA returns PASS:
 
 </workflow-phases>
 
+<communication-rules>
+
+## Communication Rules
+
+- Do NOT use SendMessage to contact peer agents. You communicate only with:
+  1. Your QA sub-agent (via Task tool spawn)
+  2. The Team Leader (via SendMessage on completion or error)
+- Never attempt to coordinate with or message other coding agents directly.
+
+</communication-rules>
+
 <error-recovery>
 
 ═══════════════════════════════════════════════════════════════
