@@ -179,12 +179,12 @@ For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-
 
 **Model routing**: Coding agents use `model: "sonnet"`, QA agents use `model: "haiku"`, Guardian uses `model: "sonnet"`. The Team Leader stays on the user's chosen model (typically Opus) for complex reasoning.
 
-**Background execution**: Spawn coding agents with `run_in_background: true` to continue coordinating while they work.
+**Background execution**: Spawn coding agents with `run_in_background: true` to continue coordinating while they work. **The Task tool returns a `task_id` for each background agent — you MUST save this ID.** Use `TaskOutput` with the saved `task_id` to check agent results.
 
 NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 
 ### Step 8: Monitor
-Wait for agents to complete. Agents handle their own QA cycle internally (coding agent spawns QA sub-agent, handles retries up to max rounds). On QA PASS notification: merge the workbranch. On QA FAIL after max rounds: escalate to the user with the QA report.
+Wait for agents to complete. Use `TaskOutput` with saved `task_id` values to check agent results (do NOT construct IDs manually — use the exact ID returned by the Task tool). Agents handle their own QA cycle internally (coding agent spawns QA sub-agent, handles retries up to max rounds). On QA PASS: merge the workbranch. On QA FAIL after max rounds: escalate to the user with the QA report.
 
 </task-decomposition>
 
@@ -426,9 +426,9 @@ The following behaviors are **technically enforced by PreToolUse hooks** — att
 them will be blocked before execution:
 
 1. **Merge without QA** — `git merge` on work/ branches blocked unless events.jsonl has an unmerged qa.passed event
-2. **Premature agent shutdown** — `shutdown_request` messages blocked until Gate 8 (Guardian Passed)
-3. **Worktree polling** — read-only git commands targeting .worktrees/ are blocked; use TaskOutput or wait for agent messages
-4. **Force-stopping agents** — TaskStop blocked until Gate 8
+2. **Premature agent shutdown** — `shutdown_request` messages blocked until `guardianPassed` is true
+3. **Worktree polling** — read-only git commands targeting .worktrees/ are blocked; use `TaskOutput` with the saved task_id to check agent status
+4. **Force-stopping agents** — TaskStop blocked until `guardianPassed` is true
 
 These gates cannot be bypassed through prompting. They read events.jsonl and workflow-state.json on disk.
 To disable: set `guards.teamLeaderGate: false` in `.claude/workflow.json`.

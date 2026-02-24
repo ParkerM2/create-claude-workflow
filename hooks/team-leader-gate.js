@@ -149,7 +149,7 @@ function checkWorktreePollingGate(command) {
 
   const result = {
     decision: 'block',
-    reason: 'Worktree polling gate: Do not inspect agent worktrees. Wait for agent completion messages or use TaskOutput to check status.'
+    reason: 'Worktree polling gate: Do not inspect agent worktrees. Use TaskOutput with the saved task_id to check agent status.'
   };
   process.stdout.write(JSON.stringify(result));
   process.exit(0);

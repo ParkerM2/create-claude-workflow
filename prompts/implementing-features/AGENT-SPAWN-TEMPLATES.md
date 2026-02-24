@@ -8,15 +8,15 @@
 
 ## Workflow State File
 
-The Team Leader maintains a workflow state file at:
-`.claude/progress/<feature>/workflow-state.json`
+The workflow state file at `.claude/progress/<feature>/workflow-state.json` is managed
+**automatically by hooks**. When you emit events via `/claude-workflow:track`, the tracker
+hook updates the state file. PreToolUse hooks read it to enforce phase gates:
 
-This file tracks which phase gates have passed. PreToolUse hooks enforce these gates —
-coding agents cannot be spawned until Gate 3 (Branch + Team Ready) passes, and the
-Guardian cannot be spawned until Gate 7 (All Waves Complete) passes.
+- Coding agents cannot be spawned until `setupComplete` is `true`
+- Guardian cannot be spawned until `phase` is `guardian` or `done`
 
-**Coding agents do NOT need to read or manage this file** — the Team Leader and hooks
-handle it. Coding agents focus on their task scope only.
+**Do NOT write workflow-state.json directly.** Emit checkpoint events instead — the hooks
+handle all state transitions. Coding agents do not interact with this file at all.
 
 ---
 
@@ -34,6 +34,10 @@ Task tool parameters:
   name: "<agent-role>"
   mode: bypassPermissions
   run_in_background: true
+
+IMPORTANT: The Task tool returns a `task_id` when run_in_background is true.
+Save this ID — use it with `TaskOutput(task_id=<saved-id>)` to check results.
+Do NOT construct IDs manually (e.g., "agent@task") — always use the exact returned ID.
 </spawn-parameters>
 
 Prompt:
@@ -660,8 +664,8 @@ When starting a new feature, the Team Leader follows this sequence:
  7. SET dependencies:
       TaskUpdate with addBlockedBy for each task
  8. UPDATE progress file with task list + dependency graph
-    - [ ] Initialize `workflow-state.json` — gates 1-3 should be passed before spawning
-    - [ ] Verify gate 3 in `workflow-state.json` before spawning any coding agents
+    - [ ] Emit `/claude-workflow:track checkpoint "setup-complete"` — hooks set setupComplete=true
+    - [ ] Verify `setupComplete` is true before spawning (hooks enforce this automatically)
  9. For each wave (in order):
       a. CREATE worktrees from feature/ HEAD:
            git checkout <featurePrefix>/<feature-name>
@@ -677,7 +681,7 @@ When starting a new feature, the Team Leader follows this sequence:
          - REMOVE worktree: git worktree remove <worktreeDir>/<feature-name>/<task-slug>
          - DELETE workbranch
          - Check if next-wave tasks are unblocked
-         - [ ] Update `workflow-state.json` with current gate status
+         - [ ] Emit `/claude-workflow:track checkpoint "wave-N-complete"` after all wave tasks merged
       b. On QA FAIL (round < 3):
          - Agent handles re-work automatically
       c. On QA FAIL (round 3):
@@ -688,7 +692,7 @@ When starting a new feature, the Team Leader follows this sequence:
          - UPDATE progress file status to COMPLETE
          - COMMIT final state
          - CREATE PR (if requested)
-         - [ ] Update `workflow-state.json` with current gate status
+         - [ ] Guardian emits `checkpoint "guardian-passed"` — hooks set guardianPassed=true
       c. If Guardian FAILS:
          - Fix or assign fixes
          - Re-run Guardian

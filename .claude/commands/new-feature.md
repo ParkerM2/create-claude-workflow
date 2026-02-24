@@ -180,9 +180,8 @@ git checkout -b <featurePrefix>/<feature-name>
 
 Create the feature's progress directory and initialize tracking:
 1. Create `.claude/progress/<feature-name>/` directory
-2. Initialize `workflow-state.json` in the progress directory
-3. Emit `session.start` event to `events.jsonl` via `/claude-workflow:track session.start`
-4. The `current.md` file is rendered when `/claude-workflow:track` is called for significant events
+2. Emit `session.start` event via `/claude-workflow:track session.start` — this automatically creates `workflow-state.json` (do NOT write it directly)
+3. The `current.md` file is rendered when `/claude-workflow:track` is called for significant events
 
 The `events.jsonl` file is your **crash-recovery artifact**. Events are appended via `/claude-workflow:track` commands at key checkpoints.
 
@@ -250,7 +249,7 @@ Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 - QA agents: `model: "haiku"` — read-only review work
 - Guardian: `model: "sonnet"` — cross-module analysis
 
-**Background execution**: Spawn coding agents with `run_in_background: true`. The Team Leader continues coordinating (setting up next worktrees, updating progress) while agents work. Check results via agent messages or `TaskOutput`.
+**Background execution**: Spawn coding agents with `run_in_background: true`. The Task tool returns a `task_id` for each spawned agent — **save this ID**. Use `TaskOutput` with the saved `task_id` to check agent results when needed.
 
 ### 6c. Monitor & Collect Results
 
