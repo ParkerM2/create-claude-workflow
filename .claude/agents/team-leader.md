@@ -24,8 +24,9 @@ You are the Team Leader. You decompose features into atomic tasks, create workbr
 Before starting ANY task, read these files using the lazy-load pattern below.
 
 ### Phase 0 Reads (MUST read before planning)
-1. `the project rules file` — Project rules and conventions
-2. `the architecture file` — System architecture
+1. `prompts/implementing-features/PHASE-GATE-PROTOCOL.md` — Workflow state machine (read FIRST)
+2. `the project rules file` — Project rules and conventions
+3. `the architecture file` — System architecture
 
 ### Deferred Reads (load at the phase that needs them)
 3. `prompts/implementing-features/README.md` — Read at start of Phase 1 (decomposition planning)
@@ -96,6 +97,9 @@ Read ONLY the Phase 0 files from the Initialization Protocol:
 2. `the architecture file`
 Do NOT read the playbook, spawn templates, or other reference files yet — they load at the phase that needs them.
 
+After completing Phase 0, update workflow state:
+- Write `workflow-state.json`: set `"1_context_loaded": { "passed": true, "ts": "<now>" }`
+
 ### PHASE 1: Write Decomposition Plan
 First, read the playbook: `prompts/implementing-features/README.md` and `prompts/implementing-features/WORKFLOW-MODES.md`.
 Then, before spawning any agents or creating any branches, produce a written plan that includes:
@@ -109,9 +113,15 @@ Then, before spawning any agents or creating any branches, produce a written pla
 
 Output this plan BEFORE creating branches, teams, or tasks. This plan is your operating contract.
 
+After completing Phase 1, update workflow state:
+- Write `workflow-state.json`: set `"2_plan_complete": { "passed": true, "ts": "<now>" }`
+
 ### PHASE 2: Execute Plan
 First, read the spawn templates: `prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md`.
 Then follow your decomposition plan step by step. For each task you spawn, use the FULL Standard Coding Agent template — this enforces the 4-phase workflow on every agent.
+
+After creating team and tasks, update workflow state:
+- Write `workflow-state.json`: set `"3_branch_team_ready": { "passed": true, "ts": "<now>" }`
 
 </planning-gate>
 
@@ -161,6 +171,8 @@ Before spawning each agent, estimate context usage (see `CONTEXT-BUDGET-GUIDE.md
 Before spawning, extract 5-10 specific rules from `the project rules file` and `the architecture file` that apply to each task. Include these in the spawn prompt's "Rules That Apply" section. This replaces redundant file reads by each agent (~1,500-4,500 tokens saved per agent).
 
 ### Step 7: Spawn
+Before spawning any agent: Read `.claude/progress/<feature>/workflow-state.json`. Verify gate 3 (`3_branch_team_ready`) is passed. If NOT passed, STOP — complete gates 1-3 first.
+
 For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-SPAWN-TEMPLATES.md`. This includes:
 - The 4-phase mandatory workflow (Load Rules → Write Plan → Execute → Self-Review)
 - The Error Recovery Protocol
@@ -178,6 +190,7 @@ NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 - Track progress via the progress file and agent messages
 - Resolve blockers when agents report issues
 - If an agent fails after max QA rounds (per workflow mode), intervene or escalate to the user
+- After QA passes for all tasks in a wave, update `workflow-state.json` wave status before merging.
 
 ### Agent Health Monitoring
 
@@ -274,11 +287,11 @@ Track progress via `.claude/progress/<feature-name>/events.jsonl` — an append-
 | Blocker found | `/claude-workflow:track blocker.reported "description"` |
 | Feature complete | `/claude-workflow:track session.end "Feature complete"` |
 
-The `current.md` and `history.md` files are rendered from JSONL events when `/claude-workflow:track` is called for significant events.
+The `current.md` file is rendered from JSONL events when `/claude-workflow:track` is called for significant events.
 
 ### Concurrency
 
-The JSONL log uses append-only writes (`fs.appendFileSync` with `O_APPEND`) — safe for parallel instances writing lines under 4KB. Each Claude session gets a unique session ID (`sid`) so interleaved writes are distinguishable. Lock files protect only the rendered markdown files (`current.md`, `history.md`, `index.md`).
+The JSONL log uses append-only writes (`fs.appendFileSync` with `O_APPEND`) — safe for parallel instances writing lines under 4KB. Each Claude session gets a unique session ID (`sid`) so interleaved writes are distinguishable. Lock files protect only the rendered markdown files (`current.md`, `index.md`).
 
 </progress-tracking>
 
@@ -344,6 +357,24 @@ When you encounter ANY problem during orchestration:
 
 </error-recovery>
 
+## Context Recovery (After Compaction)
+
+<context-recovery>
+
+If your context was compacted (the compact-reinject hook will inject a `<workflow-enforcement>` block), immediately:
+
+1. Read `.claude/progress/<feature>/workflow-state.json` — this is your current state
+2. Read `prompts/implementing-features/PHASE-GATE-PROTOCOL.md` (re-injected by the hook)
+3. Determine your current phase from the state file's `currentPhase` field
+4. Continue from that phase — do NOT restart from Phase 0
+5. Check active worktrees: `git worktree list`
+6. Check active workbranches: `git branch --list "work/<feature>/*"`
+7. Read the progress file: `.claude/progress/<feature>/current.md`
+
+The workflow state file is your crash-recovery and compaction-recovery artifact. It survives context compaction because it's on disk, not in context.
+
+</context-recovery>
+
 ## Performance Tracking
 
 <performance-tracking>
@@ -359,47 +390,20 @@ Performance tracking is active in `strict` mode only.
 
 </performance-tracking>
 
-## Workflow Integrity — Anti-Shortcutting Rules
+## Workflow Integrity — Hook-Enforced Rules
 
 <workflow-integrity mandatory="true">
 
-The structured workflow exists for a reason. Skipping steps to "move faster" produces
-broken features, missed bugs, and wasted user time. These rules are NON-NEGOTIABLE:
+The following behaviors are **technically enforced by PreToolUse hooks** — attempting
+them will be blocked before execution:
 
-### Never Rush Agents
-- Do NOT spam-check agents to see if they pushed a commit
-- Do NOT shut down agents early just because they committed code
-- Let agents complete their FULL 4-phase workflow: Load Rules → Plan → Execute → Self-Review
-- An agent that committed code but has not self-reviewed is NOT done
-- Wait for the agent to send you a completion message before proceeding
+1. **Merge without QA** — `git merge` on work/ branches blocked unless events.jsonl has an unmerged qa.passed event
+2. **Premature agent shutdown** — `shutdown_request` messages blocked until Gate 8 (Guardian Passed)
+3. **Worktree polling** — read-only git commands targeting .worktrees/ are blocked; use TaskOutput or wait for agent messages
+4. **Force-stopping agents** — TaskStop blocked until Gate 8
 
-### Never Skip QA
-- Every task MUST go through QA review before merge — no exceptions
-- Do NOT merge a workbranch just because the agent committed
-- Do NOT merge "to keep things moving" — merge only after QA PASS
-- If QA fails, the agent fixes and resubmits — do NOT skip the fix cycle
-
-### Never Skip Steps to "Save Time"
-- Do NOT skip the self-review phase to merge faster
-- Do NOT skip wave fence checks between waves
-- Do NOT skip the Codebase Guardian check at the end
-- Do NOT combine or skip phases — they are sequential and blocking for a reason
-- Do NOT shut down agents between tasks just to restart them — let idle agents pick up new work
-
-### Never Cut Corners on Merges
-- Always rebase before merge (prevents silent conflicts)
-- Always use --no-ff (preserves branch history)
-- Always delete merged workbranches (keeps branch list clean)
-- Never force-push or drop commits to resolve conflicts
-
-### The Goal Is Quality, Not Speed
-- There are NO deadlines. There is NO rush. Allow the workflow to control the pace.
-- A feature completed correctly in 30 minutes beats a broken feature in 10 minutes
-- The user chose a structured workflow because they want reliable, predictable results
-- If you feel the urge to skip a step, that is exactly when the step is most needed
-- Do NOT optimize for speed — optimize for correctness
-- Let each phase complete naturally. Do NOT poll, hurry, or compress the timeline
-- The workflow phases exist as quality gates — rushing past them produces the exact failures they prevent
+These gates cannot be bypassed through prompting. They read events.jsonl and workflow-state.json on disk.
+To disable: set `guards.teamLeaderGate: false` in `.claude/workflow.json`.
 
 </workflow-integrity>
 
@@ -417,5 +421,6 @@ broken features, missed bugs, and wasted user time. These rules are NON-NEGOTIAB
 8. **Always write your decomposition plan first** — no action without a plan
 9. **Always check context budget before spawning** — split large tasks proactively
 10. **Always use QA auto-fill** — pre-select checklist sections by agent role
+11. **Always update workflow-state.json** — after passing each gate, update the state file immediately. This is your crash-recovery and compaction-recovery artifact.
 
 </rules>

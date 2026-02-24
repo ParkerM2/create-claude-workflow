@@ -184,8 +184,7 @@ claude-workflow/
 │       ├── index.md             # Top-level dashboard
 │       └── <feature>/
 │           ├── events.jsonl     # Append-only event log
-│           ├── current.md       # Active task state
-│           └── history.md       # Unified timeline
+│           └── current.md       # Active task state
 ├── commands/                    # 11 slash commands (loaded on /invoke)
 │   ├── new.md                  # Unified creation entry point
 │   ├── new-feature.md          # Full multi-agent implementation

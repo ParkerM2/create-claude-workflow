@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.4.0] — 2026-02-23
+
+### Added
+- **Team Leader behavioral enforcement hook** (`hooks/team-leader-gate.js`): 4 PreToolUse gates that technically prevent the team-leader agent from bypassing the QA workflow
+  - **Merge gate** — blocks `git merge` on work/ branches unless events.jsonl has an unmerged `qa.passed` event
+  - **Shutdown gate** — blocks `shutdown_request` messages until Gate 8 (Guardian Passed)
+  - **Worktree polling gate** — blocks read-only git commands targeting .worktrees/ to prevent premature status checking
+  - **TaskStop gate** — blocks force-stopping background agents until Gate 8
+- `guards.teamLeaderGate` config toggle: enable/disable all 4 gates in `.claude/workflow.json`
+
+### Changed
+- `agents/team-leader.md`: replaced 40-line prose `<workflow-integrity>` anti-shortcutting rules with 8-line hook-enforced summary — behavior is now technically enforced, not just instructed
+- `hooks/hooks.json`: registered `team-leader-gate.js` for Bash, SendMessage, and TaskStop tools
+
+### Removed
+- `renderHistoryMd()` from `hooks/tracker.js` — `history.md` was redundant with `events.jsonl`; tracking now only renders `current.md` and `index.md`
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [1.3.1] — 2026-02-23
 
 ### Fixed

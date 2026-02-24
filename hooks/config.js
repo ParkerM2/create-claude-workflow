@@ -31,7 +31,8 @@ const GUARDS_DEFAULTS = {
   branchGuard: true,
   destructiveGuard: true,
   configGuard: true,
-  workflowGate: true  // NEW — enables phase gate enforcement hooks
+  workflowGate: true,
+  teamLeaderGate: true  // enforces merge-after-QA, no premature shutdowns
 };
 
 // ---------------------------------------------------------------------------

@@ -186,7 +186,7 @@ Create the feature's progress directory and initialize tracking:
 1. Create `.claude/progress/<feature-name>/` directory
 2. Initialize `workflow-state.json` in the progress directory
 3. Emit `session.start` event to `events.jsonl` via `/claude-workflow:track session.start`
-4. The `current.md` and `history.md` files are rendered when `/claude-workflow:track` is called for significant events
+4. The `current.md` file is rendered when `/claude-workflow:track` is called for significant events
 
 The `events.jsonl` file is your **crash-recovery artifact**. Events are appended via `/claude-workflow:track` commands at key checkpoints.
 

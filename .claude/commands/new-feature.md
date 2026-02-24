@@ -152,7 +152,7 @@ git checkout -b <featurePrefix>/<feature-name>
 Create the feature's progress directory and initialize tracking:
 1. Create `.claude/progress/<feature-name>/` directory
 2. Emit `session.start` event to `events.jsonl` via `/claude-workflow:track session.start`
-3. The `current.md` and `history.md` files are rendered when `/claude-workflow:track` is called for significant events
+3. The `current.md` file is rendered when `/claude-workflow:track` is called for significant events
 
 The `events.jsonl` file is your **crash-recovery artifact**. Events are appended via `/claude-workflow:track` commands at key checkpoints.
 

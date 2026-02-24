@@ -144,7 +144,6 @@ Claude Code sessions can terminate unexpectedly (terminal close, timeout, proces
 **Rendered summaries**:
 
 - `.claude/progress/<feature-name>/current.md` — active task state
-- `.claude/progress/<feature-name>/history.md` — full timeline
 - `.claude/progress/index.md` — dashboard across all features
 
 **Template**: See [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md) for the current.md format

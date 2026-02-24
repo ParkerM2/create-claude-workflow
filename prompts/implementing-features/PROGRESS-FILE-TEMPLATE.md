@@ -12,7 +12,6 @@ The progress tracking system uses three files per feature:
 |------|---------|-----------------|
 | `events.jsonl` | Append-only event log | **YES** — all state is derived from this |
 | `current.md` | Active task state (rendered) | No — regenerated from JSONL |
-| `history.md` | Full timeline (rendered) | No — regenerated from JSONL |
 
 The `current.md` file is rendered after significant events: `task.completed`, `qa.passed/failed`, `branch.merged`, `session.start/end`, `checkpoint`, `blocker.reported`, `plan.created`.
 

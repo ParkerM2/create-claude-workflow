@@ -3,7 +3,7 @@
 
 // Core JSONL progress tracker — event emitter and renderers.
 // Emits structured events to <progressDir>/<feature>/events.jsonl
-// Renders current.md, history.md, and index.md from event streams.
+// Renders current.md and index.md from event streams.
 // Used by the /track command. Not a standalone hook.
 
 const fs = require('fs');
@@ -357,7 +357,6 @@ function emitEvent(type, data, options) {
     // Trigger markdown renders for significant events
     if (RENDER_TRIGGERS.has(type)) {
       try { renderCurrentMd(featureDir); } catch { /* best-effort */ }
-      try { renderHistoryMd(featureDir); } catch { /* best-effort */ }
       try { renderIndex(progressDir); } catch { /* best-effort */ }
     }
   } catch {
@@ -531,71 +530,6 @@ function renderCurrentMd(featureDir) {
 }
 
 /**
- * Replay events.jsonl and write history.md — a full timeline grouped by
- * date and session.
- */
-function renderHistoryMd(featureDir) {
-  const lockPath = path.join(featureDir, 'render.lock');
-  if (!acquireLock(lockPath)) {
-    return;
-  }
-
-  try {
-    const events = readEvents(featureDir);
-    if (events.length === 0) {
-      releaseLock(lockPath);
-      return;
-    }
-
-    const featureName = events[0].feature || path.basename(featureDir);
-
-    // Group events by date, then by session
-    const byDate = new Map(); // dateStr -> Map(sid -> [events])
-    for (const evt of events) {
-      const dateStr = evt.ts ? evt.ts.slice(0, 10) : 'unknown';
-      if (!byDate.has(dateStr)) {
-        byDate.set(dateStr, new Map());
-      }
-      const sessions = byDate.get(dateStr);
-      const sessionKey = evt.sid || 'unknown';
-      if (!sessions.has(sessionKey)) {
-        sessions.set(sessionKey, []);
-      }
-      sessions.get(sessionKey).push(evt);
-    }
-
-    const lines = [];
-    lines.push(`# ${featureName} -- History`);
-    lines.push('');
-
-    for (const [dateStr, sessions] of byDate) {
-      lines.push(`## ${dateStr}`);
-      lines.push('');
-
-      for (const [sessionId, sessionEvents] of sessions) {
-        lines.push(`### Session \`${sessionId}\``);
-        lines.push('');
-
-        for (const evt of sessionEvents) {
-          const time = evt.ts ? evt.ts.slice(11, 19) : '??:??:??';
-          const agent = evt.agent ? ` [${evt.agent}]` : '';
-          const summary = evt.data && evt.data.message ? ` -- ${evt.data.message}` : '';
-          lines.push(`- \`${time}\`${agent} **${evt.type}**${summary}`);
-        }
-        lines.push('');
-      }
-    }
-
-    const mdPath = path.join(featureDir, 'history.md');
-    fs.writeFileSync(mdPath, lines.join('\n'));
-  } catch {
-    // best-effort
-  } finally {
-    releaseLock(lockPath);
-  }
-}
-
-/**
  * Scan all feature directories under progressDir and write index.md —
  * a dashboard listing every feature and its current status.
  */
@@ -678,6 +612,5 @@ module.exports = {
   emitEvent,
   getFeatureFromBranch,
   renderCurrentMd,
-  renderHistoryMd,
   renderIndex
 };
