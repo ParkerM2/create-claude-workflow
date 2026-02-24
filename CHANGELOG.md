@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.1] — 2026-02-24
+
+### Fixed
+- **Team leader no longer writes workflow-state.json directly** — AGENT-SPAWN-TEMPLATES.md kickoff checklist still had v1.3 gate-era "Initialize/Update `workflow-state.json`" instructions causing the team leader to use the Write tool (showing full diffs in terminal). Replaced with checkpoint event emissions — hooks handle all state writes automatically.
+- **TaskOutput "No task found with ID" error** — team leader constructed IDs manually (e.g., `agent@task`) instead of using the `task_id` returned by the Task tool. Added explicit save-and-reuse instructions to spawn templates and team-leader Step 7/8.
+- Updated workflow-integrity section to reference FSM fields (`guardianPassed`) instead of old Gate 8 references
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [1.5.0] — 2026-02-23
 
 ### Changed
