@@ -318,41 +318,37 @@ These guards apply to ALL agents and ALL commands. Follow them automatically.
 
 ## 7. QA Verification Workflow
 
-### Per-Task QA (Not End-of-Pipeline)
+### Team-Leader-Managed QA
 
-Each coding agent is responsible for spawning its own QA reviewer. QA happens on the SAME workbranch, immediately after the coding agent finishes.
+> **Teammates cannot spawn other teammates or subagents.** Only the Team Leader can spawn QA agents. Coding agents report completion to the Team Leader, who then spawns QA on their workbranch.
 
 ### The Flow
 
 ```
-Coding Agent                           QA Review Agent
-     │                                       │
-     ├─ works on workbranch                  │
-     ├─ commits code                         │
-     ├─ runs self-review                     │
-     ├─ spawns QA Review Agent ─────────────▶│
-     │   (same workbranch)                   ├─ reads task + QA checklist
-     │                                       ├─ runs automated checks
-     │                                       ├─ reviews every changed file
-     │                                       ├─ traces data flow
-     │                                       ├─ if FAIL: returns issues
-     │◀── QA report ────────────────────────┤
-     │                                       │
-     ├─ if FAIL:                             │
-     │   ├─ fixes issues, commits            │
-     │   ├─ spawns NEW QA agent ────────────▶│  (max 3 rounds)
-     │                                       │
-     ├─ if PASS:                             │
-     │   │   QA updates docs ───────────────▶├─ updates the architecture file
-     │   │   on workbranch                   ├─ updates other project docs
-     │   │                                   ├─ commits doc updates
-     │   │                                   │
-     │◀── APPROVED report ──────────────────┤
-     │                                       │
-     ├─ notifies Team Leader                 │
-     │   "Task #N QA PASS, ready to merge"   │
-     │                                       │
-     └─ Team Leader merges workbranch        │
+Coding Agent          Team Leader              QA Review Agent
+     │                     │                         │
+     ├─ works on branch    │                         │
+     ├─ commits code       │                         │
+     ├─ runs self-review   │                         │
+     ├─ SendMessage ──────▶│                         │
+     │  "complete, ready   │                         │
+     │   for QA"           ├─ spawns QA agent ──────▶│
+     │                     │  (same workbranch)      ├─ reads task + checklist
+     │                     │                         ├─ runs automated checks
+     │                     │                         ├─ reviews changed files
+     │                     │◀── SendMessage ────────┤
+     │                     │  "QA PASS" or "QA FAIL" │
+     │                     │                         │
+     │  if FAIL:           │                         │
+     │◀── SendMessage ────┤                         │
+     │  "fix these issues" │                         │
+     ├─ fixes, commits     │                         │
+     ├─ SendMessage ──────▶│                         │
+     │  "fixes done"       ├─ spawns NEW QA ────────▶│  (max N rounds)
+     │                     │                         │
+     │  if PASS:           │                         │
+     │                     ├─ merges workbranch      │
+     │                     │                         │
 ```
 
 ### Why QA Updates Docs
@@ -364,9 +360,9 @@ Coding Agent                           QA Review Agent
 
 ### QA Round Limits
 
-- **Maximum 3 QA rounds** per task
-- If a task fails QA 3 times, the coding agent reports to the Team Leader
-- The Team Leader may reassign, intervene directly, or escalate to the user
+- **Maximum QA rounds** per task are set by workflow mode (strict: 3, standard: 2, fast: 1)
+- If a task fails QA at max rounds, the Team Leader escalates to the user
+- The Team Leader manages all QA spawning and result routing
 
 ### QA Checklist
 
@@ -380,7 +376,7 @@ Every task includes a filled QA checklist from [`QA-CHECKLIST-TEMPLATE.md`](./QA
 
 Merge a workbranch to `feature/` when:
 
-1. The coding agent reports QA PASS
+1. The QA agent reports PASS to the Team Leader
 2. QA has committed doc updates on the workbranch
 3. No other merge is in progress (sequential only)
 

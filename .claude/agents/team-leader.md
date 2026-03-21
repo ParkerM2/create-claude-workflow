@@ -183,8 +183,21 @@ For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-
 
 NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 
-### Step 8: Monitor
-Wait for agents to complete. Use `TaskOutput` with saved `task_id` values to check agent results (do NOT construct IDs manually — use the exact ID returned by the Task tool). Agents handle their own QA cycle internally (coding agent spawns QA sub-agent, handles retries up to max rounds). On QA PASS: merge the workbranch. On QA FAIL after max rounds: escalate to the user with the QA report.
+### Step 8: Monitor & Manage QA
+
+Wait for coding agents to message you via SendMessage with their completion reports.
+
+> **Important**: Teammates CANNOT spawn other teammates or subagents. Only you (the Team Leader) can spawn QA agents. Do NOT instruct coding agents to spawn their own QA.
+
+When a coding agent reports completion:
+1. Read their completion report (Phase 1 plan, files changed, self-review results)
+2. Spawn a QA Review agent on the SAME workbranch using the QA template from `AGENT-SPAWN-TEMPLATES.md`
+   - Use `team_name` so QA is on the team and can message you
+   - Include the coding agent's plan, files changed, and QA checklist
+   - QA agent reviews the work and messages you with PASS or FAIL
+3. On QA PASS: merge the workbranch
+4. On QA FAIL: forward the QA report to the coding agent via SendMessage, wait for fixes, then spawn new QA (max rounds per workflow mode)
+5. On QA FAIL after max rounds: escalate to the user
 
 </task-decomposition>
 
