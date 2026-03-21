@@ -161,9 +161,9 @@ All file paths are relative to the worktree root.
 
 <phase name="self-review" blocking="false">
 
-## PHASE 3: SELF-REVIEW [before spawning QA]
+## PHASE 3: SELF-REVIEW [before reporting to Team Leader]
 
-Before spawning QA, you MUST verify your own work against your plan:
+Before reporting completion, you MUST verify your own work against your plan:
 
 1. Re-read your Phase 1 plan
 2. For each acceptance criterion: verify it is met (run the check, read the file, confirm)
@@ -176,33 +176,48 @@ Before spawning QA, you MUST verify your own work against your plan:
    # Go: golangci-lint run, go vet, go test ./...
    # If a command doesn't exist, skip it and note in self-review
    ```
-5. If ANY check fails: fix it BEFORE spawning QA. Do not pass known failures to QA.
+5. If ANY check fails: fix it BEFORE reporting. Do not pass known failures to QA.
 
 Only after ALL self-review checks pass, proceed to Phase 4.
 
 </phase>
 
-<phase name="spawn-qa" blocking="false">
+<phase name="report-completion" blocking="false">
 
-## PHASE 4: SPAWN QA
+## PHASE 4: REPORT TO TEAM LEADER
 
-Spawn a QA Review agent using the QA template below. Include:
+> **Important**: Teammates CANNOT spawn other teammates or subagents.
+> Only the Team Leader can spawn QA agents. Your job is to report completion
+> so the Team Leader can spawn QA on your workbranch.
+
+Send your completion report to the Team Leader via SendMessage. Include:
 - Your Phase 1 plan (so QA can verify you followed it)
 - The list of files you created/modified
-- The QA checklist from this task
 - Your self-review results from Phase 3
+- Any issues or concerns found during self-review
 
-If QA returns FAIL:
-1. Read the FULL QA report
-2. Re-read your Phase 1 plan (context anchor — prevents drift)
-3. Fix ONLY the issues QA identified
-4. Commit fixes
-5. Spawn a NEW QA agent (max 3 rounds total)
+```
+SendMessage:
+  type: "message"
+  recipient: "team-lead"
+  content: |
+    Task #<N> complete. Self-review PASS. Ready for QA.
 
-If QA returns PASS:
-1. QA will have updated docs and committed on your workbranch
-2. Send the QA report + completion summary to the Team Leader
-3. Mark Task #<N> as completed via TaskUpdate
+    Files changed: <list>
+    Self-review: All acceptance criteria met, automated checks passed.
+    Phase 1 plan: <paste or summarize your plan>
+  summary: "Task #<N> complete, ready for QA"
+```
+
+After the Team Leader spawns QA on your workbranch:
+- If QA returns FAIL: The Team Leader will forward the QA report to you via SendMessage.
+  1. Read the FULL QA report
+  2. Re-read your Phase 1 plan (context anchor — prevents drift)
+  3. Fix ONLY the issues QA identified
+  4. Commit fixes
+  5. Send another completion report to the Team Leader for re-QA
+
+- If QA returns PASS: The Team Leader handles the merge. You are done.
 
 </phase>
 
@@ -212,10 +227,10 @@ If QA returns PASS:
 
 ## Communication Rules
 
-- Do NOT use SendMessage to contact peer agents. You communicate only with:
-  1. Your QA sub-agent (via Task tool spawn)
-  2. The Team Leader (via SendMessage on completion or error)
-- Never attempt to coordinate with or message other coding agents directly.
+- Do NOT use SendMessage to contact peer agents. You communicate only with the Team Leader.
+- The Team Leader spawns QA agents — you do NOT spawn QA yourself.
+- Send completion reports to "team-lead" via SendMessage when your work is done.
+- Wait for Team Leader to forward QA results if there are issues to fix.
 
 </communication-rules>
 
@@ -310,7 +325,7 @@ If you find yourself running low on context:
 
 ## QA Review Agent Spawn
 
-The coding agent spawns this AFTER completing its work. It runs on the SAME workbranch.
+The **Team Leader** spawns this AFTER a coding agent reports completion. It runs on the coding agent's workbranch. The coding agent cannot spawn QA itself — only the Team Leader can spawn teammates.
 
 ```
 <spawn-parameters>
@@ -495,7 +510,10 @@ Format:
 
 **VERDICT: APPROVED / REJECTED**
 
-Send this report to the coding agent that spawned you.
+Send this report to the Team Leader via SendMessage:
+- If PASS: `recipient: "team-lead"`, summary: "QA PASS Task #<N>"
+- If FAIL: `recipient: "team-lead"`, summary: "QA FAIL Task #<N>"
+The Team Leader will forward FAIL reports to the coding agent for fixes, or merge on PASS.
 
 </phase>
 

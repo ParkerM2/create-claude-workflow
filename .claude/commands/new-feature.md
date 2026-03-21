@@ -232,12 +232,18 @@ Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 
 **Background execution**: Spawn coding agents with `run_in_background: true`. The Task tool returns a `task_id` for each spawned agent — **save this ID**. Use `TaskOutput` with the saved `task_id` to check agent results when needed.
 
-### 6c. Monitor & Collect Results
+### 6c. Monitor, Spawn QA, Collect Results
 
-- Track agent completion messages
-- On QA PASS: proceed to merge
-- On QA FAIL (round < 3): agent handles re-work automatically
-- On QA FAIL (round 3): escalate to user
+> **Teammates cannot spawn other teammates.** Only the Team Leader spawns QA agents.
+
+1. Wait for coding agents to send completion messages via SendMessage
+2. When a coding agent reports complete: spawn a QA Review agent on the same workbranch
+   - Use the QA template from `AGENT-SPAWN-TEMPLATES.md`
+   - Include: coding agent's plan, files changed, QA checklist
+   - QA agent reviews and messages Team Leader with PASS or FAIL
+3. On QA PASS: proceed to merge
+4. On QA FAIL: forward report to coding agent via SendMessage, wait for fixes, re-spawn QA
+5. On QA FAIL (max rounds): escalate to user
 
 ### 6d. Merge Completed Workbranches
 
