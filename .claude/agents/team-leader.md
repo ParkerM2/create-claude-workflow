@@ -282,80 +282,63 @@ The JSONL log uses append-only writes (`fs.appendFileSync` with `O_APPEND`) — 
 
 <progress-display>
 
-After calling `/claude-workflow:track` for significant events, output a box-drawn progress
-card as inline text inside a fenced code block. This renders as a fixed-width monospace box in
-the CLI — NOT a file diff, NOT a markdown table.
+After calling `/claude-workflow:track` for significant events, output a GFM markdown
+progress display. This renders as a clean native table in the Claude Code chat — NOT
+a fixed-width box that requires character-level alignment.
 
 ### When to Display
 
 Display after: session.start, task.completed, qa.passed/failed, branch.merged,
 checkpoint (wave complete), session.end.
 
-### Box Format
+### Format
 
-Output inside a fenced code block (triple backticks). The box uses Unicode box-drawing
-characters with rounded corners. **Every line between the top and bottom border MUST be
-right-padded with spaces to the same width as the border line**, so that all `│` characters
-on the right edge align perfectly.
-
-**Fixed box width**: 60 characters total (╭/╰ + 58 dashes/spaces + ╮/╯).
-
-**Column layout** (within the 58-char inner width):
-
-| Column | Width | Alignment | Notes |
-|--------|-------|-----------|-------|
-| Left margin | 3 | — | Always 3 spaces |
-| # | 4 | right | Task number |
-| Task | 18 | left | **Truncate at 18 chars** — use ".." suffix if longer |
-| Status | 10 | left | Includes symbol prefix |
-| QA | 4 | center | Pass, Fail, or -- |
-| Wave | 4 | center | Wave number |
-| Right pad | 15 | — | Fill remaining to width 58 |
-
-**Status symbols** (Unicode, not emoji):
-
-| Symbol | Meaning |
-|--------|---------|
-| `✓` | Done — task complete and merged |
-| `▶` | Active — agent working |
-| `·` | Queued — waiting for wave |
-| `✗` | Failed — QA failed max rounds |
-| `⊘` | Blocked — dependency not met |
-
-**Progress bar**: 28 characters using `━` (heavy horizontal, filled) and `─` (light
-horizontal, empty) — both are box-drawing characters guaranteed single-width in monospace.
-Do NOT use `█` or `░` — they render as double-width in some terminals.
+Output the progress display as native markdown (NOT inside a fenced code block).
+Claude Code renders GFM tables natively with auto-sized columns.
 
 ### Template
 
-Reproduce this structure exactly, substituting values. Every line MUST be exactly 60 chars
-total (╭/╰ + 58 inner + ╮/╯). Pad every content line to 58 chars before adding `│`:
+```markdown
+### <feature-name> — <mode> · Wave <N>/<total>
 
-````
+| # | Task | Status | QA | Wave |
+|---|------|--------|----|------|
+| 1 | <task name> | ✓ Done | Pass | 1 |
+| 2 | <task name> | ▶ Active | -- | 2 |
+| 3 | <task name> | · Queued | -- | 2 |
+| 4 | <task name> | · Queued | -- | 3 |
+
+**Progress:** `[=====-----------]` 25% · 1/4 tasks
+**Blockers:** none
 ```
-╭─ user-auth ────────────────────────────── strict · W2/3 ─╮
-│                                                          │
-│    #   Task                Status       QA    Wv         │
-│   ──   ──────────────────  ──────────  ────   ──         │
-│    1   Add auth types      ✓ Done      Pass    1         │
-│    2   Auth service        ▶ Active     --     2         │
-│    3   Auth middleware     · Queued     --     2         │
-│    4   Login page          · Queued     --     3         │
-│                                                          │
-│   ━━━━━━━─────────────────────   25%  · 1/4 tasks        │
-│   Blockers: none                                         │
-╰──────────────────────────────────────────────────────────╯
+
+### Status Symbols
+
+| Symbol | Meaning |
+|--------|---------|
+| ✓ | Done — task complete and merged |
+| ▶ | Active — agent working |
+| · | Queued — waiting for wave |
+| ✗ | Failed — QA failed max rounds |
+| ⊘ | Blocked — dependency not met |
+
+### Progress Bar
+
+Build the progress bar using `=` (filled) and `-` (empty) inside a code span:
+
 ```
-````
+Tasks complete / Tasks total × 16 characters
+Example: 1/4 = 4 filled + 12 empty
+**Progress:** `[====-----------]` 25% · 1/4 tasks
+```
 
 ### Rules
 
 1. Reconstruct from your in-memory task state after each `/claude-workflow:track` call
-2. Output inside a fenced code block — this ensures monospace alignment in the CLI
-3. **Right-pad every line** to exactly 58 inner chars so right-edge `│` characters align
-4. **Truncate task names** at 18 characters — append ".." if truncated (e.g. "Implement middlew..")
-5. The `current.md` file write still happens for persistence — this display is supplementary
-6. Do NOT use Write/Edit tool for the box display — just output it as text
+2. Output as native markdown — do NOT wrap in a fenced code block
+3. Truncate task names at 20 characters — append ".." if longer
+4. The `current.md` file write still happens for persistence — this display is supplementary
+5. Do NOT use Write/Edit tool for the display — just output it as text
 
 </progress-display>
 
