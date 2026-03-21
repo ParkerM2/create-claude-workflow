@@ -42,12 +42,13 @@ Do NOT construct IDs manually (e.g., "agent@task") — always use the exact retu
 
 Prompt:
 
-═══════════════════════════════════════════════════════════════
-  MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING
-  You MUST complete each phase fully before starting the next.
-  Skipping or rushing a phase is a CRITICAL VIOLATION.
-  Do NOT write any code until Phase 2.
-═══════════════════════════════════════════════════════════════
+---
+**MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING**
+You MUST complete each phase fully before starting the next.
+Skipping or rushing a phase is a CRITICAL VIOLATION.
+Do NOT write any code until Phase 2.
+
+---
 
 <workflow-phases>
 
@@ -220,11 +221,12 @@ If QA returns PASS:
 
 <error-recovery>
 
-═══════════════════════════════════════════════════════════════
-  ERROR RECOVERY PROTOCOL
-  Follow this EVERY TIME you encounter an error during Phase 2.
-  This prevents you from chasing errors and forgetting your task.
-═══════════════════════════════════════════════════════════════
+---
+**ERROR RECOVERY PROTOCOL**
+Follow this EVERY TIME you encounter an error during Phase 2.
+This prevents you from chasing errors and forgetting your task.
+
+---
 
 When you encounter ANY error:
 
@@ -245,7 +247,7 @@ When you encounter ANY error:
    - Abandon your plan to investigate a tangential issue
    - Spend more than 2 attempts on any single error
 
-═══════════════════════════════════════════════════════════════
+---
 
 </error-recovery>
 
@@ -328,11 +330,12 @@ Your job is to validate the work done for **Task #<N>: <task name>**.
 You are reviewing on workbranch **work/<feature-name>/<task-slug>**.
 Worktree path: **<worktreeDir>/<feature-name>/<task-slug>** (if worktrees enabled).
 
-═══════════════════════════════════════════════════════════════
-  MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING
-  Complete each phase fully before starting the next.
-  Do NOT start reviewing code until your review plan is written.
-═══════════════════════════════════════════════════════════════
+---
+**MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING**
+Complete each phase fully before starting the next.
+Do NOT start reviewing code until your review plan is written.
+
+---
 
 <workflow-phases>
 
@@ -440,46 +443,57 @@ If your review passes:
 Compile your report referencing your Phase 1 review plan.
 
 Format:
-```
-QA REPORT: PASS | FAIL
-═══════════════════════════════════
-Task: #<N> — <task name>
-Workbranch: work/<feature-name>/<task-slug>
-Reviewer: qa-task-<N>
-Round: <1|2|3> of 3
-Timestamp: <ISO>
 
-Rules Enforced: <count of specific rules from Phase 1b>
+## QA REPORT: PASS | FAIL
 
-Automated Checks:
-  - lint: PASS/FAIL (N violations)
-  - typecheck: PASS/FAIL (N errors)
-  - test: PASS/FAIL
-  - build: PASS/FAIL
+| Field | Value |
+|-------|-------|
+| Task | #<N> — <task name> |
+| Workbranch | work/<feature-name>/<task-slug> |
+| Reviewer | qa-task-<N> |
+| Round | <1\|2\|3> of 3 |
+| Timestamp | <ISO> |
+| Rules Enforced | <count of specific rules from Phase 1b> |
 
-Code Review:
-  - Type safety: PASS/FAIL
-  - Code structure: PASS/FAIL
-  - Architecture: PASS/FAIL
-  - Error handling: PASS/FAIL
-  - Security: PASS/FAIL
+### Automated Checks
 
-Acceptance Criteria:
-  - <criterion 1>: MET/NOT MET
-  - <criterion 2>: MET/NOT MET
+| Check | Result |
+|-------|--------|
+| Lint | PASS/FAIL (N violations) |
+| Typecheck | PASS/FAIL (N errors) |
+| Test | PASS/FAIL |
+| Build | PASS/FAIL |
 
-Data Flow: PASS/FAIL
+### Code Review
 
-Documentation Updated (on PASS):
-  - <file>: <what was updated>
-  - Commit: <short hash>
+| Area | Result |
+|------|--------|
+| Type safety | PASS/FAIL |
+| Code structure | PASS/FAIL |
+| Architecture | PASS/FAIL |
+| Error handling | PASS/FAIL |
+| Security | PASS/FAIL |
 
-Issues Found: <count>
-  1. [SEVERITY] file:line — rule: <specific rule> — fix instruction
-  2. ...
+### Acceptance Criteria
 
-VERDICT: APPROVED / REJECTED
-```
+| Criterion | Status |
+|-----------|--------|
+| <criterion 1> | MET/NOT MET |
+| <criterion 2> | MET/NOT MET |
+
+**Data Flow:** PASS/FAIL
+
+### Documentation Updated (on PASS)
+
+- <file>: <what was updated>
+- Commit: <short hash>
+
+### Issues Found: <count>
+
+1. [SEVERITY] file:line — rule: <specific rule> — fix instruction
+2. ...
+
+**VERDICT: APPROVED / REJECTED**
 
 Send this report to the coding agent that spawned you.
 
@@ -489,9 +503,10 @@ Send this report to the coding agent that spawned you.
 
 <error-recovery>
 
-═══════════════════════════════════════════════════════════════
-  ERROR RECOVERY PROTOCOL
-═══════════════════════════════════════════════════════════════
+---
+**ERROR RECOVERY PROTOCOL**
+
+---
 
 If you encounter an error during review (e.g., a check command fails to run):
 1. Re-read your Phase 1 review plan
@@ -540,11 +555,12 @@ Prompt:
 You are the **Codebase Guardian** on team "<team-name>".
 Your job is to perform a final structural integrity check on the merged feature branch.
 
-═══════════════════════════════════════════════════════════════
-  MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING
-  Complete each phase before starting the next.
-  Do NOT start checking code until your check plan is written.
-═══════════════════════════════════════════════════════════════
+---
+**MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING**
+Complete each phase before starting the next.
+Do NOT start checking code until your check plan is written.
+
+---
 
 <workflow-phases>
 
@@ -631,9 +647,10 @@ After completing your report, emit a tracking event:
 
 <error-recovery>
 
-═══════════════════════════════════════════════════════════════
-  ERROR RECOVERY PROTOCOL
-═══════════════════════════════════════════════════════════════
+---
+**ERROR RECOVERY PROTOCOL**
+
+---
 
 If you encounter an error during checks:
 1. Re-read your Phase 1 check plan

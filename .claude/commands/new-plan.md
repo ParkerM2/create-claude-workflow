@@ -470,38 +470,38 @@ Save to the progress directory as `<feature-name>-design.md`.
 
 After saving the design document, present a summary to the user:
 
-```
-═══════════════════════════════════════════════════════════
-  FEATURE PLAN READY
-═══════════════════════════════════════════════════════════
+```markdown
+## FEATURE PLAN READY
 
-  Feature:      <feature name>
-  Design Doc:   <progress directory>/<feature-name>-design.md
-  Tasks:        <count>
-  Waves:        <count>
-  Agents:       <list of agent roles needed>
-  Mode:         <strict|standard|fast>
+| Field | Value |
+|-------|-------|
+| Feature | <feature name> |
+| Design Doc | `<progress directory>/<feature-name>-design.md` |
+| Tasks | <count> |
+| Waves | <count> |
+| Agents | <list of agent roles needed> |
+| Mode | <strict/standard/fast> |
 
-  ─── Task Summary ───────────────────────────────────────
+### Task Summary
 
-  Wave 1: <task count> tasks (<agent roles>)
-  Wave 2: <task count> tasks (<agent roles>)
-  ...
+| Wave | Tasks | Agents |
+|------|-------|--------|
+| Wave 1 | <task count> tasks | <agent roles> |
+| Wave 2 | <task count> tasks | <agent roles> |
 
-  ─── Risks ──────────────────────────────────────────────
+### Risks
 
-  <count> technical, <count> scope, <count> integration
+<count> technical, <count> scope, <count> integration
 
-═══════════════════════════════════════════════════════════
+---
 
-  To implement this feature, run:
+To implement this feature, run:
 
     /new-feature "<feature name>"
 
-  The Team Leader will read the design document and
-  use it as the decomposition plan — skipping the
-  analysis work because /new-plan already did it.
-═══════════════════════════════════════════════════════════
+The Team Leader will read the design document and
+use it as the decomposition plan — skipping the
+analysis work because /new-plan already did it.
 ```
 
 ### Updating /new-feature to Use the Design Doc

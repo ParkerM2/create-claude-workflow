@@ -620,27 +620,14 @@ ls ~/.claude/teams/
 
 ## Quick Reference — Wave Execution
 
-```
-┌──────────────────────────────────────────────────────┐
-│  WAVE 1: Foundation (no blockers)                     │
-│  Create workbranches → spawn agents → QA → merge      │
-├──────────────────────────────────────────────────────┤
-│  WAVE 2: Business Logic (blocked by Wave 1)           │
-│  Create from updated feature/ → spawn → QA → merge    │
-├──────────────────────────────────────────────────────┤
-│  WAVE 3: Integration (blocked by Wave 2)              │
-│  Create from updated feature/ → spawn → QA → merge    │
-├──────────────────────────────────────────────────────┤
-│  WAVE 4: Presentation (blocked by Wave 3)             │
-│  Create from updated feature/ → spawn → QA → merge    │
-├──────────────────────────────────────────────────────┤
-│  FINAL: Codebase Guardian                             │
-│  Runs on merged feature/ → structural check           │
-├──────────────────────────────────────────────────────┤
-│  FINAL: Visual QA (requires running app)              │
-│  MCP Electron → test flows → screenshots → PR         │
-└──────────────────────────────────────────────────────┘
-```
+| Wave | Description | Process |
+|------|-------------|---------|
+| Wave 1 | Foundation (no blockers) | Create workbranches → spawn agents → QA → merge |
+| Wave 2 | Business Logic (blocked by Wave 1) | Create from updated feature/ → spawn → QA → merge |
+| Wave 3 | Integration (blocked by Wave 2) | Create from updated feature/ → spawn → QA → merge |
+| Wave 4 | Presentation (blocked by Wave 3) | Create from updated feature/ → spawn → QA → merge |
+| Final | Codebase Guardian | Runs on merged feature/ → structural check |
+| Final | Visual QA (requires running app) | MCP Electron → test flows → screenshots → PR |
 
 Each wave:
 
