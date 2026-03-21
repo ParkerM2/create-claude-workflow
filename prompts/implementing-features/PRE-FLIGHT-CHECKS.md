@@ -43,17 +43,18 @@ Adapt commands to the project's actual toolchain.
 
 ### All Checks Pass
 
-```
-PRE-FLIGHT: PASS
-══════════════════
-Baseline verified on branch: main
-  - lint:      PASS
-  - typecheck: PASS
-  - tests:     PASS (N passing)
-  - build:     PASS
+## PRE-FLIGHT: PASS
+
+Baseline verified on branch: `main`
+
+| Check | Result |
+|-------|--------|
+| Lint | PASS |
+| Typecheck | PASS |
+| Tests | PASS (N passing) |
+| Build | PASS |
 
 Proceeding to feature branch creation and agent spawning.
-```
 
 Record the baseline in the progress file:
 
@@ -68,17 +69,18 @@ Record the baseline in the progress file:
 
 ### One or More Checks Fail
 
-```
-PRE-FLIGHT: FAIL
-══════════════════
-Baseline broken on branch: main
-  - lint:      PASS
-  - typecheck: FAIL (3 errors)
-  - tests:     PASS
-  - build:     FAIL
+## PRE-FLIGHT: FAIL
+
+Baseline broken on branch: `main`
+
+| Check | Result |
+|-------|--------|
+| Lint | PASS |
+| Typecheck | FAIL (3 errors) |
+| Tests | PASS |
+| Build | FAIL |
 
 ⚠ WARNING: Spawning agents on a broken baseline will cause false QA failures.
-```
 
 **Team Leader options when pre-flight fails**:
 
