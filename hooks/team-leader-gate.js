@@ -2,7 +2,8 @@
 'use strict';
 
 // PreToolUse hook: Team Leader behavioral enforcement.
-// Blocks: merges without QA, premature shutdowns, worktree polling, agent kills.
+// Blocks: merges without QA, premature shutdowns, worktree polling, agent kills,
+//         worktree creation outside setup/wave phase.
 // Registered for: Bash, SendMessage, TaskStop
 // Respects guards.teamLeaderGate setting.
 // Fail-open: any internal error = allow.
@@ -31,6 +32,7 @@ process.stdin.on('end', () => {
       case 'Bash':
         checkMergeGate(toolInput.command || '');
         checkWorktreePollingGate(toolInput.command || '');
+        checkWorktreeCreationGate(toolInput.command || '');
         break;
       case 'SendMessage':
         checkShutdownGate(toolInput);
@@ -52,22 +54,46 @@ process.stdin.on('end', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Helper: write a block decision and exit
+// ---------------------------------------------------------------------------
+
+function block(reason) {
+  const result = { decision: 'block', reason };
+  process.stdout.write(JSON.stringify(result));
+  process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
 // Gate A: Merge Gate — block `git merge` on work/ branches without QA pass
 // ---------------------------------------------------------------------------
 
 function checkMergeGate(command) {
-  // Only trigger on git merge targeting a work/ branch
-  const mergeMatch = command.match(/git\s+merge\b.*\b(work\/\S+)/);
-  if (!mergeMatch) return;
+  // Broader detection: any git command containing merge
+  if (!/\bgit\b.*\bmerge\b/i.test(command)) return;
 
-  const feature = getActiveFeature();
-  if (!feature) return;
-
+  // Check if it references a work/ branch anywhere
   const config = getWorkflowConfig();
-  const progressDir = config.progressDir || '.claude/progress';
+  const workPrefix = (config.branching && config.branching.workPrefix) || 'work';
+  const escapedPrefix = workPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!new RegExp('\\b' + escapedPrefix + '\\/').test(command)) return;
+
+  // It's a merge of a work branch — enforce QA gate
+  const feature = getActiveFeature();
+  if (!feature) {
+    // FAIL-CLOSED: can't determine feature
+    block('Merge gate: Cannot determine active feature. Ensure you are on a feature branch.');
+    return;
+  }
+
+  const progressDir = (config.progressDir) || '.claude/progress';
   const featureDir = path.join(getRepoRoot(), progressDir, feature);
   const events = readEventsForFeature(featureDir);
-  if (events.length === 0) return;
+
+  // FAIL-CLOSED on empty events (was fail-open before)
+  if (events.length === 0) {
+    block('Merge gate: No events recorded. QA must pass before merging.');
+    return;
+  }
 
   // Count unique tasks with qa.passed events
   const qaPassed = new Set();
@@ -86,16 +112,11 @@ function checkMergeGate(command) {
   if (qaPassed.size > mergedCount) return;
 
   // Block — no unmerged QA-passed task
-  const result = {
-    decision: 'block',
-    reason: 'Merge gate: No unmerged QA-passed task. Wait for qa.passed event before merging.'
-  };
-  process.stdout.write(JSON.stringify(result));
-  process.exit(0);
+  block('Merge gate: No unmerged QA-passed task. Wait for qa.passed event before merging.');
 }
 
 // ---------------------------------------------------------------------------
-// Gate B: Shutdown Gate — block shutdown_request before Gate 8
+// Gate B: Shutdown Gate — block shutdown_request before Guardian passes
 // ---------------------------------------------------------------------------
 
 function checkShutdownGate(toolInput) {
@@ -118,45 +139,30 @@ function checkShutdownGate(toolInput) {
 }
 
 // ---------------------------------------------------------------------------
-// Gate C: Worktree Polling Gate — block read-only git in worktree dirs
+// Gate C: Worktree Polling Gate — block ANY Bash reference to worktreeDir
 // ---------------------------------------------------------------------------
-
-const READ_ONLY_GIT_SUBCOMMANDS = /\b(log|status|show|diff|rev-parse|rev-list|shortlog)\b/;
 
 function checkWorktreePollingGate(command) {
   const config = getWorkflowConfig();
   const worktreeDir = (config.branching && config.branching.worktreeDir) || '.worktrees';
-
-  // Escape special regex characters in worktreeDir
   const escaped = worktreeDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  // Match git -C <worktreeDir>/... or git --git-dir <worktreeDir>/...
-  const targetPattern = new RegExp(
-    'git\\s+(?:-C|--git-dir)\\s+["\']?' + escaped + '[/\\\\]'
-  );
+  // Match ANY reference to worktreeDir followed by a path separator
+  const worktreeRef = new RegExp(escaped + '[/\\\\]');
+  if (!worktreeRef.test(command)) return;
 
-  if (!targetPattern.test(command)) return;
+  // Allowlist: legitimate worktree management operations
+  if (/\bgit\s+worktree\s+(add|remove|list|prune)\b/.test(command)) return;
 
-  // Check if the subcommand is read-only
-  // Extract the git subcommand (first non-flag argument after git [-C path])
-  const subcommandMatch = command.match(
-    /git\s+(?:-C|--git-dir)\s+\S+\s+(\w[\w-]*)/
-  );
-  if (!subcommandMatch) return;
+  // Allowlist: rebase from worktree (needed for merge prep)
+  if (/\brebase\b/.test(command)) return;
 
-  const subcommand = subcommandMatch[1];
-  if (!READ_ONLY_GIT_SUBCOMMANDS.test(subcommand)) return;
-
-  const result = {
-    decision: 'block',
-    reason: 'Worktree polling gate: Do not inspect agent worktrees. Use TaskOutput with the saved task_id to check agent status.'
-  };
-  process.stdout.write(JSON.stringify(result));
-  process.exit(0);
+  // Block everything else referencing worktreeDir
+  block('Worktree gate: Do not inspect agent worktrees. Wait for agents to message you.');
 }
 
 // ---------------------------------------------------------------------------
-// Gate D: TaskStop Gate — block TaskStop before Gate 8
+// Gate D: TaskStop Gate — block TaskStop before Guardian passes
 // ---------------------------------------------------------------------------
 
 function checkTaskStopGate() {
@@ -174,6 +180,24 @@ function checkTaskStopGate() {
   };
   process.stdout.write(JSON.stringify(result));
   process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
+// Gate E: Worktree Creation Gate — block git worktree add outside setup/wave
+// ---------------------------------------------------------------------------
+
+function checkWorktreeCreationGate(command) {
+  if (!/\bgit\s+worktree\s+add\b/.test(command)) return;
+
+  const feature = getActiveFeature();
+  if (!feature) return;
+
+  const state = getWorkflowState(feature);
+  if (!state) return;
+
+  if (state.phase !== 'wave' && state.phase !== 'setup') {
+    block('Worktree gate: git worktree add only allowed during setup or wave phase. Current phase: ' + state.phase);
+  }
 }
 
 // ---------------------------------------------------------------------------
