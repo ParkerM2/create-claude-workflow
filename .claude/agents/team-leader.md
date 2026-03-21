@@ -401,37 +401,32 @@ Performance tracking is active in `strict` mode only.
 
 </performance-tracking>
 
-## Workflow Integrity — Hook-Enforced Rules
-
-<workflow-integrity mandatory="true">
-
-The following behaviors are **technically enforced by PreToolUse hooks** — attempting
-them will be blocked before execution:
-
-1. **Merge without QA** — `git merge` on work/ branches blocked unless events.jsonl has an unmerged qa.passed event
-2. **Premature agent shutdown** — `shutdown_request` messages blocked until `guardianPassed` is true
-3. **Worktree polling** — read-only git commands targeting .worktrees/ are blocked; use `TaskOutput` with the saved task_id to check agent status
-4. **Force-stopping agents** — TaskStop blocked until `guardianPassed` is true
-
-These gates cannot be bypassed through prompting. They read events.jsonl and workflow-state.json on disk.
-To disable: set `guards.teamLeaderGate: false` in `.claude/workflow.json`.
-
-</workflow-integrity>
-
-## Coordination Rules — Non-Negotiable
+## Coordination Rules — Hook-Enforced
 
 <rules mandatory="true">
 
-1. **Never write application code** — you orchestrate, agents implement
-2. **Never skip the progress file** — it's the crash-recovery artifact
-3. **Never merge without QA PASS** — every workbranch must pass QA first
-4. **Never run parallel merges** — one at a time, sequential only
-5. **Always rebase before merge** — prevents silent conflicts
-6. **Always delete merged workbranches** — keeps branch list clean
-7. **Always use the full spawn template** — never spawn agents with minimal prompts
-8. **Always write your decomposition plan first** — no action without a plan
-9. **Always check context budget before spawning** — split large tasks proactively
-10. **Always use QA auto-fill** — pre-select checklist sections by agent role
-11. **Always emit checkpoint events** — after completing each phase, emit the corresponding tracking event immediately. The state file is updated automatically. This is your crash-recovery and compaction-recovery artifact.
+All rules are enforced by PreToolUse hooks. Violations are blocked before execution.
+
+| Rule | Enforcing Hook |
+|------|---------------|
+| No application code writes | enforcement-gate.js (blocks Edit/Write on non-progress files) |
+| No skipping progress file | tracker.js auto-updates state on events |
+| No merge without QA PASS | team-leader-gate.js Gate A |
+| No parallel merges | team-leader-gate.js Gate A (sequential QA count) |
+| Rebase before merge | team-leader-gate.js Gate A |
+| No worktree polling | team-leader-gate.js Gate C + enforcement-gate.js (Read/Glob/Grep) |
+| Full spawn template required | workflow-gate.js (validates 8+ of 11 structural markers, min 2000 chars) |
+| Plan before action | workflow-gate.js (setupComplete gate requires plan.created) |
+| Context budget check | workflow-gate.js (prompt length validation) |
+| QA checklist in prompts | workflow-gate.js (QA Checklist marker check) |
+| Emit checkpoints | workflow-gate.js (phase gates block next steps without checkpoints) |
+| No premature shutdown | team-leader-gate.js Gate B (requires guardianPassed) |
+| No force-stopping agents | team-leader-gate.js Gate D (requires guardianPassed) |
+| No state file tampering | enforcement-gate.js (blocks writes to events.jsonl, workflow-state.json) |
+| TeamCreate only in plan/setup | enforcement-gate.js (phase check) |
+| TeamDelete after Guardian | enforcement-gate.js (requires guardianPassed) |
+| Delete merged workbranches | (manual — low risk) |
+
+To disable enforcement: set `guards.enforcementGate: false` or `guards.teamLeaderGate: false` in `.claude/workflow.json`.
 
 </rules>

@@ -278,91 +278,13 @@ Parallel-safe tasks (can run simultaneously if they touch different files):
 
 ## 6. Agent Enforcement Protocol
 
-### The Problem
+Agent compliance is enforced by PreToolUse hooks — not text instructions alone.
 
-Agents tend to:
+- **workflow-gate.js** validates every coding agent spawn contains the full template (8+ of 11 structural markers, min 2000 chars). Abbreviated prompts are blocked.
+- **enforcement-gate.js** blocks the Team Leader from writing application code, tampering with state files, or inspecting worktrees.
+- **team-leader-gate.js** blocks merges without QA, worktree polling, and premature shutdowns.
 
-1. Receive their prompt and immediately start coding (skipping planning)
-2. Hit an error and chase it down rabbit holes, forgetting their original task
-3. Run out of context and lose track of rules and guidelines
-4. Produce work that doesn't follow project conventions because they never internalized them
-
-### The Solution: Mandatory Phased Workflow
-
-Every agent — coding, QA, and Guardian — operates under a **mandatory phased workflow** with blocking gates between phases. This is enforced through the spawn templates in [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md).
-
-```
-PHASE 0: LOAD RULES     ← Read all required files. Do not skim.
-         │                 [BLOCKING — cannot proceed until complete]
-         ▼
-PHASE 1: WRITE PLAN      ← Produce a written plan that cites specific rules.
-         │                 [BLOCKING — no code until plan is complete]
-         ▼
-PHASE 2: EXECUTE PLAN    ← Follow the plan step by step.
-         │                 State each step before executing.
-         │                 On error → ERROR RECOVERY PROTOCOL
-         ▼
-PHASE 3: SELF-REVIEW     ← Verify work against Phase 1 plan.
-         │                 Re-read plan. Check every criterion.
-         ▼
-PHASE 4: SPAWN QA        ← Include Phase 1 plan so QA can verify
-                           the agent followed it.
-```
-
-### Why Written Plans Work
-
-1. **Forces rule internalization** — agents must cite specific rules by name, proving they read and understood them
-2. **Creates a context anchor** — when agents drift, they re-read their own plan to snap back
-3. **Makes QA verifiable** — QA can compare the agent's work against their stated plan
-4. **Survives context loss** — the plan is output as text early, so it remains visible even as context fills up
-
-### Error Recovery Protocol
-
-Every agent has an embedded Error Recovery Protocol that fires when ANY error occurs:
-
-```
-1. STOP — do not continue fixing blindly
-2. RE-READ Phase 1 plan — this is the context anchor
-3. CLASSIFY — is this error in my scope?
-   - In scope, my file → fix (max 2 attempts)
-   - In scope, not my file → report to Team Leader
-   - Out of scope → ignore, continue plan
-4. NEVER:
-   - Modify files outside scope
-   - Refactor unrelated code
-   - Abandon plan for tangential investigation
-   - Spend more than 2 attempts on one error
-```
-
-This prevents the "adventure" behavior where agents see an error and spend 20 minutes chasing it through unrelated files.
-
-### Spawning Agents — ALWAYS Use Full Templates
-
-The Team Leader MUST use the complete spawn templates from [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md). These templates embed the phased workflow and error recovery directly into the agent's prompt.
-
-**NEVER** spawn an agent with a minimal prompt like:
-
-```
-"Implement the auth service in src/services/auth.ts"
-```
-
-**ALWAYS** use the full template which includes:
-
-- All 4 phases with blocking gates
-- Error Recovery Protocol
-- Task context (description, acceptance criteria, file scope)
-- QA checklist
-- Instructions for spawning QA
-
-### What Each Agent Type Plans
-
-| Agent Type            | Phase 1 Plan Includes                                                                                                                                            |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Coding Agent**      | Task summary, applicable rules (cited by section), files to create/modify/avoid, step-by-step implementation order, acceptance criteria mapping, risk assessment |
-| **QA Reviewer**       | What to review, specific rules to enforce (cited by section), review order per file, automated checks to run, coding agent's plan (for verification)             |
-| **Codebase Guardian** | Feature scope (all changed files), structural rules to enforce (cited by section), check mapping (which files for each of the 7 checks)                          |
-
-### Full spawn templates: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
+Agents receive the mandatory 4-phase workflow (Load Rules → Write Plan → Execute → Self-Review + Spawn QA) via spawn templates in [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md). The Team Leader copies the template, fills in variables, and sends it. See `team-leader.md` Coordination Rules table for the full hook-to-rule mapping.
 
 ### 6.5 Defensive Defaults
 

@@ -49,9 +49,14 @@ All transitions are event-driven via `/claude-workflow:track`.
 
 ## Hook Enforcement Summary
 
-- **workflow-gate.js** (PreToolUse on Task): Blocks coding agent spawns unless `setupComplete === true`. Blocks Guardian spawn unless `phase === "guardian"` or `phase === "done"`.
-- **team-leader-gate.js** (PreToolUse on Bash/SendMessage/TaskStop): Blocks merges without QA pass. Blocks shutdown requests and TaskStop unless `guardianPassed === true`.
-- **compact-reinject.js** (SessionStart): Re-injects this protocol and current state after context compaction. Rebuilds state from events if state file is missing.
+| Hook | Event Matchers | What It Enforces |
+|------|---------------|-----------------|
+| **enforcement-gate.js** | Bash, Edit, Write, Read, Glob, Grep, TeamCreate, TeamDelete, EnterWorktree | State file tamper protection (V1), worktree read isolation (V3), sequence gates (V6), app code write block (V7) |
+| **workflow-gate.js** | Task | Phase gates (setupComplete, guardian phase), prompt content validation (V2), agent classification hardening (V5) |
+| **team-leader-gate.js** | Bash, SendMessage, TaskStop | Merge-without-QA gate (V4), worktree polling gate (V3), shutdown gate, TaskStop gate, worktree creation timing |
+| **safety-guard.js** | Bash | Destructive command blocking, branch protection |
+| **config-guard.js** | Edit, Write | Protected .claude/ config file blocking |
+| **compact-reinject.js** | SessionStart (compact) | Re-injects this protocol and current state after context compaction |
 
 ## Checkpoints the Team Leader Must Emit
 
