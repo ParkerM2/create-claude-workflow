@@ -32,7 +32,8 @@ const GUARDS_DEFAULTS = {
   destructiveGuard: true,
   configGuard: true,
   workflowGate: true,
-  teamLeaderGate: true  // enforces merge-after-QA, no premature shutdowns
+  teamLeaderGate: true,  // enforces merge-after-QA, no premature shutdowns
+  enforcementGate: true  // master toggle for consolidated enforcement-gate.js hook
 };
 
 // ---------------------------------------------------------------------------
