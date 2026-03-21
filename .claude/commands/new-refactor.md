@@ -69,27 +69,31 @@ npm run build         # or equivalent
 
 **If any check fails**: STOP. Do not proceed with refactoring.
 
-```
-⚠ PRE-FLIGHT FAILED — Cannot refactor on a broken baseline.
+## PRE-FLIGHT FAILED
 
-  lint:      PASS
-  typecheck: FAIL (3 errors)
-  tests:     PASS (142 passing)
-  build:     FAIL
+Cannot refactor on a broken baseline.
+
+| Check | Result |
+|-------|--------|
+| Lint | PASS |
+| Typecheck | FAIL (3 errors) |
+| Tests | PASS (142 passing) |
+| Build | FAIL |
 
 Fix these issues first, then re-run /new-refactor.
-```
 
 **If all checks pass**: Record the baseline:
 
-```
-PRE-FLIGHT BASELINE:
-  Branch:    main (commit abc1234)
-  Lint:      PASS (0 violations)
-  Typecheck: PASS (0 errors)
-  Tests:     PASS (142 passing, 0 failing, 0 skipped)
-  Build:     PASS
-```
+## PRE-FLIGHT: PASS
+
+| Check | Result | Details |
+|-------|--------|---------|
+| Lint | PASS | 0 violations |
+| Typecheck | PASS | 0 errors |
+| Tests | PASS | 142 passing, 0 failing, 0 skipped |
+| Build | PASS | Compiled successfully |
+
+Baseline verified on branch: `main` (commit: `abc1234`)
 
 This baseline is the contract: after refactoring, all these checks must still pass with the same or better results.
 
@@ -121,43 +125,39 @@ Refactoring Scope Analysis:
 
 Present a detailed refactoring plan to the user for approval:
 
-```
-═══════════════════════════════════════════════════════════
-  REFACTORING PLAN
-═══════════════════════════════════════════════════════════
+## REFACTORING PLAN
 
-  Scope:     <description of what is being refactored>
-  Approach:  <high-level strategy>
-  Risk:      LOW / MEDIUM / HIGH
+| Field | Value |
+|-------|-------|
+| Scope | <description of what is being refactored> |
+| Approach | <high-level strategy> |
+| Risk | LOW / MEDIUM / HIGH |
 
-  ─── Changes ────────────────────────────────────────────
+### Changes
 
-  Wave 1: Foundation
-    - Move src/utils/auth.ts → src/services/auth/utils.ts
-    - Move src/utils/user.ts → src/services/user/utils.ts
-    - Create barrel exports at src/services/auth/index.ts
+**Wave 1: Foundation**
+- Move src/utils/auth.ts → src/services/auth/utils.ts
+- Move src/utils/user.ts → src/services/user/utils.ts
+- Create barrel exports at src/services/auth/index.ts
 
-  Wave 2: Update Consumers
-    - Update imports in src/components/LoginForm.tsx
-    - Update imports in src/routes/auth.ts
-    - Update imports in src/middleware/auth.ts
+**Wave 2: Update Consumers**
+- Update imports in src/components/LoginForm.tsx
+- Update imports in src/routes/auth.ts
+- Update imports in src/middleware/auth.ts
 
-  Wave 3: Cleanup
-    - Remove old src/utils/auth.ts
-    - Remove old src/utils/user.ts
-    - Update the architecture file
+**Wave 3: Cleanup**
+- Remove old src/utils/auth.ts
+- Remove old src/utils/user.ts
+- Update the architecture file
 
-  ─── Risk Mitigation ───────────────────────────────────
+### Risk Mitigation
 
-  - Pre-flight baseline recorded (142 passing tests)
-  - Each wave verified before proceeding
-  - External consumers updated explicitly (not relying on aliases)
-  - Old files removed only after all imports updated
-
-═══════════════════════════════════════════════════════════
+- Pre-flight baseline recorded (142 passing tests)
+- Each wave verified before proceeding
+- External consumers updated explicitly (not relying on aliases)
+- Old files removed only after all imports updated
 
 Proceed with this plan?
-```
 
 Use AskUserQuestion:
 - "Yes, proceed" → continue
@@ -266,27 +266,23 @@ npm run build
 
 ### Before/After Comparison
 
-```
-═══════════════════════════════════════════════════════════
-  REFACTORING VERIFICATION
-═══════════════════════════════════════════════════════════
+## REFACTORING VERIFICATION
 
-  | Check      | Before (baseline) | After (refactored) | Status |
-  |------------|------------------|--------------------|--------|
-  | Lint       | PASS (0)         | PASS (0)           | ✓      |
-  | Typecheck  | PASS (0)         | PASS (0)           | ✓      |
-  | Tests      | 142 passing      | 145 passing        | ✓ (+3) |
-  | Build      | PASS             | PASS               | ✓      |
+| Check | Before (baseline) | After (refactored) | Status |
+|-------|-------------------|-------------------|--------|
+| Lint | PASS (0) | PASS (0) | ✓ |
+| Typecheck | PASS (0) | PASS (0) | ✓ |
+| Tests | 142 passing | 145 passing | ✓ (+3) |
+| Build | PASS | PASS | ✓ |
 
-  Structural Changes:
-  - Files moved:    5
-  - Files created:  2 (barrel exports)
-  - Files deleted:  3 (old locations)
-  - Imports updated: 12
+### Structural Changes
 
-  VERIFICATION: PASS ✓ — No regressions detected
-═══════════════════════════════════════════════════════════
-```
+- Files moved: 5
+- Files created: 2 (barrel exports)
+- Files deleted: 3 (old locations)
+- Imports updated: 12
+
+**VERIFICATION: PASS ✓** — No regressions detected
 
 If verification fails, investigate and fix before completing.
 
