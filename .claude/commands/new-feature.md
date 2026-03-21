@@ -123,16 +123,17 @@ If a feature directory exists in the progress directory with an `events.jsonl` f
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify context loaded before proceeding
+---
+
+**PHASE CHECK: Verify context loaded before proceeding**
+
 Required:
-  Path A (design doc): PHASE-GATE-PROTOCOL.md read, design doc read
-  Path B (no design doc): PHASE-GATE-PROTOCOL.md read, project rules file read, architecture file read
-  - Workflow mode resolved (strict/standard/fast) and recorded
-  - Branching config read from <workflow-config>
-═══════════════════════════════════════════
-```
+- Path A (design doc): PHASE-GATE-PROTOCOL.md read, design doc read
+- Path B (no design doc): PHASE-GATE-PROTOCOL.md read, project rules file read, architecture file read
+- Workflow mode resolved (strict/standard/fast) and recorded
+- Branching config read from <workflow-config>
+
+---
 
 ## Phase 3: Plan & Decompose
 
@@ -157,18 +158,19 @@ This transitions the FSM from `plan` → `setup`.
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify plan complete before proceeding
+---
+
+**PHASE CHECK: Verify plan complete before proceeding**
+
 Required:
-  - Written decomposition plan produced (feature summary, rules cited, task list)
-  - Each task has: agent role, file scope, acceptance criteria, QA checklist
-  - Dependency map defined (which tasks block which)
-  - Wave plan finalized (tasks grouped by dependency layer)
-  - Context budget checked per task (8,000 + files × 1,000 + 3,000)
-  - `plan.created` event emitted
-═══════════════════════════════════════════
-```
+- Written decomposition plan produced (feature summary, rules cited, task list)
+- Each task has: agent role, file scope, acceptance criteria, QA checklist
+- Dependency map defined (which tasks block which)
+- Wave plan finalized (tasks grouped by dependency layer)
+- Context budget checked per task (8,000 + files × 1,000 + 3,000)
+- `plan.created` event emitted
+
+---
 
 ## Phase 4: Create Feature Branch & Progress File
 
@@ -191,18 +193,19 @@ This transitions the FSM from `setup` → `wave` and sets `setupComplete=true`.
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify setup complete before spawning agents
+---
+
+**PHASE CHECK: Verify setup complete before spawning agents**
+
 Required:
-  - Feature branch created from configured base branch
-  - TeamCreate called with feature name
-  - TaskCreate called for ALL tasks with full descriptions and blockedBy dependencies
-  - Progress file initialized: .claude/progress/<feature>/events.jsonl exists
-  - session.start event emitted via /claude-workflow:track
-  - checkpoint "setup-complete" emitted
-═══════════════════════════════════════════
-```
+- Feature branch created from configured base branch
+- TeamCreate called with feature name
+- TaskCreate called for ALL tasks with full descriptions and blockedBy dependencies
+- Progress file initialized: .claude/progress/<feature>/events.jsonl exists
+- session.start event emitted via /claude-workflow:track
+- checkpoint "setup-complete" emitted
+
+---
 
 ## Phase 5: Set Up Team & Tasks
 
@@ -301,16 +304,17 @@ When ALL waves are complete:
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify all waves complete before Guardian
+---
+
+**PHASE CHECK: Verify all waves complete before Guardian**
+
 Required:
-  - All wave checkpoints emitted (wave-1-complete, wave-2-complete, etc.)
-  - checkpoint "all-waves-complete" emitted
-  - No open workbranches: git branch --list "work/<feature>/*" returns empty
-  - Feature branch contains all merged work and is stable
-═══════════════════════════════════════════
-```
+- All wave checkpoints emitted (wave-1-complete, wave-2-complete, etc.)
+- checkpoint "all-waves-complete" emitted
+- No open workbranches: git branch --list "work/<feature>/*" returns empty
+- Feature branch contains all merged work and is stable
+
+---
 
 ## Phase 7: Codebase Guardian Check
 
@@ -341,17 +345,18 @@ All must pass. If any fail, investigate and fix before proceeding.
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify Guardian passed before completion
+---
+
+**PHASE CHECK: Verify Guardian passed before completion**
+
 Required:
-  - Codebase Guardian spawned on <featurePrefix>/ branch
-  - Guardian completed all 7 structural integrity checks
-  - Guardian reported PASS (or trivial fixes committed and re-verified)
-  - Full verification run: lint, typecheck, test, build all pass
-  - checkpoint "guardian-passed" emitted (sets guardianPassed=true)
-═══════════════════════════════════════════
-```
+- Codebase Guardian spawned on <featurePrefix>/ branch
+- Guardian completed all 7 structural integrity checks
+- Guardian reported PASS (or trivial fixes committed and re-verified)
+- Full verification run: lint, typecheck, test, build all pass
+- checkpoint "guardian-passed" emitted (sets guardianPassed=true)
+
+---
 
 ## Phase 9: Completion & Cleanup
 
