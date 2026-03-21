@@ -208,30 +208,26 @@ npm run test -- --coverage
 
 Present the results:
 
-```
-═══════════════════════════════════════════════════════════
-  TEST GENERATION REPORT
-═══════════════════════════════════════════════════════════
+## TEST GENERATION REPORT
 
-  Targets:         <count> files
-  Tests generated: <count> test files, <count> test cases
-  QA:             PASS ✓
+| Field | Value |
+|-------|-------|
+| Targets | <count> files |
+| Tests generated | <count> test files, <count> test cases |
+| QA | PASS ✓ |
 
-  ─── Coverage Delta ─────────────────────────────────────
+### Coverage Delta
 
-  | File | Before | After | Change |
-  |------|--------|-------|--------|
-  | src/services/auth-service.ts | 0% | 92% | +92% |
-  | src/components/LoginForm.tsx | 25% | 88% | +63% |
-  | Overall | 64% | 78% | +14% |
+| File | Before | After | Change |
+|------|--------|-------|--------|
+| src/services/auth-service.ts | 0% | 92% | +92% |
+| src/components/LoginForm.tsx | 25% | 88% | +63% |
+| Overall | 64% | 78% | +14% |
 
-  ─── Files Created ──────────────────────────────────────
+### Files Created
 
-  - src/services/__tests__/auth-service.test.ts (12 tests)
-  - src/components/__tests__/LoginForm.test.tsx (8 tests)
-
-═══════════════════════════════════════════════════════════
-```
+- src/services/__tests__/auth-service.test.ts (12 tests)
+- src/components/__tests__/LoginForm.test.tsx (8 tests)
 
 ### Commit
 
