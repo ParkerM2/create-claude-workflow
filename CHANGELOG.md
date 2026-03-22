@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0] — 2026-03-22
+
+### Added
+- Unified tracking system (`.claude/tracking/`) with manifest.json, events.jsonl, and per-agent JSONL files (`hooks/tracking.js`)
+- Hook-based agent event emitter for team agent lifecycle tracking — TeammateIdle, TaskCompleted, PreToolUse, PostToolUse, Stop (`hooks/tracking-emitter.js`)
+- Tracking initialization wired into `/new-feature`, `/new`, and `/new-plan` commands
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [2.0.0] — 2026-03-21
 
 ### Added
