@@ -367,6 +367,27 @@ For each identified risk:
 
 Compile everything into a single design document saved to disk. This is the artifact that `/new-feature` will consume.
 
+### Optional: Initialize Unified Tracking
+
+If the feature name is known at planning time, you may optionally initialize unified tracking with status `"pending"` — indicating the feature is planned but not yet started. This allows the tracking system to index the feature before implementation begins.
+
+1. Create `.claude/tracking/<feature-name>/` directory
+2. Create `.claude/tracking/<feature-name>/manifest.json`:
+   ```json
+   {
+     "feature": "<feature-name>",
+     "status": "pending",
+     "created": "<ISO8601>",
+     "branch": null,
+     "plan": "<path-to-design-doc>",
+     "agents": {}
+   }
+   ```
+3. Create empty `.claude/tracking/<feature-name>/events.jsonl`
+4. Create `.claude/tracking/<feature-name>/agents/` directory
+
+> Note: This is optional during planning. The tracking system (`hooks/tracking.js`) will be fully initialized by `/new-feature` when implementation begins. For programmatic use, call `initTracking("<feature-name>", { status: "pending", plan: "<design-doc-path>" })`. This coexists with the existing `.claude/progress/` system.
+
 ### Output Location
 
 Save to the progress directory as `<feature-name>-design.md`.

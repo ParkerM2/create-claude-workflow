@@ -133,6 +133,31 @@ Fill in:
 - Started: current timestamp
 - Feature branch name
 
+### Step 3b: Initialize Unified Tracking
+
+After creating the progress file, also initialize unified tracking alongside `.claude/progress/`:
+
+1. Create `.claude/tracking/<feature-name>/` directory
+2. Create `.claude/tracking/<feature-name>/manifest.json`:
+   ```json
+   {
+     "feature": "<feature-name>",
+     "status": "in-progress",
+     "created": "<ISO8601>",
+     "branch": "feature/<feature-name>",
+     "plan": null,
+     "agents": {}
+   }
+   ```
+3. Create empty `.claude/tracking/<feature-name>/events.jsonl`
+4. Create `.claude/tracking/<feature-name>/agents/` directory
+5. Emit a "feature.started" event to events.jsonl:
+   ```json
+   {"v":1,"ts":"<ISO8601>","type":"feature.started","feature":"<feature-name>","data":{"branch":"feature/<feature-name>"}}
+   ```
+
+> Note: This uses the unified tracking system from `hooks/tracking.js` and coexists with the existing `.claude/progress/` system. For programmatic use, call `initTracking("<feature-name>", { status: "in-progress", branch: "feature/<feature-name>" })`.
+
 ### Step 4: Create Stub Design Doc
 Create a design doc in the progress directory with:
 
