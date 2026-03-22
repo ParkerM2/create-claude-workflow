@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.0.0] — 2026-03-21
+
+### Added
+- **Consolidated enforcement hook** (`hooks/enforcement-gate.js`): single PreToolUse hook closing 4 vulnerability classes — state file tamper protection (V1), worktree read isolation (V3), sequence gates (V6), app code write block (V7)
+- **Prompt content validation** (V2): workflow-gate.js now validates coding agent spawn prompts contain 8+ of 11 required structural markers and minimum 2000 chars
+- **Classification hardening** (V5): team_name mismatch no longer bypasses gates; QA/Guardian require dual-signal detection; catch block fails CLOSED
+- **Broader worktree gate** (V3): team-leader-gate.js Gate C rewritten with broad worktreeDir matching + allowlist
+- **Broader merge gate** (V4): team-leader-gate.js Gate A rewritten with fail-CLOSED on empty events and no active feature
+- **Worktree creation timing** (Gate E): blocks `git worktree add` outside wave/setup phases
+- **`/deep-research` command**: conversational phased research with 5-layer validation, iterative cross-referencing, and quality rules
+- 9 new PreToolUse matchers in `hooks.json` for enforcement-gate.js (Bash, Edit, Write, Read, Glob, Grep, TeamCreate, TeamDelete, EnterWorktree)
+- `enforcementGate` guard toggle in workflow config
+
+### Fixed
+- **QA workflow**: Team Leader now spawns QA agents — coding agents (teammates) cannot spawn other teammates/subagents
+
+### Changed
+- Coordination rules and workflow integrity sections replaced with hook-reference trigger tables (~240 lines trimmed, ~6,000 tokens saved per session)
+- 9 command/agent/prompt files converted from ASCII box-drawing tables to GFM markdown tables
+- Agent Enforcement Protocol section in playbook replaced with hook summary
+- Hook Enforcement Summary expanded in PHASE-GATE-PROTOCOL.md
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [1.5.1] — 2026-02-24
 
 ### Fixed
