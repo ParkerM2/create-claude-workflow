@@ -173,6 +173,31 @@ Create the feature's progress directory and initialize tracking:
 
 The `events.jsonl` file is your **crash-recovery artifact**. Events are appended via `/claude-workflow:track` commands at key checkpoints.
 
+### Initialize Unified Tracking (alongside progress)
+
+After creating the progress directory, also initialize unified tracking:
+
+1. Create `.claude/tracking/<feature-name>/` directory
+2. Create `.claude/tracking/<feature-name>/manifest.json`:
+   ```json
+   {
+     "feature": "<feature-name>",
+     "status": "in-progress",
+     "created": "<ISO8601>",
+     "branch": "feature/<feature-name>",
+     "plan": null,
+     "agents": {}
+   }
+   ```
+3. Create empty `.claude/tracking/<feature-name>/events.jsonl`
+4. Create `.claude/tracking/<feature-name>/agents/` directory
+5. Emit a "feature.started" event to events.jsonl:
+   ```json
+   {"v":1,"ts":"<ISO8601>","type":"feature.started","feature":"<feature-name>","data":{"branch":"feature/<feature-name>"}}
+   ```
+
+> Note: This uses the unified tracking system from `hooks/tracking.js`. The tracking system coexists with the existing `.claude/progress/` system. For programmatic use, call `initTracking("<feature-name>", { status: "in-progress", branch: "feature/<feature-name>" })` from `hooks/tracking.js`.
+
 **After completing Phase 4 + Phase 5 (branch, team, tasks ready), emit:**
 `/claude-workflow:track checkpoint "setup-complete"`
 This transitions the FSM from `setup` → `wave` and sets `setupComplete=true`.
