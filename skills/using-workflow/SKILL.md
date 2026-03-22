@@ -14,16 +14,9 @@ Multi-agent workflow orchestration for Claude Code. Provides branch-per-task fea
 | /new-feature | Full multi-agent feature implementation with branch management, QA, and Guardian |
 | /new-plan | Deep technical planning and task decomposition before implementation |
 | /resume | Crash recovery — resume from last checkpoint |
-| /new | Unified creation entry: feature, plan, task, agent, or idea |
 | /status | Quick progress summary of active feature |
-| /new-hotfix | Single-agent urgent fix |
-| /new-refactor | Safe restructuring with baseline verification |
-| /review-pr | QA + Guardian review on a pull request |
-| /new-tests | Automated test generation with QA verification |
-| /new agent | Interactive agent definition creator |
 | /settings | Scan and validate agent definitions, audit performance, manage permissions |
 | /track | Emit tracking events to JSONL progress log |
-| /new (discover mode) | Auto-discover optimal agent roles for a codebase |
 
 ## Agents
 

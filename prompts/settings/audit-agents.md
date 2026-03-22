@@ -203,7 +203,7 @@ FIX: component-engineer and hook-engineer overlap on src/components/**/use*.ts
 FIX: src/workers/ has no agent coverage (5 source files)
 
   Option A: Create a new agent
-    → Run /new agent to create worker-engineer
+    → Create a new agent definition in .claude/agents/worker-engineer.md
   Option B: Expand an existing agent's scope
     → Add src/workers/** to service-engineer's scope
 ```
@@ -213,5 +213,4 @@ Reference the agent creation guide:
 ```
 For guidance on creating or updating agents, see:
   .claude/docs/customize-quick-start/CREATING-AGENTS.md
-  Or run /new agent to create a new agent interactively
 ```

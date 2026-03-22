@@ -584,7 +584,7 @@ Full details: [`WAVE-FENCE-PROTOCOL.md`](./WAVE-FENCE-PROTOCOL.md)
 
 ## 14. Pre-Flight Checks
 
-In `strict` mode, verify the codebase baseline (lint, typecheck, test, build) before spawning agents. Mandatory for `/new-refactor` regardless of mode.
+In `strict` mode, verify the codebase baseline (lint, typecheck, test, build) before spawning agents.
 
 Full details: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
 

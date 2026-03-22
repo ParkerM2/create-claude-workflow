@@ -35,7 +35,6 @@ If no progress files exist:
 No active features found in .claude/progress/.
 
 To start a new feature:  /new-feature "description"
-To discover agents:      /new (discover mode)
 ```
 
 Stop here.

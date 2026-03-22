@@ -139,4 +139,4 @@ After the feature is complete (Phase 8 of `/new-feature`), compare against the p
 - **Lint/typecheck**: Should still be clean (no regressions)
 - **Build**: Should still succeed
 
-This comparison is particularly useful for `/new-refactor` — verifying that restructuring didn't break anything that was working before.
+This comparison verifies that the feature didn't break anything that was working before.

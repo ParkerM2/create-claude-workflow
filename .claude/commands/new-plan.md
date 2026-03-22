@@ -20,7 +20,6 @@ description: "Deep technical planning — analyzes codebase, designs architectur
 
 - The feature is small and well-defined (just run `/new-feature` directly)
 - You already have a complete design document
-- The task is a bug fix (use `/new-hotfix`) or restructuring (use `/new-refactor`)
 
 ---
 

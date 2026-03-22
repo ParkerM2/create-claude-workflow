@@ -21,7 +21,6 @@ description: "Conversational deep research — phased investigation with user ch
 
 - You already know what to build — use `/new-plan` or `/new-feature` directly
 - Simple factual question — just ask directly without invoking a skill
-- Bug investigation — use `/new-hotfix` which has its own analysis phase
 
 ---
 
@@ -574,6 +573,4 @@ Never present raw agent output directly to the user.
 |---------------|-----|
 | Ready to plan implementation | `/new-plan` — reference the research report as input |
 | Ready to implement directly | `/new-feature` — for well-scoped changes |
-| Need a quick fix based on findings | `/new-hotfix` |
-| Need to restructure based on findings | `/new-refactor` |
 | Want to continue researching | Stay in this session and ask follow-up questions |

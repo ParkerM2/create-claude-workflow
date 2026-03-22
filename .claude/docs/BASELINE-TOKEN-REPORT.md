@@ -28,7 +28,6 @@
 | scaffold-agent.md | 274 | 7,918 | 2,263 |
 | generate-tests.md | 242 | 7,818 | 2,234 |
 | audit-agents.md | 214 | 7,090 | 2,026 |
-| review-pr.md | 223 | 5,553 | 1,587 |
 | resume-feature.md | 207 | 5,305 | 1,516 |
 | hotfix.md | 195 | 5,069 | 1,449 |
 | status.md | 152 | 4,929 | 1,409 |

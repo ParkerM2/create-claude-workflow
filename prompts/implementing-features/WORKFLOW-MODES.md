@@ -38,7 +38,7 @@ If no mode is specified, the default is `strict`.
 
 ### Per-Invocation Override
 
-When invoking `/new-feature`, `/new-hotfix`, or `/new-refactor`, the user can specify a mode:
+When invoking `/new-feature`, the user can specify a mode:
 
 ```
 /new-feature "Add user settings" — mode: fast
@@ -105,7 +105,7 @@ Context budget:      CHECK — estimate context, split if over threshold
 
 ### Fast Mode
 
-Use for: prototyping, spikes, small changes, non-critical code, `/new-hotfix`.
+Use for: prototyping, spikes, small changes, non-critical code.
 
 ```
 Planning gate:       REQUIRED — abbreviated plan (task summary + files + steps only)
@@ -145,12 +145,6 @@ Context budget:      SKIP
 - Single file, minimal risk
 - One agent, one QA round
 - No need for Guardian or wave fences
-
-### Scenario: "/new-hotfix critical security bug" — use `fast` (default for /new-hotfix)
-- Urgency requires speed
-- Still enforces planning gate (even urgent fixes need a plan)
-- Single QA round for safety
-- Skip ceremony that doesn't add value for a 1-file fix
 
 ---
 

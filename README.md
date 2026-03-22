@@ -52,21 +52,16 @@ git clone https://github.com/ParkerM2/create-claude-workflow.git
 
 | Command | Description |
 |---------|-------------|
-| `/new` | Unified creation entry point -- create a feature, plan, task, phase, agent, or idea from a single command |
 | `/new-feature` | Full multi-agent feature implementation with branch-per-task isolation, QA cycles, and Codebase Guardian verification |
 | `/new-plan` | Deep technical planning -- analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering |
-| `/new-hotfix` | Streamlined single-agent urgent fix with automatic QA verification |
-| `/new-refactor` | Safe restructuring with mandatory baseline verification, wave execution, and before/after comparison |
-| `/new-tests` | Automated test generation -- identifies targets, spawns test engineer, QA verifies coverage |
 | `/resume` | Crash recovery -- scans progress files, detects errors and blockers, auto-resumes or presents options to user |
 | `/settings` | Workflow settings hub -- guard permissions, agent audit, and performance audit |
-| `/review-pr` | QA reviewer + Codebase Guardian analysis on a pull request, posts combined results as PR comment |
 | `/status` | Quick progress summary -- shows completion percentage, task states, branch status, and active blockers |
 | `/track` | Emit a tracking event to the JSONL progress log -- records checkpoints, task state, errors, blockers, and QA results |
 
 ## Agents
 
-The plugin ships with three built-in agents. Additional agents can be generated with `/new agent` or discovered automatically via `/new`.
+The plugin ships with three built-in agents. Additional agents can be defined manually in `.claude/agents/`.
 
 | Agent | Role |
 |-------|------|
@@ -185,16 +180,11 @@ claude-workflow/
 │       └── <feature>/
 │           ├── events.jsonl     # Append-only event log
 │           └── current.md       # Active task state
-├── commands/                    # 11 slash commands (loaded on /invoke)
-│   ├── new.md                  # Unified creation entry point
+├── commands/                    # Slash commands (loaded on /invoke)
 │   ├── new-feature.md          # Full multi-agent implementation
 │   ├── new-plan.md             # Deep technical planning
-│   ├── new-hotfix.md           # Streamlined urgent fix
-│   ├── new-refactor.md         # Safe restructuring
-│   ├── new-tests.md            # Automated test generation
 │   ├── resume.md               # Crash recovery
 │   ├── settings.md             # Guard permissions + audits hub
-│   ├── review-pr.md
 │   ├── status.md
 │   └── track.md
 ├── agents/                      # Agent definitions (loaded on spawn)
@@ -203,7 +193,6 @@ claude-workflow/
 │   └── codebase-guardian.md
 ├── prompts/                     # Reference docs and templates
 │   ├── implementing-features/   # Playbook, QA templates, workflow modes
-│   ├── new/                     # Sub-flows for /new (scaffold-agent, discover-agents)
 │   └── settings/                # Sub-flows for /settings (guards, audits)
 ├── hooks/                       # Enforcement hooks
 │   ├── hooks.json
