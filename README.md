@@ -54,6 +54,7 @@ git clone https://github.com/ParkerM2/create-claude-workflow.git
 |---------|-------------|
 | `/new-feature` | Full multi-agent feature implementation with branch-per-task isolation, QA cycles, and Codebase Guardian verification |
 | `/new-plan` | Deep technical planning -- analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering |
+| `/deep-research` | Conversational deep research -- phased investigation with user checkpoints, iterative cross-referencing, and multi-layered validation |
 | `/resume` | Crash recovery -- scans progress files, detects errors and blockers, auto-resumes or presents options to user |
 | `/settings` | Workflow settings hub -- guard permissions, agent audit, and performance audit |
 | `/status` | Quick progress summary -- shows completion percentage, task states, branch status, and active blockers |
@@ -183,6 +184,7 @@ claude-workflow/
 ├── commands/                    # Slash commands (loaded on /invoke)
 │   ├── new-feature.md          # Full multi-agent implementation
 │   ├── new-plan.md             # Deep technical planning
+│   ├── deep-research.md        # Conversational deep research
 │   ├── resume.md               # Crash recovery
 │   ├── settings.md             # Guard permissions + audits hub
 │   ├── status.md
