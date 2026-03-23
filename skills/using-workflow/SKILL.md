@@ -13,6 +13,7 @@ Multi-agent workflow orchestration for Claude Code. Provides branch-per-task fea
 |---------|-------------|
 | /new-feature | Full multi-agent feature implementation with branch management, QA, and Guardian |
 | /new-plan | Deep technical planning and task decomposition before implementation |
+| /deep-research | Conversational deep research with phased investigation and multi-layered validation |
 | /resume | Crash recovery — resume from last checkpoint |
 | /status | Quick progress summary of active feature |
 | /settings | Scan and validate agent definitions, audit performance, manage permissions |

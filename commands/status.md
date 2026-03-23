@@ -35,7 +35,6 @@ If no progress files exist:
 No active features found in .claude/progress/.
 
 To start a new feature:  /new-feature "description"
-To discover agents:      /new (discover mode)
 ```
 
 Stop here.
@@ -73,57 +72,55 @@ Data to extract from events:
 
 Format and display the summary:
 
-```
-═══════════════════════════════════════════════════════════
-  FEATURE STATUS: <Feature Name>
-═══════════════════════════════════════════════════════════
+## FEATURE STATUS: <Feature Name>
 
-  Status:    <STATUS>
-  Mode:      <strict|standard|fast>
-  Branch:    feature/<feature-name>
-  Started:   <date>
-  Updated:   <date>
+| Field | Value |
+|-------|-------|
+| Status | <STATUS> |
+| Mode | <strict\|standard\|fast> |
+| Branch | feature/<feature-name> |
+| Started | <date> |
+| Updated | <date> |
 
-  ─── Progress ───────────────────────────────────────────
+### Progress
 
-  Tasks:     ██████████░░░░░░░░░░  3/6 complete
-  Waves:     Wave 2 of 4 in progress
+**Progress:** `[==========----------]` 3/6 complete · Wave 2 of 4 in progress
 
-  #1  Define types            COMPLETE  ✓  QA PASS (round 1)
-  #2  Implement service       COMPLETE  ✓  QA PASS (round 2)
-  #3  Create API handlers     COMPLETE  ✓  QA PASS (round 1)
-  #4  Build state management  QA_REVIEW ●  QA round 1 in progress
-  #5  Create UI components    PENDING   ○  blocked by #4
-  #6  Integration tests       PENDING   ○  blocked by #5
+| # | Task | Status | QA | Wave |
+|---|------|--------|----|------|
+| 1 | Define types | ✓ COMPLETE | PASS (round 1) | 1 |
+| 2 | Implement service | ✓ COMPLETE | PASS (round 2) | 1 |
+| 3 | Create API handlers | ✓ COMPLETE | PASS (round 1) | 2 |
+| 4 | Build state management | ● QA_REVIEW | round 1 in progress | 2 |
+| 5 | Create UI components | ○ PENDING | blocked by #4 | 3 |
+| 6 | Integration tests | ○ PENDING | blocked by #5 | 3 |
 
-  ─── Branches ───────────────────────────────────────────
+### Branches
 
-  work/<feature>/state-mgmt     IN_PROGRESS  (not yet merged)
-  work/<feature>/schema         MERGED       ✓
-  work/<feature>/service        MERGED       ✓
-  work/<feature>/api-handlers   MERGED       ✓
+| Branch | Status |
+|--------|--------|
+| work/<feature>/state-mgmt | IN_PROGRESS (not yet merged) |
+| work/<feature>/schema | MERGED ✓ |
+| work/<feature>/service | MERGED ✓ |
+| work/<feature>/api-handlers | MERGED ✓ |
 
-  ─── Blockers ───────────────────────────────────────────
+### Blockers
 
-  None
+None
 
-  ─── Guardian ───────────────────────────────────────────
+### Guardian
 
-  Not yet run (waiting for all tasks to complete)
-
-═══════════════════════════════════════════════════════════
-```
+Not yet run (waiting for all tasks to complete)
 
 ### Progress Bar
 
 Build the progress bar from task counts:
 
-```
-Tasks complete / Tasks total x 20 characters
+Tasks complete / Tasks total × 20 characters, using `=` for filled and `-` for empty.
 
 Example: 3/6 = 10 filled + 10 empty
-██████████░░░░░░░░░░  3/6 complete
-```
+
+**Progress:** `[==========----------]` 3/6 complete
 
 ### Status Icons
 
@@ -136,31 +133,31 @@ Example: 3/6 = 10 filled + 10 empty
 
 ### If Blockers Exist
 
-```
-  ─── Blockers ───────────────────────────────────────────
+Replace the `### Blockers` section with:
 
-  ⚠ Task #4 failed QA round 3 — escalated to user
-    Issue: Missing error handling in state-mgmt module
-    Affected: Task #5, #6 (blocked)
-```
+### Blockers
+
+⚠ Task #4 failed QA round 3 — escalated to user
+- **Issue:** Missing error handling in state-mgmt module
+- **Affected:** Task #5, #6 (blocked)
 
 ### If Guardian Has Run
 
-```
-  ─── Guardian ───────────────────────────────────────────
+Replace the `### Guardian` section with one of:
 
-  Guardian Check: PASS ✓
-  Checks passed: 7/7
-  Ready for PR
-```
+**Guardian PASS:**
 
-Or:
+### Guardian
 
-```
-  ─── Guardian ───────────────────────────────────────────
+**Guardian Check: PASS ✓**
+Checks passed: 7/7
+Ready for PR
 
-  Guardian Check: FAIL ✗
-  Checks passed: 5/7
-  Failed: Module Completeness, Documentation Coherence
-  Action needed: fix issues and re-run Guardian
-```
+**Guardian FAIL:**
+
+### Guardian
+
+**Guardian Check: FAIL ✗**
+Checks passed: 5/7
+Failed: Module Completeness, Documentation Coherence
+Action needed: fix issues and re-run Guardian

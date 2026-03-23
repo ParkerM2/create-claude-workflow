@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0] — 2026-03-23
+
+### Added
+- `/deep-research` command now distributed with plugin (previously project-local only)
+
+### Removed
+- Removed `/new`, `/new-hotfix`, `/new-refactor`, `/new-tests`, `/review-pr` from distributed commands
+- Synced all distributed commands with trimmed project-local versions
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [2.1.0] — 2026-03-22
 
 ### Added

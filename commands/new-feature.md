@@ -123,16 +123,11 @@ If a feature directory exists in the progress directory with an `events.jsonl` f
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify context loaded before proceeding
-Required:
-  Path A (design doc): PHASE-GATE-PROTOCOL.md read, design doc read
-  Path B (no design doc): PHASE-GATE-PROTOCOL.md read, project rules file read, architecture file read
-  - Workflow mode resolved (strict/standard/fast) and recorded
-  - Branching config read from <workflow-config>
-═══════════════════════════════════════════
-```
+---
+
+**PHASE CHECK**: Context loaded? → Hooks verify automatically before agent spawns.
+
+---
 
 ## Phase 3: Plan & Decompose
 
@@ -157,18 +152,11 @@ This transitions the FSM from `plan` → `setup`.
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify plan complete before proceeding
-Required:
-  - Written decomposition plan produced (feature summary, rules cited, task list)
-  - Each task has: agent role, file scope, acceptance criteria, QA checklist
-  - Dependency map defined (which tasks block which)
-  - Wave plan finalized (tasks grouped by dependency layer)
-  - Context budget checked per task (8,000 + files × 1,000 + 3,000)
-  - `plan.created` event emitted
-═══════════════════════════════════════════
-```
+---
+
+**PHASE CHECK**: Plan complete? → workflow-gate.js blocks spawns until plan.created emitted.
+
+---
 
 ## Phase 4: Create Feature Branch & Progress File
 
@@ -185,24 +173,42 @@ Create the feature's progress directory and initialize tracking:
 
 The `events.jsonl` file is your **crash-recovery artifact**. Events are appended via `/claude-workflow:track` commands at key checkpoints.
 
+### Initialize Unified Tracking (alongside progress)
+
+After creating the progress directory, also initialize unified tracking:
+
+1. Create `.claude/tracking/<feature-name>/` directory
+2. Create `.claude/tracking/<feature-name>/manifest.json`:
+   ```json
+   {
+     "feature": "<feature-name>",
+     "status": "in-progress",
+     "created": "<ISO8601>",
+     "branch": "feature/<feature-name>",
+     "plan": null,
+     "agents": {}
+   }
+   ```
+3. Create empty `.claude/tracking/<feature-name>/events.jsonl`
+4. Create `.claude/tracking/<feature-name>/agents/` directory
+5. Emit a "feature.started" event to events.jsonl:
+   ```json
+   {"v":1,"ts":"<ISO8601>","type":"feature.started","feature":"<feature-name>","data":{"branch":"feature/<feature-name>"}}
+   ```
+
+> Note: This uses the unified tracking system from `hooks/tracking.js`. The tracking system coexists with the existing `.claude/progress/` system. For programmatic use, call `initTracking("<feature-name>", { status: "in-progress", branch: "feature/<feature-name>" })` from `hooks/tracking.js`.
+
 **After completing Phase 4 + Phase 5 (branch, team, tasks ready), emit:**
 `/claude-workflow:track checkpoint "setup-complete"`
 This transitions the FSM from `setup` → `wave` and sets `setupComplete=true`.
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify setup complete before spawning agents
-Required:
-  - Feature branch created from configured base branch
-  - TeamCreate called with feature name
-  - TaskCreate called for ALL tasks with full descriptions and blockedBy dependencies
-  - Progress file initialized: .claude/progress/<feature>/events.jsonl exists
-  - session.start event emitted via /claude-workflow:track
-  - checkpoint "setup-complete" emitted
-═══════════════════════════════════════════
-```
+---
+
+**PHASE CHECK**: Setup complete? → workflow-gate.js blocks agent spawns until setupComplete = true.
+
+---
 
 ## Phase 5: Set Up Team & Tasks
 
@@ -251,12 +257,18 @@ Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 
 **Background execution**: Spawn coding agents with `run_in_background: true`. The Task tool returns a `task_id` for each spawned agent — **save this ID**. Use `TaskOutput` with the saved `task_id` to check agent results when needed.
 
-### 6c. Monitor & Collect Results
+### 6c. Monitor, Spawn QA, Collect Results
 
-- Track agent completion messages
-- On QA PASS: proceed to merge
-- On QA FAIL (round < 3): agent handles re-work automatically
-- On QA FAIL (round 3): escalate to user
+> **Teammates cannot spawn other teammates.** Only the Team Leader spawns QA agents.
+
+1. Wait for coding agents to send completion messages via SendMessage
+2. When a coding agent reports complete: spawn a QA Review agent on the same workbranch
+   - Use the QA template from `AGENT-SPAWN-TEMPLATES.md`
+   - Include: coding agent's plan, files changed, QA checklist
+   - QA agent reviews and messages Team Leader with PASS or FAIL
+3. On QA PASS: proceed to merge
+4. On QA FAIL: forward report to coding agent via SendMessage, wait for fixes, re-spawn QA
+5. On QA FAIL (max rounds): escalate to user
 
 ### 6d. Merge Completed Workbranches
 
@@ -301,16 +313,11 @@ When ALL waves are complete:
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify all waves complete before Guardian
-Required:
-  - All wave checkpoints emitted (wave-1-complete, wave-2-complete, etc.)
-  - checkpoint "all-waves-complete" emitted
-  - No open workbranches: git branch --list "work/<feature>/*" returns empty
-  - Feature branch contains all merged work and is stable
-═══════════════════════════════════════════
-```
+---
+
+**PHASE CHECK**: All waves complete? → workflow-gate.js blocks Guardian spawn until phase = guardian.
+
+---
 
 ## Phase 7: Codebase Guardian Check
 
@@ -341,17 +348,11 @@ All must pass. If any fail, investigate and fix before proceeding.
 
 ---
 
-```
-═══════════════════════════════════════════
-PHASE CHECK: Verify Guardian passed before completion
-Required:
-  - Codebase Guardian spawned on <featurePrefix>/ branch
-  - Guardian completed all 7 structural integrity checks
-  - Guardian reported PASS (or trivial fixes committed and re-verified)
-  - Full verification run: lint, typecheck, test, build all pass
-  - checkpoint "guardian-passed" emitted (sets guardianPassed=true)
-═══════════════════════════════════════════
-```
+---
+
+**PHASE CHECK**: Guardian passed? → team-leader-gate.js blocks shutdown until guardianPassed = true.
+
+---
 
 ## Phase 9: Completion & Cleanup
 
