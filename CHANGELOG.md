@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.3.1] — 2026-03-24
+
+### Fixed
+- **Critical: `isWorkBranch()` now recognizes Claude Code worktree branch names** — Agent tool's `isolation: "worktree"` creates branches named `worktree-agent-*`, `claude/*`, `agent-*` which didn't match the `work/` prefix pattern, causing enforcement-gate, quality-gate, and safety-guard to block all agent file writes
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [2.3.0] — 2026-03-24
 
 ### Added

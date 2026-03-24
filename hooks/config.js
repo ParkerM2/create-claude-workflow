@@ -170,9 +170,16 @@ function isFeatureBranch(name, config) {
 /**
  * Check if a branch name matches the work prefix pattern.
  * e.g. workPrefix="work" matches "work/my-feature/task-1"
+ * Also recognizes Claude Code auto-generated worktree branch names:
+ *   worktree-agent-*, claude/*, agent-*
  */
 function isWorkBranch(name, config) {
   if (!name || !config) return false;
+
+  // Claude Code Agent tool creates worktree branches with these patterns
+  // when using isolation: "worktree" — they are legitimate coding agent branches
+  if (/^(worktree-agent-|claude\/|agent-)/.test(name)) return true;
+
   const prefix = config.workPrefix;
   if (!prefix) return false;
   return name.startsWith(prefix + '/');
