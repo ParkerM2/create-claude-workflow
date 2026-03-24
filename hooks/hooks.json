@@ -240,6 +240,16 @@
             "timeout": 10000
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/quality-gate.js",
+            "timeout": 120000
+          }
+        ]
       }
     ]
   }

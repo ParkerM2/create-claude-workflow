@@ -307,11 +307,47 @@ This task is estimated at ~<N> tokens of context.
 Files to create/modify: <count>
 Files to read for context: <count>
 
-If you find yourself running low on context:
-1. Re-read your Phase 1 plan (it's your anchor)
-2. Focus on the remaining steps in order
-3. Skip non-essential reads (you've already internalized the rules)
-4. Report to Team Leader if you cannot complete all steps
+**CONTEXT EXHAUSTION PROTOCOL**
+
+If you find yourself running low on context (repeated compactions, losing track of prior work):
+
+1. **STOP coding immediately** — do not push through with degraded context
+2. **Commit all work done so far:**
+   ```bash
+   git add <files you've changed>
+   git commit -m "wip: <task-name> — partial progress, context handoff
+
+   COMPLETED:
+   - <step 1 from Phase 1 plan>
+   - <step 2 from Phase 1 plan>
+
+   REMAINING:
+   - <step 3 — not started>
+   - <step 4 — not started>
+
+   NOTES:
+   - <any gotchas, edge cases discovered, decisions made>"
+   ```
+3. **Message the Team Leader with a handoff packet:**
+   ```
+   SendMessage:
+     to: "<TEAM_LEADER_NAME>"
+     message: |
+       CONTEXT EXHAUSTION — Task #<N> partial handoff.
+       Completed steps: <list>
+       Remaining steps: <list>
+       Files changed so far: <list>
+       Commit: <hash>
+       Key decisions made: <any context the next agent needs>
+       Blockers found: <any>
+     summary: "Task #<N> context exhaustion — needs handoff"
+   ```
+4. The Team Leader will spawn a fresh agent with your commit as the starting point and your handoff notes as context.
+
+**Do NOT:**
+- Try to keep working with degraded context — you will introduce bugs
+- Skip the commit — uncommitted work is lost on handoff
+- Omit the "REMAINING" section — the next agent needs to know what's left
 
 ## QA Checklist
 
@@ -429,7 +465,20 @@ For each file in your review plan:
 - Verify: input validation, correct types, proper error handling
 - Check: are side effects intentional and complete?
 
-### Step 4: Verify Acceptance Criteria
+### Step 4: Adversarial Testing
+
+**Your job is not just to verify the happy path — actively try to break the code.**
+
+- **Edge cases:** What happens with empty inputs, null values, extremely large inputs, concurrent access?
+- **Error paths:** Does the error handling actually work? Trace what happens when each external call fails.
+- **Missing cases:** Are there enum values, switch branches, or conditional paths that aren't handled?
+- **Security:** Can user input reach dangerous operations (SQL, file paths, shell commands) without sanitization?
+- **Race conditions:** If two users or processes hit this code simultaneously, what breaks?
+- **Boundary conditions:** Off-by-one errors, empty arrays, single-element arrays, max-length strings.
+
+For each vulnerability found: record [SEVERITY] file:line — attack vector — impact — fix instruction.
+
+### Step 5: Verify Acceptance Criteria
 Go through each acceptance criterion and verify it is met.
 Do not assume — read the code and confirm.
 
@@ -497,6 +546,17 @@ Format:
 | <criterion 2> | MET/NOT MET |
 
 **Data Flow:** PASS/FAIL
+
+### Adversarial Testing
+
+| Attack Vector | Result |
+|--------------|--------|
+| Edge cases (null/empty/large) | PASS/FAIL |
+| Error path coverage | PASS/FAIL |
+| Missing branches | PASS/FAIL |
+| Security (injection/traversal) | PASS/FAIL |
+| Race conditions | PASS/FAIL or N/A |
+| Boundary conditions | PASS/FAIL |
 
 ### Documentation Updated (on PASS)
 

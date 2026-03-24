@@ -242,7 +242,8 @@ function updateWorkflowStateFromEvent(feature, event) {
           guardianPassed: false,
           currentWave: 0,
           totalWaves: 0,
-          waves: {}
+          waves: {},
+          tasks: {}
         });
         break;
 
@@ -250,21 +251,87 @@ function updateWorkflowStateFromEvent(feature, event) {
         updateWorkflowState(feature, { phase: 'setup' });
         break;
 
-      case 'task.started':
-        // No phase transition — informational only
+      case 'task.started': {
+        // Track per-task artifact state: pending → in-progress
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'in-progress',
+            agent: data.agent || null,
+            branch: data.branch || null,
+            startedAt: ts,
+            files: data.files || []
+          });
+          updateWorkflowState(feature, { tasks });
+        }
         break;
+      }
 
-      case 'task.completed':
-        // No phase transition — informational only
+      case 'task.completed': {
+        // Track per-task artifact state: in-progress → completed (awaiting QA)
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'completed',
+            completedAt: ts,
+            files: data.files || (tasks[taskId] && tasks[taskId].files) || []
+          });
+          updateWorkflowState(feature, { tasks });
+        }
         break;
+      }
 
-      case 'qa.passed':
-        // No phase transition — tracked at wave level via checkpoints
+      case 'qa.passed': {
+        // Track per-task artifact state: completed → qa-passed (ready to merge)
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'qa-passed',
+            qaPassedAt: ts,
+            qaRounds: (tasks[taskId] && tasks[taskId].qaRounds || 0) + 1
+          });
+          updateWorkflowState(feature, { tasks });
+        }
         break;
+      }
 
-      case 'branch.merged':
-        // No phase transition — tracked at wave level via checkpoints
+      case 'qa.failed': {
+        // Track per-task artifact state: mark QA failure, keep in completed state
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'qa-failed',
+            lastQaFailedAt: ts,
+            qaRounds: (tasks[taskId] && tasks[taskId].qaRounds || 0) + 1,
+            lastFailReason: data.message || data.reason || null
+          });
+          updateWorkflowState(feature, { tasks });
+        }
         break;
+      }
+
+      case 'branch.merged': {
+        // Track per-task artifact state: qa-passed → merged (final state)
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'merged',
+            mergedAt: ts
+          });
+          updateWorkflowState(feature, { tasks });
+        }
+        break;
+      }
 
       case 'checkpoint':
         if (data.message) {
