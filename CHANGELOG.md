@@ -1,5 +1,49 @@
 # Changelog
 
+## [3.0.0] — 2026-03-24
+
+### BREAKING: Proof-of-Work Architecture
+
+Complete rewrite of the enforcement system. Replaces 6 gate files with 4 proof-aware hooks.
+
+### Added
+- **proof-ledger.js** (PostToolUse): Records what ACTUALLY happened — agent spawns, messages sent, branches merged. Written by hook (outside LLM control), unforgeable by the team leader.
+- **proof-gate.js** (PreToolUse): Single enforcer replacing workflow-gate.js + team-leader-gate.js + enforcement-gate.js. Validates proof artifacts before allowing state transitions.
+- **teammate-quality.js** (TeammateIdle): Exit code 2 REJECTS idle if lint/test fail. Replaces quality-gate.js Stop hook which could only warn but not block.
+- **task-validator.js** (TaskCompleted): Exit code 2 REJECTS task completion if working tree has uncommitted changes.
+- **proof-ledger.jsonl**: Append-only proof file in progress directory. Only proof-ledger.js can write to it.
+- **WORKFLOW-V3-FINAL.md**: Architecture document explaining the proof-of-work design.
+- `guards.proofGate` config toggle (replaces 3 separate guard toggles)
+- `guards.qualityGate` and `guards.taskValidator` config toggles
+- `permissionDecision: "allow"` for progress/tracking files (fixes permission prompt bug)
+- Recovery actions in every block message (no permanent deadlocks)
+
+### Changed
+- **Hub-and-spoke communication model**: ALL agents report to Team Leader. Agents do NOT communicate with each other directly. On QA FAIL, team leader relays to coder and spawns new QA.
+- **5 phases** (down from 7): Setup, Plan, Team Setup, Execute Waves, Guardian & Finalize
+- **new-feature.md** reduced from ~900 lines to ~470 lines
+- **AGENT-SPAWN-TEMPLATES.md**: Coding agents message team leader (not QA), QA agents message team leader (not coding agent), Guardian messages team leader (no self-emitting events)
+- Mandatory verification checklist at end of every phase
+- PreToolUse hooks per Bash call reduced from 3 to 2 (safety-guard + proof-gate)
+- File reads per hook invocation reduced from 12-15 to 3-4
+
+### Fixed
+- **qa.passed exploit**: Team leader could emit qa.passed without spawning a QA agent. Now proof-gate validates agent.spawned proof in proof-ledger.jsonl.
+- **guardian-passed exploit**: Same fix — Guardian must be spawned and send PASS message.
+- **Permission prompts on progress files**: proof-gate outputs `permissionDecision: "allow"` for progress/tracking files, suppressing unnecessary permission prompts.
+- **Stop hook can't actually block**: Replaced with TeammateIdle hook (exit 2 = reject idle).
+- **Gate deadlocks**: Every deny message includes specific recovery instructions.
+- **Triple-gating on Bash**: Reduced from 3 PreToolUse hooks to 2.
+
+### Deprecated
+- `guards.workflowGate`, `guards.teamLeaderGate`, `guards.enforcementGate` (default OFF, replaced by `guards.proofGate`)
+- workflow-gate.js, team-leader-gate.js, enforcement-gate.js, quality-gate.js (no longer registered in hooks.json, kept on disk for backward compat)
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [2.3.2] — 2026-03-24
 
 ### Changed

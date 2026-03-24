@@ -31,9 +31,14 @@ const GUARDS_DEFAULTS = {
   branchGuard: true,
   destructiveGuard: true,
   configGuard: true,
-  workflowGate: true,
-  teamLeaderGate: true,  // enforces merge-after-QA, no premature shutdowns
-  enforcementGate: true  // master toggle for consolidated enforcement-gate.js hook
+  // v3 proof-of-work gates
+  proofGate: true,       // single gate replacing workflowGate + teamLeaderGate + enforcementGate
+  qualityGate: true,     // TeammateIdle quality enforcement (lint/typecheck/test)
+  taskValidator: true,   // TaskCompleted validation (uncommitted changes check)
+  // Legacy gates (kept for backward compatibility, default OFF in v3)
+  workflowGate: false,
+  teamLeaderGate: false,
+  enforcementGate: false
 };
 
 // ---------------------------------------------------------------------------

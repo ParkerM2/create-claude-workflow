@@ -1,927 +1,469 @@
 ---
-description: "Full multi-agent feature implementation with branch-per-task isolation, QA cycles, and Codebase Guardian verification"
+name: new-feature
+description: Full multi-agent feature implementation with branch-per-task isolation, QA cycles, and Codebase Guardian verification
 ---
 
-# /new-feature — Team Workflow Orchestrator
+# /new-feature — Team Workflow Orchestrator (v3)
 
-> Invoke this skill to implement a feature using Claude Agent Teams with branch-per-task isolation, per-task QA with doc updates, crash-safe progress tracking, and a final Codebase Guardian check.
+CRITICAL: Execute this workflow step by step. Do NOT skip, combine, or abbreviate any step. Do NOT write application code yourself — spawn coding agents. Do NOT emit qa.passed or guardian-passed without spawning the respective agents first. The proof-gate.js hook WILL block you if you try to cheat — it validates that agents were actually spawned in proof-ledger.jsonl before allowing state transitions.
 
----
+## Architecture: Hub-and-Spoke with Proof-of-Work
 
-## When to Use
-
-- Implementing a new feature that touches multiple files or modules
-- Refactoring an existing feature across multiple files
-- Any task requiring 2+ specialist agents working in coordination
-
----
-
-## Phase 1: Initialize & Validate Environment
-
-> **⚠️ MANDATORY EXECUTION RULES — READ BEFORE PROCEEDING**
->
-> You MUST execute every numbered step in this phase sequentially. Do NOT skip, reorder, combine, or abbreviate any step. Do NOT assume a prior session already completed these steps. Each step exists because a hook or gate depends on its output — skipping any step WILL cause silent failures in later phases.
->
-> Follow this workflow **word for word**. When a step says "create", create it. When it says "run", run it. When it says "read", read it. Do not summarize or paraphrase the instructions to yourself — execute them literally.
-
-### Step 1.0: Pre-Flight Infrastructure Audit
-
-**Before any other step, verify that the entire plugin infrastructure exists and is healthy.** This step discovers, validates, and creates everything the workflow depends on — in one pass — so that no later phase ever fails due to a missing file or directory.
-
-Run every check below. For each item: if it exists, confirm its path. If it does NOT exist and it CAN be created, create it. If it CANNOT be created (plugin file — must be installed), halt and inform the user.
-
-#### 1.0a — Plugin Root & Hook Files (MUST exist — cannot be created)
-
-Determine the plugin root path from the `<workflow-config>` system context (the `Plugin root:` line). All plugin files are relative to this path.
+**Communication model — Team Leader is the hub. Agents do NOT talk to each other.**
 
 ```
-PLUGIN FILES (required — halt if any missing):
-  <plugin-root>/hooks/config.js
-  <plugin-root>/hooks/tracker.js
-  <plugin-root>/hooks/tracking.js
-  <plugin-root>/hooks/activity-logger.js
-  <plugin-root>/hooks/compact-reinject.js
-  <plugin-root>/hooks/config-guard.js
-  <plugin-root>/hooks/safety-guard.js
-  <plugin-root>/hooks/enforcement-gate.js
-  <plugin-root>/hooks/workflow-gate.js
-  <plugin-root>/hooks/team-leader-gate.js
-  <plugin-root>/hooks/tracking-emitter.js
-  <plugin-root>/hooks/session-start.js
-  <plugin-root>/hooks/quality-gate.js
-  <plugin-root>/hooks/hooks.json
+Leader spawns coder -> coder works -> coder messages leader "done"
+Leader spawns QA   -> QA reviews   -> QA messages leader "PASS/FAIL"
+If FAIL: leader messages coder "fix: ..." -> coder fixes -> leader spawns NEW QA
+If PASS: leader emits qa.passed -> merges -> shuts down both agents
 ```
 
-Verify each exists. If ANY is missing → halt: _"Plugin installation is corrupt — missing `<file>`. Reinstall the claude-workflow plugin."_
+**Proof enforcement — proof-ledger.js (PostToolUse) records what happened. proof-gate.js (PreToolUse) validates proof before allowing transitions.**
 
-Then load-test the 3 core modules:
+| Action | Required Proof (in proof-ledger.jsonl) |
+|--------|---------------------------------------|
+| Emit qa.passed | QA agent was spawned for this task |
+| git merge work/* | qa.passed event exists for this branch |
+| Emit guardian-passed | Guardian agent was spawned |
+| Team leader Edit/Write app code | BLOCKED during active workflow (only progress/tracking files allowed) |
+
+---
+
+## Phase 1: SETUP & VALIDATE
+
+> MANDATORY: Execute every step in order. Each step exists because a hook or gate depends on its output. Skipping any step WILL cause silent failures in later phases.
+
+### Step 1.0: Pre-Flight Infrastructure Check
+
+Verify plugin infrastructure exists and is healthy before anything else.
+
+**1.0a — Plugin hook files (halt if missing).** Determine plugin root from `<workflow-config>` system context (`Plugin root:` line). Verify these exist: `hooks/config.js`, `hooks/tracker.js`, `hooks/tracking.js`, `hooks/proof-ledger.js`, `hooks/proof-gate.js`, `hooks/safety-guard.js`, `hooks/hooks.json`. If ANY missing: halt — _"Plugin installation corrupt. Reinstall claude-workflow."_ Load-test: `node -e "require('<plugin-root>/hooks/config.js')"` (repeat for proof-ledger.js, proof-gate.js). If any throws: halt.
+
+**1.0b — Required prompt files (halt if missing).** Verify: `prompts/implementing-features/WORKFLOW-MODES.md`, `QA-CHECKLIST-TEMPLATE.md`, `AGENT-SPAWN-TEMPLATES.md`, `PROGRESS-FILE-TEMPLATE.md`, `EVENT-SCHEMA.md`.
+
+**1.0c — Agent Teams tools (halt if unavailable).** Verify available: **TeamCreate**, **SendMessage**, **Agent** (or Task). If ANY missing: halt — _"Agent Teams tools not available."_
+
+**1.0d — Project config.** Check `.claude/workflow.json`: valid JSON = read config; malformed = halt with error; missing = apply defaults (Step 1.3).
+
+**1.0e — Core directories (create if missing):**
 ```bash
-node -e "require('<plugin-root>/hooks/config.js')" 2>&1
-node -e "require('<plugin-root>/hooks/tracker.js')" 2>&1
-node -e "require('<plugin-root>/hooks/tracking.js')" 2>&1
+mkdir -p .claude/progress .claude/tracking
 ```
-If any throws → halt with the error.
+If `useWorktrees` is true: also `mkdir -p <worktreeDir>` (default: `.worktrees`)
 
-#### 1.0b — Prompt Files (MUST exist — cannot be created)
+### Step 1.1: Git Validation
 
-```
-REQUIRED PROMPTS (halt if missing):
-  <plugin-root>/prompts/implementing-features/PHASE-GATE-PROTOCOL.md
-  <plugin-root>/prompts/implementing-features/WORKFLOW-MODES.md
-  <plugin-root>/prompts/implementing-features/README.md
-  <plugin-root>/prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md
-  <plugin-root>/prompts/implementing-features/QA-CHECKLIST-AUTO-FILL-RULES.md
-  <plugin-root>/prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md
-  <plugin-root>/prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md
-  <plugin-root>/prompts/implementing-features/CONTEXT-BUDGET-GUIDE.md
+Run `git rev-parse --git-dir` (halt if not a repo) and `git rev-parse --show-toplevel` (store as `REPO_ROOT`). Detect primary branch: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'` — fall back to checking if `main` or `master` exists. Store as `PRIMARY_BRANCH`.
 
-REQUIRED SKILLS (halt if missing):
-  <plugin-root>/skills/using-workflow/SKILL.md
-  <plugin-root>/commands/track.md
-```
-
-Verify each exists. If ANY is missing → halt: _"Plugin installation is incomplete — missing `<file>`. Reinstall the claude-workflow plugin."_
-
-#### 1.0c — Project Configuration File
-
-Check if `.claude/workflow.json` exists:
-- If it exists → **validate it parses as valid JSON.** If malformed:
-  - Show the parse error to the user
-  - Halt: _"Fix `.claude/workflow.json` syntax or delete it to use defaults."_
-- If it exists and is valid → read and store all config values (see Step 1.4 for the full key list)
-- If it does NOT exist → inform the user, apply defaults (see Step 1.4)
-
-#### 1.0d — Project-Specific Files (optional — warn if missing)
-
-```
-OPTIONAL PROJECT FILES (warn, do not halt):
-  <projectRulesFile>       (default: CLAUDE.md)
-  <architectureFile>       (default: .claude/docs/ARCHITECTURE.md)
-```
-
-If missing → note: _"Optional file `<path>` not found. The workflow will proceed without it."_
-
-#### 1.0e — Core Directories (create if missing)
-
-These directories are required by hooks at runtime. If they don't exist, **create them now**.
-
-```bash
-# Progress tracking root (used by: tracker.js, activity-logger.js, all gates)
-mkdir -p .claude/progress
-
-# Unified tracking root (used by: tracking.js, tracking-emitter.js)
-mkdir -p .claude/tracking
-
-# Worktree root — only if useWorktrees is true in config (used by: enforcement-gate.js, agent spawns)
-# Default: .worktrees
-mkdir -p <worktreeDir>
-```
-
-After creation, confirm each exists:
-```bash
-ls -d .claude/progress .claude/tracking <worktreeDir>
-```
-
-#### 1.0f — Agent Teams Capability
-
-Verify these tools are available in the current session:
-- **TeamCreate** — required Phase 3
-- **Agent** — required Phase 4
-- **SendMessage** — required Phase 4
-- **TaskOutput** — required Phase 4
-
-If ANY is unavailable → halt: _"Agent Teams tools not available. The /new-feature workflow requires TeamCreate, Agent, SendMessage, and TaskOutput. Ensure Claude Code has Agent Teams enabled."_
-
-Store `TEAM_LEADER_NAME` for use in agent communication instructions.
-
-#### Step 1.0 Verification
-
-```
-PRE-FLIGHT INFRASTRUCTURE AUDIT:
-[ ] 1.0a — All 14 hook files exist and 3 core modules load without error
-[ ] 1.0b — All 8 required prompt files exist, both required skills exist
-[ ] 1.0c — workflow.json valid JSON (or defaults applied)
-[ ] 1.0d — Project files checked (present or warned)
-[ ] 1.0e — .claude/progress/ exists
-[ ] 1.0e — .claude/tracking/ exists
-[ ] 1.0e — <worktreeDir>/ exists (if useWorktrees = true)
-[ ] 1.0f — Agent Teams tools available (TeamCreate, Agent, SendMessage, TaskOutput)
-[ ] 1.0f — TEAM_LEADER_NAME stored
-```
-
-If ANY item fails → fix it or halt before proceeding. Do NOT continue to Step 1.1 with missing infrastructure.
-
----
-
-### Step 1.1: Git Repository Validation
-
-1. Run `git rev-parse --git-dir`. If this fails → stop and tell the user: _"This directory is not a git repository. Initialize one with `git init` and make an initial commit before running /new-feature."_
-2. Run `git rev-parse --show-toplevel` and store the result as `REPO_ROOT`. All paths below are relative to this root.
-
-### Step 1.2: Primary Branch Detection
-
-1. Detect the primary branch name: try `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@'`, fall back to checking if `main` or `master` exists.
-2. Store the result as `PRIMARY_BRANCH`. Use this throughout — never hardcode `main`.
-
-### Step 1.3: Detect Current Branch & Starting Position
-
-The user's current branch determines how Phase 3 will handle branch creation. Detect it now.
+### Step 1.2: Branch Scenario Classification
 
 ```bash
 CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD)
 ```
 
-Classify `CURRENT_BRANCH` into one of three cases and store `BRANCH_SCENARIO`:
+Classify `CURRENT_BRANCH`:
 
-**Case A — Already on a feature branch** (most common):
-The user is already on a branch matching `<featurePrefix>/*` (e.g., `feature/ES-12004-auth-refactor`). This is the typical workflow — the user created or checked out their ticket branch and then invoked `/new-feature`.
-- Set `BRANCH_SCENARIO = "on-feature"`
-- Extract the feature name from the branch: `FEATURE_NAME = CURRENT_BRANCH` with the `<featurePrefix>/` prefix stripped
-- This branch will be ADOPTED as the feature branch in Phase 3 — no new branch creation needed
+| Scenario | Condition | Action |
+|----------|-----------|--------|
+| **ON-FEATURE** | Matches `<featurePrefix>/*` | Adopt branch, extract FEATURE_NAME by stripping prefix |
+| **ON-BASE** | Equals PRIMARY_BRANCH or baseBranch | FEATURE_NAME from user args; create branch in Phase 2 |
+| **WRONG-BRANCH** | Anything else | If protected: warn, branch from baseBranch. If unknown: ask user |
 
-**Case B — On the base branch** (starting fresh):
-The user is on `PRIMARY_BRANCH` or whatever `baseBranch` resolves to (e.g., `main`, `master`, `develop`).
-- Set `BRANCH_SCENARIO = "on-base"`
-- `FEATURE_NAME` must come from the user's invocation arguments or prompt
-- Phase 3 will create a new `<featurePrefix>/<feature-name>` branch from here
+**Dirty working tree:** Run `git status --porcelain`. ON-FEATURE with changes: note and continue. ON-BASE/WRONG-BRANCH with changes: halt until user commits or stashes.
 
-**Case C — On a protected or unrelated branch** (needs redirect):
-The user is on a branch that is neither a feature branch nor the base branch — e.g., `production`, `staging`, `release/v2`, `hotfix/urgent`, or a detached HEAD.
-- Set `BRANCH_SCENARIO = "wrong-branch"`
-- Check if `CURRENT_BRANCH` is in `protectedBranches` — if so, warn: _"You're on protected branch `<CURRENT_BRANCH>`. I'll branch from `<baseBranch>` instead."_
-- If it's an unrecognized branch, ask the user: _"You're on `<CURRENT_BRANCH>` which isn't a feature branch or the base branch. Should I branch from `<baseBranch>`, or use this branch as the starting point?"_
-- Phase 3 will handle the checkout accordingly
+### Step 1.3: Read Configuration
 
-### Step 1.4: Apply Configuration Values
+Resolve from `.claude/workflow.json` (or defaults): `projectRulesFile` (CLAUDE.md), `architectureFile` (.claude/docs/ARCHITECTURE.md), `progressDir` (.claude/progress), `featurePrefix` (feature), `workPrefix` (work), `worktreeDir` (.worktrees), `useWorktrees` (true), `protectedBranches` (["main","master"]), `baseBranch` ("auto" = PRIMARY_BRANCH).
 
-Configuration was already read and validated in Step 1.0c. Now resolve derived values:
+Resolve workflow mode: per-invocation override > project rules file setting > default `strict`.
 
-1. Resolve `baseBranch`: if set to `"auto"`, replace with `PRIMARY_BRANCH`.
-2. Store all config values for use throughout the workflow:
-   - `projectRulesFile` (default: `CLAUDE.md`)
-   - `architectureFile` (default: `.claude/docs/ARCHITECTURE.md`)
-   - `progressDir` (default: `.claude/progress`)
-   - `featurePrefix` (default: `feature`)
-   - `workPrefix` (default: `work`)
-   - `worktreeDir` (default: `.worktrees`)
-   - `enforce` (default: `warn`)
-   - `protectedBranches` (default: `["main", "master"]`)
-   - `useWorktrees` (default: `true`)
+### Step 1.4: Initialize Tracking
 
-> Note: Directories, hooks, prompts, and Agent Teams tools were already validated in Step 1.0. Do NOT re-check them here.
-
-### Step 1.5: Dirty Working Tree Check
-
-Before any branch operations, check for uncommitted work:
-
+**First, check for existing progress** (before creating anything):
 ```bash
-git status --porcelain
+ls .claude/progress/<feature-name>/events.jsonl 2>/dev/null
+git branch --list "<workPrefix>/<feature-name>/*"
 ```
+- events.jsonl exists with no session.end: suggest `/resume`
+- events.jsonl exists with session.end: ask user if starting new work
+- Stale workbranches: clean up with `git worktree remove` / `git branch -d`
 
-If there are uncommitted changes:
-- If `BRANCH_SCENARIO = "on-feature"` → this is fine, the user's work-in-progress is on their feature branch. Note it and continue — Phase 3 will not change branches.
-- If `BRANCH_SCENARIO = "on-base"` or `"wrong-branch"` → warn the user: _"You have uncommitted changes on `<CURRENT_BRANCH>`. Commit or stash them before proceeding — switching branches would lose this work."_ Do NOT proceed until the working tree is clean or the user stashes/commits.
-
-### Step 1.6: Branch Collision & Existing Progress Check
-
-This step combines branch collision detection with crash recovery checks. There is no separate "Phase 2" — all progress detection happens here.
-
-1. Determine the target feature branch name:
-   - If `BRANCH_SCENARIO = "on-feature"` → target is `CURRENT_BRANCH` (already exists, will be adopted)
-   - If `BRANCH_SCENARIO = "on-base"` or `"wrong-branch"` → target is `<featurePrefix>/<feature-name>`
-
-2. **Check for existing progress artifacts:**
-   ```bash
-   # Existing progress tracking
-   ls .claude/progress/<feature-name>/events.jsonl 2>/dev/null
-
-   # Existing workbranches from a prior session
-   git branch --list "<workPrefix>/<feature-name>/*"
-
-   # Existing team from a prior session
-   ls ~/.claude/teams/<feature-name>/config.json 2>/dev/null
-   ```
-
-3. **For `"on-base"` and `"wrong-branch"` scenarios:** check if the target branch already exists: `git branch --list "<featurePrefix>/<feature-name>"`
-   - If it exists with events → inform the user: _"Feature branch and progress data already exist. Use `/resume` to continue the previous session, or provide a different feature name."_
-   - If it exists without events → inform the user: _"Feature branch exists but has no progress tracking. Use `/resume` to adopt it, or delete the branch and re-run."_
-   - If it does NOT exist → proceed (Phase 2 will create it).
-
-4. **For `"on-feature"` scenario:** check for existing progress data:
-   - If `events.jsonl` exists with no `session.end` → suggest `/resume`: _"Found interrupted progress for this feature. Use `/resume` to continue, or confirm you want to start fresh (existing progress will be archived)."_
-   - If `events.jsonl` exists with `session.end` → feature was previously completed. Ask: _"This feature was previously completed. Start a new phase of work on this branch?"_
-   - If no events → proceed (fresh start on existing branch).
-
-5. **Stale team/worktree cleanup:** If prior workbranches or a stale team exist but the user chose to start fresh:
-   ```bash
-   # Remove stale worktrees
-   git worktree list  # identify any under <worktreeDir>/<feature-name>/
-   git worktree remove <path> --force  # for each stale one
-
-   # Delete stale workbranches (use -d not -D — safety-guard.js blocks -D as destructive)
-   git branch -d <workPrefix>/<feature-name>/<task>  # for each stale one
-   # If -d fails because branch is not fully merged, ask user to confirm before using -D
-   ```
-   Note: Do NOT delete the team here — `TeamDelete` is blocked by enforcement-gate unless `guardianPassed` or `phase=done`. If a stale team exists, note it and it will be overwritten by `TeamCreate` in Phase 3.
-
-### Step 1.7: Check for Design Document
-
-Check if a prior `/new-plan` session produced a design doc:
-
+**Then initialize:**
 ```bash
-ls .claude/progress/<feature-name>/*-design.md 2>/dev/null
+mkdir -p .claude/progress/<feature-name> .claude/tracking/<feature-name>/agents
 ```
+Emit: `/claude-workflow:track session.start "<feature-name>" --branch "<branch>" --mode "<mode>"`
 
-Store the result as `HAS_DESIGN_DOC` (true/false). This determines the context loading path below.
+This creates `workflow-state.json` and `events.jsonl` via hooks. Do NOT write these files directly.
 
-### Step 1.8: Load Context Files
-
-> Note: All prompt files were already validated in Step 1.0b. Project-specific files were checked in Step 1.0d.
-
-**Path A — Design Doc Exists** (`HAS_DESIGN_DOC = true`):
-
-The design doc consolidates rules, architecture, task breakdown, wave plan, and QA strategy. Read only what it doesn't contain:
-
-```
-READS (Path A):
-1. prompts/implementing-features/PHASE-GATE-PROTOCOL.md  — Gate state machine (always needed)
-2. The design doc itself                                   — Contains consolidated plan
-3. prompts/implementing-features/WORKFLOW-MODES.md        — Only if mode not specified in design doc
-```
-
-**Skip** in Path A: README.md, QA-CHECKLIST-TEMPLATE.md, PROGRESS-FILE-TEMPLATE.md, project rules, architecture file — all consolidated into the design doc.
-
-**Defer** to later phases: AGENT-SPAWN-TEMPLATES.md → Phase 4, QA-CHECKLIST-TEMPLATE.md → Phase 4 (only if expansion needed).
-
-Use the design doc as your decomposition plan in Phase 2b instead of planning from scratch.
-
-**Path B — No Design Doc** (`HAS_DESIGN_DOC = false`):
-
-Load context incrementally. Read ONLY these files now; defer the rest to the phase that needs them:
-
-```
-PHASE 1 READS (now):
-1. prompts/implementing-features/PHASE-GATE-PROTOCOL.md  — Gate state machine
-2. The project rules file (from config)                    — Project rules (skip if missing, noted in 1.0d)
-3. The architecture file (from config)                     — System architecture (skip if missing, noted in 1.0d)
-4. prompts/implementing-features/WORKFLOW-MODES.md        — Workflow mode definitions
-
-DEFERRED READS (do NOT read these now — existence already confirmed in Step 1.0b):
-Phase 2: README.md, QA-CHECKLIST-TEMPLATE.md, QA-CHECKLIST-AUTO-FILL-RULES.md, PROGRESS-FILE-TEMPLATE.md
-Phase 4: AGENT-SPAWN-TEMPLATES.md, CONTEXT-BUDGET-GUIDE.md
-```
-
-Do NOT read deferred files now. Read each one at the moment its phase begins.
-
-### Step 1.9: Resolve Workflow Mode
-
-Determine the active workflow mode:
-1. Check if the user specified a mode with this invocation (e.g., `--mode fast`)
-2. Check the project rules file for a `Workflow Mode` section
-3. Default to `strict` if not specified
-
-Store the resolved mode. It affects: pre-flight checks, QA round count, Guardian scope, and wave fence behavior.
-
-### Step 1.10: Pre-Flight Checks (Strict Mode Only)
-
-If workflow mode is `strict`:
-1. Pre-flight runs against the base branch. Determine how to access it based on `BRANCH_SCENARIO`:
-   - `"on-base"` → already on the right branch, run checks directly
-   - `"on-feature"` → stash any uncommitted work (`git stash` if dirty), check out `<baseBranch>`, run checks, then return: `git checkout <CURRENT_BRANCH>` and `git stash pop` if stashed
-   - `"wrong-branch"` → working tree is already confirmed clean (Step 1.5), check out `<baseBranch>`, run checks, then return to `<baseBranch>` (Phase 2 will handle the feature branch checkout)
-2. Run the project's verification suite (build, lint, typecheck, test)
-3. Record pass/fail baseline in memory — this becomes the progress file baseline in Phase 2
-4. If baseline is broken → warn the user and **do not proceed** until resolved
-
-If workflow mode is `standard` or `fast` → skip pre-flight entirely.
-
-### Step 1.11: Self-Verification Checklist
-
-**Before leaving Phase 1, iterate through every step above and confirm completion.** This is not optional — check each item and report any that were skipped or failed:
+### Step 1.5: Verification Checklist
 
 ```
 PHASE 1 VERIFICATION:
-[ ] 1.0  — PRE-FLIGHT INFRASTRUCTURE AUDIT passed (all sub-checks in 1.0a–1.0f)
-[ ] 1.1  — git repo confirmed, REPO_ROOT stored
-[ ] 1.2  — PRIMARY_BRANCH detected and stored
-[ ] 1.3  — CURRENT_BRANCH detected, BRANCH_SCENARIO classified (on-feature | on-base | wrong-branch)
-[ ] 1.4  — Config values resolved (baseBranch, featurePrefix, workPrefix, etc.)
-[ ] 1.5  — Working tree is clean (or on-feature with noted WIP)
-[ ] 1.6  — Branch collision / existing progress check passed; stale artifacts cleaned
-[ ] 1.7  — HAS_DESIGN_DOC determined
-[ ] 1.8  — Context files read (Path A or Path B)
-[ ] 1.9  — Workflow mode resolved and stored
-[ ] 1.10 — Pre-flight passed (strict) or skipped (standard/fast)
+- [ ] 1.0a — Hook files exist and core modules load
+- [ ] 1.0b — Required prompt files exist
+- [ ] 1.0c — Agent Teams tools available (TeamCreate, SendMessage, Agent)
+- [ ] 1.0d — Config loaded or defaults applied
+- [ ] 1.0e — Progress and tracking directories exist
+- [ ] 1.1  — Git repo confirmed, REPO_ROOT and PRIMARY_BRANCH stored
+- [ ] 1.2  — BRANCH_SCENARIO classified, FEATURE_NAME determined
+- [ ] 1.3  — All config values resolved, workflow mode set
+- [ ] 1.4  — session.start emitted, tracking initialized
 ```
 
-If ANY item is unchecked → go back and complete it before proceeding to Phase 2. Do NOT proceed with a partial Phase 1.
-
-**Phase 1 transition is automatic** — the `session.start` event (emitted in Phase 2 after branch creation) initializes the FSM in `plan` phase.
+> RECOVERY: If any item fails, fix it or halt. Do NOT proceed to Phase 2 with missing infrastructure.
 
 ---
 
----
-
-**PHASE CHECK**: Environment validated? → All hooks and gates have their prerequisites. Proceed to Phase 2.
+**PHASE CHECK**: Before proceeding, confirm all Phase 1 items checked. proof-gate.js blocks agent spawns until session.start has been emitted.
 
 ---
 
-## Phase 2: Create Feature Branch & Plan
+## Phase 2: PLAN & DECOMPOSE
 
-### 2a. Establish Feature Branch
+### Step 2.1: Load Context Files
 
-Branch handling depends on `BRANCH_SCENARIO` (determined in Step 1.3):
+<lazy-load purpose="Defer reading large files until needed">
 
-**Case A — `"on-feature"` (most common):**
-You are already on the feature branch. No branch creation needed.
-```bash
-# Already on feature/<feature-name> — just confirm
-git symbolic-ref --short HEAD   # should match <featurePrefix>/<FEATURE_NAME>
+**Read NOW:** (1) `<projectRulesFile>` — project conventions, (2) `<architectureFile>` — system architecture, (3) `WORKFLOW-MODES.md` — mode reference. Skip any that are missing.
+
+**Check for design doc:** `ls .claude/progress/<feature-name>/*-design.md 2>/dev/null` — if exists, use as primary planning source.
+
+**DEFERRED (do NOT read yet):** `AGENT-SPAWN-TEMPLATES.md` (Phase 3), `QA-CHECKLIST-TEMPLATE.md` (Phase 4), `CONTEXT-BUDGET-GUIDE.md` (Phase 4).
+
+</lazy-load>
+
+### Step 2.2: Decompose into Tasks
+
+Each task MUST have: (1) one assigned agent role from `.claude/agents/`, (2) scoped files with no overlap between tasks, (3) specific acceptance criteria, (4) estimated complexity. If design doc exists, adopt its decomposition.
+
+### Step 2.3: Plan Waves
+
+Group tasks into dependency layers: Wave 1 (foundation: types, schemas), Wave 2 (logic: services), Wave 3 (integration: handlers, state), Wave 4 (presentation: components). Tasks within a wave run in parallel. Record `TOTAL_WAVES`.
+
+### Step 2.4: Emit Plan
+
+```
+/claude-workflow:track plan.created "<summary of N tasks in M waves>"
 ```
 
-**Case B — `"on-base"`:**
-Create the feature branch from the current base branch.
-```bash
-# Already on <baseBranch>
-git checkout -b <featurePrefix>/<feature-name>
-```
-
-**Case C — `"wrong-branch"`:**
-Switch to base branch first, then create the feature branch.
-```bash
-git checkout <baseBranch>
-git checkout -b <featurePrefix>/<feature-name>
-```
-
-### 2b. Initialize Progress & Tracking
-
-Create the feature's progress directory:
-
-```bash
-mkdir -p .claude/progress/<feature-name>
-```
-
-> **⚠️ ENFORCEMENT GATE WARNING:** `enforcement-gate.js` V1 blocks ALL direct Edit/Write/Bash writes to files ending in `events.jsonl` or `workflow-state.json`. You MUST use the `/claude-workflow:track` skill to emit events — never write these files directly. The unified tracking system (`tracking.js`) handles its own file creation internally via hooks.
-
-**Initialize progress tracking (via /track skill):**
-
-1. Emit `session.start` event via `/claude-workflow:track session.start` — this automatically creates `workflow-state.json` and `events.jsonl` (do NOT write either directly). This initializes the FSM in `plan` phase.
-2. The `current.md` file is rendered when `/claude-workflow:track` is called for significant events.
-
-**Initialize unified tracking (via tracking.js hooks):**
-
-The unified tracking system initializes automatically when tracking events are emitted. The `tracking-emitter.js` hook calls `initTracking()` from `tracking.js` which creates:
-- `.claude/tracking/<feature-name>/manifest.json`
-- `.claude/tracking/<feature-name>/events.jsonl`
-- `.claude/tracking/<feature-name>/agents/` directory
-
-Do NOT create these files manually — the hooks create them. If you need to force initialization before the first tracking event, create only the directory:
-
-```bash
-mkdir -p .claude/tracking/<feature-name>/agents
-```
-
-Then emit the first tracking event which triggers full initialization.
-
-The `events.jsonl` files are your **crash-recovery artifacts**. Events are appended via `/claude-workflow:track` commands at key checkpoints.
-
-### 2c. Plan & Decompose
-
-1. **Understand the feature** — Read requirements, design docs, and all referenced files
-2. **Decompose into tasks** — Each task must be:
-   - Assignable to exactly ONE specialist agent (from `.claude/agents/`)
-   - Scoped to specific files (no two agents editing the same file)
-   - Have clear acceptance criteria
-   - Have a filled QA checklist (from `QA-CHECKLIST-TEMPLATE.md`)
-3. **Map dependencies** — Identify which tasks block which
-4. **Plan waves** — Group tasks by dependency layer:
-   ```
-   Wave 1: Foundation    — types, schemas, database migrations (no blockers)
-   Wave 2: Logic         — services, business logic (depends on Wave 1)
-   Wave 3: Integration   — handlers, state, hooks (depends on Wave 2)
-   Wave 4: Presentation  — components, pages, routes (depends on Wave 3)
-   ```
-5. **Identify parallel opportunities** — Tasks within a wave that touch different files
-6. **Record total wave count** — Store `TOTAL_WAVES` (the number of waves in the plan). This value is passed with the `setup-complete` checkpoint in Phase 3 so the FSM knows the expected wave count and prevents phantom wave creation after the last real wave.
-
-**After completing Phase 2c, emit:** `/claude-workflow:track plan.created "<summary>"`
-This transitions the FSM from `plan` → `setup`.
-
-### Phase 2 Completion Checklist
-
-**Before proceeding to Phase 3, verify every item. Do NOT skip any.**
+### Step 2.5: Verification Checklist
 
 ```
 PHASE 2 VERIFICATION:
-[ ] 2a — On the correct feature branch (git symbolic-ref --short HEAD confirms)
-[ ] 2b — .claude/progress/<feature-name>/ directory exists
-[ ] 2b — session.start emitted via /track (NOT written directly — enforcement-gate blocks direct writes)
-[ ] 2b — workflow-state.json exists with phase: "plan" (created by /track, not by you)
-[ ] 2b — .claude/tracking/<feature-name>/ directory exists with agents/ subdirectory
-[ ] 2b — Unified tracking initialized (manifest.json exists — created by hooks, not direct write)
-[ ] 2c — Tasks decomposed: each has ONE agent, scoped files, acceptance criteria, QA checklist
-[ ] 2c — No file overlap between any two tasks
-[ ] 2c — Dependencies mapped, wave plan created
-[ ] 2c — TOTAL_WAVES count recorded
-[ ] 2c — plan.created event emitted via /track (workflow-state.json now shows phase: "setup")
+- [ ] Context files read (project rules, architecture, or design doc)
+- [ ] Tasks decomposed: each has ONE agent, scoped files, acceptance criteria
+- [ ] No file overlap between any two tasks
+- [ ] Dependencies mapped, waves planned, TOTAL_WAVES recorded
+- [ ] plan.created emitted
 ```
 
-If ANY item is unchecked → go back and complete it. The workflow-gate.js will BLOCK agent spawns if `plan.created` was not emitted.
+> RECOVERY: If decomposition is unclear, ask the user for clarification. Do NOT guess at task boundaries.
 
 ---
 
----
-
-**PHASE CHECK**: Plan complete? → workflow-gate.js blocks spawns until plan.created emitted.
+**PHASE CHECK**: Before proceeding, confirm all Phase 2 items checked. proof-gate.js blocks agent spawns until plan.created has been emitted.
 
 ---
 
-## Phase 3: Set Up Team & Tasks
+## Phase 3: TEAM SETUP
+
+### Step 3.1: Create Team
 
 ```
-1. TeamCreate — team_name: "<feature-name>"
-2. TaskCreate — one per task, with full description + acceptance criteria
-3. TaskUpdate — set addBlockedBy dependencies for each task
-4. Update progress file with task list + dependency graph
+TeamCreate: team_name = "<feature-name>"
 ```
 
-**After completing Phase 3 (team and tasks ready), emit:**
-`/claude-workflow:track checkpoint "setup-complete"`
-This transitions the FSM from `setup` → `wave`, sets `setupComplete=true`, and records `totalWaves`.
+### Step 3.2: Create Tasks
 
-> **Important:** The `setup-complete` checkpoint initializes wave tracking. If you planned 3 waves, the state records `totalWaves: 3` so the wave-complete handler knows when to stop. Without this, phantom waves can be created after the last real wave.
+For each task from the plan:
+```
+TaskCreate:
+  description = "<task name>: <summary>"
+  team_name = "<feature-name>"
+```
 
-### Phase 3 Completion Checklist
+Set dependencies via TaskUpdate with `addBlockedBy` for tasks that depend on prior waves.
 
-**Before proceeding to Phase 4, verify every item. Do NOT skip any.**
+### Step 3.3: Emit Setup Checkpoint
+
+```
+/claude-workflow:track checkpoint "setup-complete"
+```
+
+This sets `setupComplete=true` and records `totalWaves` in workflow state.
+
+### Step 3.4: Read Spawn Templates
+
+<lazy-load purpose="Defer template loading until agents are about to be spawned">
+
+Read NOW:
+- `prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md` — copy-paste templates for coding and QA agents
+- `prompts/implementing-features/CONTEXT-BUDGET-GUIDE.md` — estimate context per agent, split if over threshold
+
+</lazy-load>
+
+### Step 3.5: Verification Checklist
 
 ```
 PHASE 3 VERIFICATION:
-[ ] TeamCreate called with team_name: "<feature-name>"
-[ ] One TaskCreate per task — each has description + acceptance criteria
-[ ] TaskUpdate called for each task with correct addBlockedBy dependencies
-[ ] Progress file updated with task list + dependency graph
-[ ] setup-complete checkpoint emitted (workflow-state.json now shows phase: "wave", setupComplete: true)
-[ ] totalWaves recorded in workflow state
+- [ ] TeamCreate called with correct team_name
+- [ ] One TaskCreate per task with description and acceptance criteria
+- [ ] Dependencies set via TaskUpdate
+- [ ] setup-complete checkpoint emitted (workflow-state shows setupComplete: true)
+- [ ] AGENT-SPAWN-TEMPLATES.md read and templates ready
 ```
 
-If ANY item is unchecked → go back and complete it. The workflow-gate.js will BLOCK all agent spawns if `setupComplete` is not true.
+> RECOVERY: If TeamCreate fails, check if a stale team exists from a prior session. Note it and retry — TeamCreate will overwrite stale teams.
 
 ---
 
----
-
-**PHASE CHECK**: Setup complete? → workflow-gate.js blocks agent spawns until setupComplete = true.
+**PHASE CHECK**: Before proceeding, confirm all Phase 3 items checked. proof-gate.js blocks agent spawns until setupComplete is true.
 
 ---
 
-## Phase 4: Execute Waves (Core Loop)
+## Phase 4: EXECUTE WAVES
 
-Read `AGENT-SPAWN-TEMPLATES.md` NOW (deferred until needed — this reduces initial context consumption).
+> MANDATORY: This is the core execution loop. For EACH wave, execute steps 4a through 4g in order. Do NOT skip the QA step. Do NOT merge without QA passing. Do NOT write application code yourself.
 
-For each wave, in dependency order:
+For each wave (1 to TOTAL_WAVES):
 
-### 4a. Create Workbranches
+### Step 4a: Create Worktrees
 
+For each task in this wave:
 ```bash
-# Create worktree with workbranch from feature branch HEAD
 git checkout <featurePrefix>/<feature-name>
 git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<feature-name>/<task-slug>
 ```
+If `useWorktrees` is false, create branches instead: `git checkout -b <workPrefix>/<feature-name>/<task-slug>` then switch back to feature branch.
 
-Create one worktree per task in this wave.
+### Step 4b: Spawn Coding Agents
 
-### 4b. Spawn Agent Pairs (Coding + QA)
+> MANDATORY: Use the FULL template from AGENT-SPAWN-TEMPLATES.md. Do NOT abbreviate. Every coding agent MUST receive: task description, file scope, acceptance criteria, pre-digested rules, worktree path, and communication instructions.
 
-For each task in this wave, spawn **both** a coding agent and its paired QA agent together. They communicate directly with each other for the code↔QA loop. The Team Leader only receives the final result.
-
-Use the templates from `AGENT-SPAWN-TEMPLATES.md`. For each task, spawn TWO agents:
-
-**Agent 1 — Coding Agent** (`coder-task-<N>`):
-- Task description + acceptance criteria
-- File scope (what to create/modify)
-- Pre-digested rules (5-10 rules from project rules + architecture that apply to this task)
-- Filled QA checklist (use `QA-CHECKLIST-AUTO-FILL-RULES.md` to pre-select sections by role)
-- Context budget note (see `CONTEXT-BUDGET-GUIDE.md` — estimate before spawning, split if over threshold)
-- Worktree path: `<worktreeDir>/<feature-name>/<task-slug>` — agent must work from this directory
-- `QA_AGENT_NAME`: `"qa-task-<N>"` — the coding agent sends completion reports HERE, not to team leader
-
-**Agent 2 — QA Agent** (`qa-task-<N>`):
-- Same task context (description, acceptance criteria, files to review)
-- Same worktree path (QA reviews the same worktree the coder works in)
-- `CODING_AGENT_NAME`: `"coder-task-<N>"` — the QA agent sends fix requests HERE, not to team leader
-- The coding agent's pre-filled QA checklist
-
-**Critical — Agent Communication Instructions:**
+For each task, spawn ONE coding agent with: `description: "<summary>"`, `subagent_type: general-purpose`, `model: "sonnet"`, `team_name: "<feature-name>"`, `name: "coder-task-<N>"`, `mode: bypassPermissions`, `run_in_background: true`.
 
 Every coding agent prompt MUST include:
 ```
 COMMUNICATION RULES:
-- You are a member of team "<feature-name>".
-- Your paired QA agent is "<qa-task-N>".
-- Your team leader's name is "<TEAM_LEADER_NAME>".
-- When you complete your work, send a completion report to your QA agent:
-    SendMessage(to: "qa-task-<N>", message: "<your report>", summary: "Task <N> ready for QA")
-- If QA sends you fix requests, fix the issues and message QA back — NOT the team leader.
-- Only contact the Team Leader for: blocking issues, context exhaustion, or escalation.
-- Do NOT attempt to spawn any agents — you cannot.
+- You are on team "<feature-name>". Your team leader is "<TEAM_LEADER_NAME>".
+- On completion: SendMessage(to: "<TEAM_LEADER_NAME>", message: "Task #<N> complete. Files: <list>. Self-review passed.", summary: "Task #<N> complete")
+- On blocker: message Team Leader immediately.
+- Do NOT communicate with other coding agents. Do NOT spawn agents. Do NOT emit tracking events.
+- Wait for shutdown_request when done.
 ```
 
-Every QA agent prompt MUST include:
-```
-COMMUNICATION RULES:
-- You are a QA reviewer on team "<feature-name>".
-- Your paired coding agent is "<coder-task-N>".
-- Your team leader's name is "<TEAM_LEADER_NAME>".
-- On QA FAIL: message the coding agent directly with fix instructions.
-- On QA PASS: message the Team Leader — this is the merge signal.
-- On QA ESCALATION (3 rounds failed): message the Team Leader.
-- Do NOT attempt to spawn any agents — you cannot.
-```
+Save each `task_id` for later use with `TaskOutput(task_id=<id>)`.
 
-**What agents must NOT be told:**
-- ~~"spawn QA when done"~~ — they CANNOT spawn teammates.
-- ~~"contact peer coding agents"~~ — they talk to their paired QA agent and the team leader only.
-- ~~"report completion to team leader"~~ — coding agents report to their QA agent, not the team leader.
+### Step 4c: WAIT for Coding Agents
 
-**Model routing** (see `CONTEXT-BUDGET-GUIDE.md` for cost details):
-- Coding agents: `model: "sonnet"` — focused file-scope work
-- QA agents: `model: "haiku"` — read-only review work
-- Guardian: `model: "sonnet"` — cross-module analysis
+**DO NOT POLL WORKTREES.** Wait for coding agents to send completion messages via SendMessage. The agents message you when done.
 
-**Background execution**: Spawn BOTH agents with `run_in_background: true` and `team_name: "<feature-name>"`. Save both task IDs. The QA agent starts loading rules and writing its review plan while the coding agent works — this parallelizes startup.
+When a coding agent messages completion:
+1. Note which task completed and the files changed
+2. Proceed to Step 4d for that task
 
-### 4c. Monitor Agent Pairs (Team Leader Responsibility)
+> RECOVERY: If an agent goes idle without messaging, send it a nudge: `SendMessage(to: "coder-task-<N>", message: "Status check — are you done with Task #<N>?")`. If no response after nudge, check TaskOutput for errors. If agent crashed, spawn a replacement on the same worktree.
 
-> **⚠️ The code↔QA loop runs BETWEEN the agent pair — you are NOT in the middle.**
-> The coding agent messages the QA agent directly. The QA agent messages the coding agent
-> directly on FAIL. You only receive the final result: QA PASS or QA ESCALATION.
+### Step 4d: Spawn QA Agent (SEQUENTIAL — only after coder finishes)
 
-**Communication flow:**
+> MANDATORY: You MUST spawn a real QA agent. proof-gate.js checks proof-ledger.jsonl for a qa-* agent spawn before allowing qa.passed. Skipping QA WILL be blocked.
+
+Spawn QA with: `description: "QA review Task #<N>"`, `model: "haiku"`, `team_name: "<feature-name>"`, `name: "qa-task-<N>"`, `mode: bypassPermissions`, `run_in_background: true`.
+
+QA prompt MUST include: task description, acceptance criteria, files to review (from coder report), worktree path, pre-filled QA checklist from QA-CHECKLIST-TEMPLATE.md.
 
 ```
-Coding Agent              QA Agent                    Team Leader (you)
-     |                        |                              |
-     |  (both spawned)        |  (both spawned)              |
-     |  (works on code)       |  (loads rules, writes plan)  |
-     |                        |                              |
-     |-- "done, review" ----->|                              |
-     |                        |-- reviews code               |
-     |                        |                              |
-     |              --- if QA FAIL (round < 3) ---           |
-     |<-- "fix these" --------|                              |
-     |-- fixes code           |                              |
-     |-- "done, re-review" -->|                              |
-     |                        |-- re-reviews                 |
-     |              ... loop until PASS or round 3 ...       |
-     |                        |                              |
-     |              --- if QA PASS ---                       |
-     |                        |-- "QA PASS Task #N" -------->|
-     |                        |                              |-- /track qa.passed
-     |                        |                              |-- merge
-     |                        |                              |-- shutdown both agents
-     |                        |                              |
-     |              --- if QA ESCALATION (3 rounds) ---      |
-     |                        |-- "ESCALATION Task #N" ----->|
-     |                        |                              |-- inform user
+QA COMMUNICATION RULES:
+- You are a QA reviewer on team "<feature-name>". Leader: "<TEAM_LEADER_NAME>".
+- On QA PASS: message Team Leader "QA PASS Task #<N>" with full report.
+- On QA FAIL: message Team Leader "QA FAIL Task #<N>" with issue list.
+- Do NOT message the coding agent directly. Do NOT spawn agents.
 ```
 
-**Step-by-step:**
+### Step 4e: Handle QA Verdict
 
-1. **Wait for QA agent results.** The coding↔QA loop is autonomous. You do NOT relay messages between them. The QA agent will message you when:
-   - **QA PASS**: The task is ready to merge.
-   - **QA ESCALATION**: 3 rounds failed, needs human intervention.
+Wait for the QA agent to message you with PASS or FAIL.
 
-   Do NOT poll worktree directories — `team-leader-gate.js` blocks worktree reads.
+**On QA PASS — execute ALL 5 steps in order:**
 
-2. **On QA PASS (QA agent messages you):**
-   - **Emit the tracking event:** `/claude-workflow:track qa.passed` with `task` and `branch` data. **This is REQUIRED** — the `team-leader-gate.js` merge gate checks `events.jsonl` for a `qa.passed` event before allowing any merge. Without this event, the merge will be blocked with: _"Branch does not have a QA pass."_
-   - Proceed to merge (Phase 4d).
-   - After merge, **shut down BOTH agents** for this task:
-     ```
-     SendMessage(to: "coder-task-<N>", message: { type: "shutdown_request", reason: "Task merged" })
-     SendMessage(to: "qa-task-<N>", message: { type: "shutdown_request", reason: "Task merged" })
-     ```
+1. Emit: `/claude-workflow:track qa.passed "Task #<N>" --task <N> --branch <workPrefix>/<feature-name>/<task-slug>` (REQUIRED — merge gate checks for this)
+2. Merge:
+   ```bash
+   git -C <worktreeDir>/<feature-name>/<task-slug> rebase <featurePrefix>/<feature-name>
+   git checkout <featurePrefix>/<feature-name>
+   git merge --no-ff <workPrefix>/<feature-name>/<task-slug> -m "Merge <task-slug>: <summary>"
+   ```
+3. Emit: `/claude-workflow:track branch.merged "<task-slug> to <featurePrefix>/<feature-name>"`
+4. Cleanup: `git worktree remove <path>` then `git branch -d <workPrefix>/<feature-name>/<task-slug>`
+5. Shut down both: `SendMessage(to: "coder-task-<N>", message: {type: "shutdown_request"})` and same for qa-task-N
 
-3. **On QA ESCALATION (QA agent messages you after 3 failed rounds):**
-   - **Emit the tracking event:** `/claude-workflow:track qa.failed` with the failure details.
-   - Inform the user with the full QA report history.
-   - Ask whether to: (a) manually fix and retry, (b) skip QA for this task, (c) abort the feature.
+**On QA FAIL (round < 3):**
+1. Forward issues to coder: `SendMessage(to: "coder-task-<N>", message: "QA FAIL round <R>. Fix: <issues>")`
+2. Wait for coder to message back with fixes.
+3. Spawn NEW QA agent: `name: "qa-task-<N>-r<round>"` (same template as 4d). Shut down previous QA.
+4. Wait for new verdict. Repeat until PASS or round 3.
 
-### 4d. Merge Completed Workbranches
+**On QA FAIL (round 3 — escalation):**
+1. Emit: `/claude-workflow:track qa.failed "Task #<N> failed 3 rounds"`
+2. Inform user with full failure history. Ask: (a) fix and retry, (b) skip QA, (c) abort.
 
-For each workbranch with QA PASS **and a `qa.passed` event in events.jsonl** (one at a time, sequentially):
+> RECOVERY: If QA agent crashes or goes unresponsive, spawn a replacement QA agent on the same worktree. If coder agent crashes mid-fix, spawn a replacement coder on the same worktree with the fix instructions.
 
-```bash
-# Rebase workbranch on latest feature HEAD (from worktree)
-git -C <worktreeDir>/<feature-name>/<task-slug> rebase <featurePrefix>/<feature-name>
+### Step 4f: Wave Fence
 
-# Merge to feature branch
-git checkout <featurePrefix>/<feature-name>
-git merge --no-ff <workPrefix>/<feature-name>/<task-slug> \
-  -m "Merge <workPrefix>/<feature-name>/<task-slug>: <summary>"
+After ALL tasks in the current wave are merged:
 
-# Emit merge tracking event — REQUIRED for merge gate bookkeeping
-/claude-workflow:track branch.merged "Merged <task-slug> to <featurePrefix>/<feature-name>"
+- **Strict mode**: Run full verification (lint, typecheck, test, build) on the feature branch
+- **Standard mode**: Run lint only
+- **Fast mode**: Skip fence
 
-# Remove worktree
-git worktree remove <worktreeDir>/<feature-name>/<task-slug>
-
-# Delete workbranch
-git branch -d <workPrefix>/<feature-name>/<task-slug>
+If fence passes:
+```
+/claude-workflow:track checkpoint "wave-<N>-complete"
 ```
 
-> **Gate dependency:** `team-leader-gate.js` checks that a `qa.passed` event exists for the branch being merged AND that no `branch.merged` event has already been recorded for it. If you skip the `/track qa.passed` in step 4c, this merge WILL be blocked.
+Then create next wave's worktrees and spawn next wave's agents.
 
-Update progress file: branch status, merge log, task status.
+When ALL waves complete:
+```
+/claude-workflow:track checkpoint "all-waves-complete"
+```
 
-### 4e. Wave Fence & Next Wave
-
-After all workbranches in the current wave are merged, run the wave fence check (see `WAVE-FENCE-PROTOCOL.md`):
-- **Strict mode**: full verify — lint, typecheck, test, build must all pass
-- **Standard mode**: quick verify — lint only
-- **Fast mode**: skip fence, proceed immediately
-
-If the fence check passes:
-- Emit: `/claude-workflow:track checkpoint "wave-N-complete"` (where N is the completed wave number)
-- Create next wave's workbranches from updated `feature/` HEAD
-- Spawn next wave's agents
-
-When ALL waves are complete:
-- Emit: `/claude-workflow:track checkpoint "all-waves-complete"`
-  This transitions the FSM from `wave` → `guardian`.
-
-### Phase 4 Completion Checklist (per wave)
-
-**After EACH wave, verify every item before starting the next wave. Do NOT skip any.**
+### Step 4g: Verification Checklist (per wave)
 
 ```
 WAVE <N> VERIFICATION:
-[ ] 4a — Worktree created for each task in this wave (git worktree list confirms)
-[ ] 4b — For EACH task, BOTH agents spawned as a pair:
-    [ ] Coding agent (coder-task-<N>) spawned with: team_name, QA_AGENT_NAME, worktree path, file scope
-    [ ] QA agent (qa-task-<N>) spawned with: team_name, CODING_AGENT_NAME, worktree path
-    [ ] Coding agent prompt sends completion to QA agent (NOT team leader)
-    [ ] QA agent prompt sends FAIL to coding agent, PASS to team leader
-    [ ] Neither agent prompt contains "spawn QA" or "report to team leader on completion"
-    [ ] Both agent task_ids saved
-[ ] 4c — For EACH task, QA agent sent final result to team leader:
-    [ ] If QA PASS: /track qa.passed emitted with task + branch data
-    [ ] If QA ESCALATION: user informed, decision made
-[ ] 4d — For EACH QA-passed task:
-    [ ] Rebase completed without conflicts
-    [ ] Merge completed with --no-ff
-    [ ] /track branch.merged emitted
-    [ ] Worktree removed
-    [ ] Workbranch deleted
-[ ] 4e — Wave fence check passed (strict: full verify, standard: lint, fast: skip)
-[ ] 4e — /track checkpoint "wave-<N>-complete" emitted
+- [ ] Worktree created for each task
+- [ ] Coding agent spawned for each task (with full template, NOT abbreviated)
+- [ ] Coding agent messaged completion (DO NOT proceed without this)
+- [ ] QA agent spawned for each completed task (proof-gate requires this)
+- [ ] QA verdict received: PASS or FAIL handled per protocol
+- [ ] For each PASS: qa.passed emitted, branch merged, branch.merged emitted, worktree cleaned, agents shut down
+- [ ] Wave fence passed (mode-appropriate check)
+- [ ] Wave checkpoint emitted
 ```
 
-**After ALL waves are complete:**
+**After ALL waves:**
 
 ```
 PHASE 4 FINAL VERIFICATION:
-[ ] All waves completed and checkpointed
-[ ] All worktrees removed (git worktree list shows none under <worktreeDir>/<feature-name>/)
-[ ] All workbranches deleted (git branch --list "<workPrefix>/<feature-name>/*" returns empty)
-[ ] /track checkpoint "all-waves-complete" emitted (workflow-state.json shows phase: "guardian")
+- [ ] All waves completed and checkpointed
+- [ ] All worktrees removed (git worktree list confirms)
+- [ ] All workbranches deleted (git branch --list "<workPrefix>/<feature-name>/*" returns empty)
+- [ ] all-waves-complete checkpoint emitted
 ```
 
-If ANY item is unchecked → go back and complete it. The workflow-gate.js will BLOCK Guardian spawn if phase is not `guardian`.
+> RECOVERY: If a merge has conflicts, resolve them on the feature branch. If wave fence fails, spawn a coding agent to fix the issues before proceeding to the next wave.
 
 ---
 
----
-
-**PHASE CHECK**: All waves complete? → workflow-gate.js blocks Guardian spawn until phase = guardian.
+**PHASE CHECK**: Before proceeding, confirm all Phase 4 items checked. proof-gate.js blocks Guardian spawn until all-waves-complete has been emitted.
 
 ---
 
-## Phase 5: Codebase Guardian Check
+## Phase 5: GUARDIAN & FINALIZE
 
-When ALL tasks have QA PASS and all workbranches are merged:
+### Step 5a: Emit Pre-Guardian Checkpoint
 
-1. Spawn Codebase Guardian on `feature/<feature-name>` (see `AGENT-SPAWN-TEMPLATES.md`)
-   - Guardian runs on the main repo (NOT in a worktree) on the feature branch
-   - Include `team_name: "<feature-name>"` so Guardian joins the team
-2. Guardian runs 7 structural integrity checks
-3. **On PASS:**
-   - **Emit:** `/claude-workflow:track checkpoint "guardian-passed"`
-   - This sets `state.guardianPassed = true` — **REQUIRED** to unblock Phase 7 (shutdown, TeamDelete)
-   - Proceed to Phase 6
-4. **On FAIL:** fix issues (Guardian may fix trivial ones), re-run Guardian. Do NOT emit `guardian-passed` until Guardian passes.
+```
+/claude-workflow:track checkpoint "pre-guardian"
+```
 
-> **⚠️ BRANCH GUARD NOTE:** If the Guardian needs to commit fixes on the feature branch, `safety-guard.js` branch guard will **warn** (enforce: `warn`) or **block** (enforce: `block`) the commit. If enforce is `block`, the Guardian prompt should instruct it to note the needed fixes and report back rather than committing directly — the team leader can then spawn a coding agent on a workbranch to apply the fix.
+### Step 5b: Spawn Guardian Agent
 
-> **Gate dependency:** Without the `guardian-passed` checkpoint:
-> - `team-leader-gate.js` blocks ALL `SendMessage` shutdown requests: _"Cannot shut down agents before Guardian passes."_
-> - `team-leader-gate.js` blocks ALL `TaskStop` calls: _"Cannot stop background agents before Guardian passes."_
-> - `enforcement-gate.js` blocks `TeamDelete`: _"TeamDelete blocked until Guardian passes."_
-> The workflow is **permanently stuck** if you skip this event.
+> MANDATORY: proof-gate.js checks proof-ledger.jsonl for a guardian agent spawn before allowing guardian-passed. Skipping Guardian WILL be blocked (except fast mode).
 
-### Phase 5 Completion Checklist
+**Fast mode:** Skip Guardian. Emit guardian-passed directly (proof-gate allows this).
 
-**Before proceeding to Phase 6, verify every item. Do NOT skip any.**
+**Strict/standard:** Spawn with `description: "Codebase Guardian"`, `model: "sonnet"`, `team_name: "<feature-name>"`, `name: "guardian"`, `mode: bypassPermissions`, `run_in_background: true`. Guardian runs on the feature branch (NOT in a worktree). Prompt includes: all files changed, project rules, architecture, 7 structural checks, communication rules (message leader with PASS/FAIL).
+
+### Step 5c: Handle Guardian Verdict
+
+**On PASS:**
+1. Emit: `/claude-workflow:track checkpoint "guardian-passed"` (sets guardianPassed=true, unblocks shutdown)
+2. Run final verification on feature branch (lint, typecheck, test, build)
+3. If PR requested: `git push -u origin <featurePrefix>/<feature-name>` then `gh pr create`
+
+**On FAIL:**
+1. Spawn coding agent on new workbranch to fix findings, merge fix, spawn Guardian again (`guardian-r2`). Repeat until PASS.
+
+> RECOVERY: If Guardian crashes, spawn replacement. If unfixable, escalate to user.
+
+### Step 5d: Cleanup
+
+> MANDATORY: Shut down agents BEFORE emitting session.end. Gates relax after session.end.
+
+1. Shut down all agents: `SendMessage(to: "<agent>", message: {type: "shutdown_request", reason: "Feature complete"})` — wait for each to acknowledge.
+2. Emit: `/claude-workflow:track session.end "Feature complete"`
+3. Clean up stragglers: `git worktree list` then `git worktree remove` for any remaining.
+4. `TeamDelete` (unblocked because guardianPassed=true).
+5. Report to user: summary, files changed, branch name.
+
+### Step 5e: Verification Checklist
 
 ```
 PHASE 5 VERIFICATION:
-[ ] Guardian spawned on feature branch (NOT in a worktree) with team_name
-[ ] Guardian completed all 7 structural integrity checks
-[ ] Guardian result is PASS (if FAIL: issues fixed and Guardian re-run until PASS)
-[ ] /track checkpoint "guardian-passed" emitted (workflow-state.json shows guardianPassed: true)
+- [ ] Guardian spawned (strict/standard) or skipped (fast)
+- [ ] Guardian PASS received (or fast mode skip)
+- [ ] guardian-passed emitted (guardianPassed = true in workflow state)
+- [ ] Final verification suite passed on feature branch
+- [ ] All agents shut down (each acknowledged shutdown_request)
+- [ ] session.end emitted AFTER all agents stopped
+- [ ] No remaining worktrees or workbranches
+- [ ] TeamDelete completed
+- [ ] User informed with summary
+- [ ] PR created (if requested)
 ```
 
-If `guardianPassed` is not true → team-leader-gate.js will block ALL shutdown requests, TaskStop calls, and TeamDelete. You CANNOT proceed to Phase 7 cleanup.
+> RECOVERY: If TeamDelete is blocked, check that guardian-passed was emitted. If agents refuse shutdown, check their status with TaskOutput.
 
 ---
 
-## Phase 6: Final Verification
-
-Run full verification on the merged feature branch:
+## Quick Reference — Branching
 
 ```bash
-git checkout <featurePrefix>/<feature-name>
+# Feature branch (from base)
+git checkout <baseBranch> && git checkout -b <featurePrefix>/<name>
 
-# Run all project checks (adapt to actual toolchain)
-npm run lint
-npm run typecheck    # or: npx tsc --noEmit
-npm run test
-npm run build
-```
-
-All must pass. If any fail, you need to fix the issues — but be aware of enforcement-gate V7:
-
-> **⚠️ ENFORCEMENT GATE V7:** The Team Leader CANNOT directly edit app code files while the workflow is active (phase is not `done`) and you're on a feature branch (not a work/ branch). If verification fails and fixes are needed:
-> 1. **Preferred:** Spawn a coding agent on a new workbranch to make the fix, QA it, and merge — same as Phase 4.
-> 2. **Quick fix:** If the fix is trivial (e.g., import order, lint auto-fix), the Guardian may have already addressed it. Re-run verification first.
-> 3. **Override:** If the user explicitly requests it, they can temporarily set `guards.enforcementGate: false` in `.claude/workflow.json` to allow direct edits, then re-enable it after.
-
-### Phase 6 Completion Checklist
-
-**Before proceeding to Phase 7, verify every item. Do NOT skip any.**
-
-```
-PHASE 6 VERIFICATION:
-[ ] On feature branch (git symbolic-ref --short HEAD confirms <featurePrefix>/<feature-name>)
-[ ] Lint passes
-[ ] Typecheck passes (if applicable)
-[ ] Tests pass
-[ ] Build passes (if applicable)
-```
-
-If ANY check fails → fix the issue on the feature branch and re-run. Do NOT proceed to cleanup with a broken build.
-
----
-
----
-
-**PHASE CHECK**: Guardian passed? → team-leader-gate.js blocks shutdown until guardianPassed = true.
-
----
-
-## Phase 7: Completion & Cleanup
-
-> **⚠️ ORDER MATTERS.** Shut down agents BEFORE emitting `session.end`. Once `session.end` is emitted, the FSM transitions to `done` and `enforcement-gate.js` stops blocking app code writes — any still-running agents could write files after the session is "ended."
-
-1. **Shut down all agents** — Send shutdown requests to every agent via `SendMessage`:
-   ```
-   SendMessage(to: "<agent-name>", message: { type: "shutdown_request", reason: "Feature complete" })
-   ```
-   Wait for each agent to acknowledge the shutdown (approve response). If an agent rejects, investigate why before forcing.
-
-2. **Confirm all agents stopped** — Verify no agents are still running. Check `TaskOutput` for any background tasks that haven't completed.
-
-3. **Emit session.end** — `/claude-workflow:track session.end "Feature complete"`
-   This transitions the FSM to `done`.
-
-4. **Update design doc** — status: IMPLEMENTED (if applicable)
-
-5. **Clean up worktrees** — Remove any remaining worktrees:
-   ```bash
-   git worktree list   # identify any under <worktreeDir>/<feature-name>/
-   git worktree remove <path>  # for each remaining one
-   ```
-
-6. **Delete the team** — `TeamDelete`
-   > This is now unblocked because `guardianPassed = true` (set in Phase 5).
-
-7. **Report to user** — summary of what was built, files changed, branch name
-
-8. **Create PR** — if requested:
-   ```bash
-   git push -u origin <featurePrefix>/<feature-name>
-   gh pr create --title "<feature title>" --body "<summary>"
-   ```
-   > **⚠️ BRANCH GUARD NOTE:** `safety-guard.js` will **warn** (enforce: `warn`) or **block** (enforce: `block`) `git push` on a feature branch. If enforce is `block`, you must either:
-   > - Temporarily set `branching.enforce: "warn"` in `.claude/workflow.json` for the push
-   > - Or ask the user to run `git push` manually
-
-### Phase 7 Completion Checklist
-
-**Verify the workflow completed cleanly. Do NOT skip any.**
-
-```
-PHASE 7 VERIFICATION:
-[ ] All agents shut down — each received shutdown_request and sent approve response
-[ ] No background tasks still running (TaskOutput confirms all completed)
-[ ] session.end emitted AFTER all agents stopped (workflow-state.json shows phase: "done")
-[ ] Design doc updated to IMPLEMENTED (if applicable)
-[ ] No remaining worktrees (git worktree list shows only main working tree)
-[ ] No remaining workbranches (git branch --list "<workPrefix>/<feature-name>/*" returns empty)
-[ ] TeamDelete completed successfully
-[ ] User informed with summary: files changed, branch name, what was built
-[ ] PR created (if requested by user)
-```
-
----
-
-## Quick Reference — Agent Roles
-
-| Agent | Typical File Scope | When to Use |
-|-------|-------------------|-------------|
-| Schema/type designer | Types, schemas, contracts | New data models, API contracts |
-| Service engineer | Business logic, domain services | Backend functionality |
-| API/handler engineer | Routes, controllers, handlers | API endpoints, request handling |
-| State engineer | Stores, state management | Client state |
-| Hook/data engineer | Data fetching, event hooks | Data layer for UI |
-| Component engineer | UI components, pages | Frontend features |
-| Router engineer | Routes, navigation, layouts | Page routing |
-| Database engineer | Migrations, queries, schemas | Database changes |
-| QA reviewer | READ ONLY (+docs on PASS) | Per-task quality gate |
-| Codebase Guardian | Feature branch (structural) | Final integrity check |
-
-See `.claude/agents/` for all specialist definitions.
-
----
-
-## Quick Reference — Branching Commands
-
-```bash
-# Feature branch (once, from configured base)
-git checkout <base-branch> && git checkout -b <featurePrefix>/<name>
-
-# Worktree per task (from feature branch HEAD)
+# Worktree per task (from feature HEAD)
 git checkout <featurePrefix>/<name>
 git worktree add <worktreeDir>/<name>/<task> -b <workPrefix>/<name>/<task>
 
-# Pre-merge rebase (from worktree)
+# Pre-merge rebase
 git -C <worktreeDir>/<name>/<task> rebase <featurePrefix>/<name>
 
 # Merge workbranch
-git checkout <featurePrefix>/<name> && git merge --no-ff <workPrefix>/<name>/<task> -m "Merge ..."
+git checkout <featurePrefix>/<name>
+git merge --no-ff <workPrefix>/<name>/<task> -m "Merge <task>: <summary>"
 
 # Cleanup
 git worktree remove <worktreeDir>/<name>/<task>
 git branch -d <workPrefix>/<name>/<task>
-
-# List worktrees
-git worktree list
-
-# List workbranches
-git branch --list "<workPrefix>/<name>/*"
-
-# PR
-git push -u origin <featurePrefix>/<name>
-gh pr create --title "..." --body "..."
 ```
+
+## Quick Reference — Agent Roles
+
+| Agent | File Scope | When |
+|-------|-----------|------|
+| Schema/type designer | Types, schemas, contracts | New data models |
+| Service engineer | Business logic, services | Backend work |
+| API/handler engineer | Routes, controllers | Endpoints |
+| Component engineer | UI components, pages | Frontend |
+| Database engineer | Migrations, queries | DB changes |
+| QA reviewer | READ ONLY (+docs on PASS) | Per-task review |
+| Codebase Guardian | Feature branch (structural) | Final check |
+
+See `.claude/agents/` for all specialist definitions.
+
+## Quick Reference — Proof Gate Rules
+
+| You Try To... | proof-gate.js Requires... | If Missing... |
+|---------------|--------------------------|---------------|
+| Spawn agent | session.start emitted, setupComplete | Finish Phase 1 and Phase 3 first |
+| Emit qa.passed | QA agent spawned in proof-ledger | Spawn a QA agent first |
+| Merge work branch | qa.passed for this branch | Run QA first |
+| Emit guardian-passed | Guardian spawned in proof-ledger | Spawn Guardian first |
+| Shut down agents | guardianPassed = true | Run Guardian first |
+| TeamDelete | guardianPassed = true | Run Guardian first |
+| Edit app code (as leader) | BLOCKED during active workflow | Spawn a coding agent instead |
