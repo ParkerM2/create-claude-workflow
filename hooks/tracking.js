@@ -63,7 +63,9 @@ function isProcessAlive(pid) {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
+  } catch (e) {
+    // EPERM means process exists but we lack permission — it's alive
+    if (e.code === 'EPERM') return true;
     return false;
   }
 }

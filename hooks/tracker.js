@@ -198,7 +198,9 @@ function isProcessAlive(pid) {
   try {
     process.kill(pid, 0); // signal 0 = existence check
     return true;
-  } catch {
+  } catch (e) {
+    // EPERM means process exists but we lack permission — it's alive
+    if (e.code === 'EPERM') return true;
     return false;
   }
 }
@@ -289,7 +291,10 @@ function updateWorkflowStateFromEvent(feature, event) {
               const current = getWorkflowState(feature) || {};
               const waves = Object.assign({}, current.waves || {});
               waves[String(completedWave)] = 'complete';
-              waves[String(nextWave)] = 'active';
+              const totalWaves = current.totalWaves || 0;
+              if (totalWaves === 0 || completedWave < totalWaves) {
+                waves[String(nextWave)] = 'active';
+              }
               updateWorkflowState(feature, {
                 currentWave: nextWave,
                 waves: waves
@@ -371,7 +376,7 @@ function emitEvent(type, data, options) {
       return;
     }
 
-    const progressDir = getProgressDir();
+    const progressDir = path.join(getRepoRoot(), getProgressDir());
     const featureDir = path.join(progressDir, feature);
 
     // Ensure feature directory exists
@@ -458,8 +463,8 @@ function renderCurrentMd(featureDir) {
     const featureName = events[0].feature || path.basename(featureDir);
 
     // Derive task states from events
-    const tasks = new Map(); // taskId -> { name, status, agent }
-    let overallStatus = 'in-progress';
+    const tasks = new Map(); // taskId -> { name, status, agent, qaStatus, merged }
+    let sessionEnded = false;
     let lastCheckpoint = null;
     const blockers = [];
 
@@ -473,14 +478,16 @@ function renderCurrentMd(featureDir) {
               tasks.set(t.id || t.name, {
                 name: t.name || t.id,
                 status: 'pending',
-                agent: t.agent || null
+                agent: t.agent || null,
+                qaStatus: null,
+                merged: false
               });
             }
           }
           break;
         case 'task.started':
           if (d.task) {
-            const existing = tasks.get(d.task) || { name: d.task, agent: null };
+            const existing = tasks.get(d.task) || { name: d.task, agent: null, qaStatus: null, merged: false };
             existing.status = 'in-progress';
             if (d.agent) existing.agent = d.agent;
             tasks.set(d.task, existing);
@@ -488,19 +495,31 @@ function renderCurrentMd(featureDir) {
           break;
         case 'task.completed':
           if (d.task) {
-            const existing = tasks.get(d.task) || { name: d.task, agent: null };
+            const existing = tasks.get(d.task) || { name: d.task, agent: null, qaStatus: null, merged: false };
             existing.status = 'done';
             tasks.set(d.task, existing);
           }
           break;
         case 'qa.passed':
-          overallStatus = 'qa-passed';
+          if (d.task) {
+            const existing = tasks.get(d.task) || { name: d.task, status: 'done', agent: null, qaStatus: null, merged: false };
+            existing.qaStatus = 'passed';
+            tasks.set(d.task, existing);
+          }
           break;
         case 'qa.failed':
-          overallStatus = 'qa-failed';
+          if (d.task) {
+            const existing = tasks.get(d.task) || { name: d.task, status: 'done', agent: null, qaStatus: null, merged: false };
+            existing.qaStatus = 'failed';
+            tasks.set(d.task, existing);
+          }
           break;
         case 'branch.merged':
-          overallStatus = 'merged';
+          if (d.task) {
+            const existing = tasks.get(d.task) || { name: d.task, status: 'done', agent: null, qaStatus: null, merged: false };
+            existing.merged = true;
+            tasks.set(d.task, existing);
+          }
           break;
         case 'checkpoint':
           lastCheckpoint = { ts: evt.ts, message: d.message || '' };
@@ -509,11 +528,30 @@ function renderCurrentMd(featureDir) {
           blockers.push({ ts: evt.ts, message: d.message || 'Unknown blocker' });
           break;
         case 'session.end':
-          // Latest session ended — keep status as-is
+          sessionEnded = true;
           break;
         default:
           break;
       }
+    }
+
+    // Derive aggregate overallStatus from per-task states
+    let overallStatus;
+    const taskList = Array.from(tasks.values());
+    const mergedCount = taskList.filter(t => t.merged).length;
+    const totalCount = taskList.length;
+    const qaFailedCount = taskList.filter(t => t.qaStatus === 'failed').length;
+
+    if (sessionEnded && totalCount > 0 && mergedCount === totalCount) {
+      overallStatus = 'complete';
+    } else if (qaFailedCount > 0) {
+      overallStatus = `in-progress (${mergedCount}/${totalCount} tasks merged, ${qaFailedCount} qa-failed)`;
+    } else if (totalCount > 0 && mergedCount === totalCount) {
+      overallStatus = 'complete';
+    } else if (totalCount > 0) {
+      overallStatus = `in-progress (${mergedCount}/${totalCount} tasks merged)`;
+    } else {
+      overallStatus = 'in-progress';
     }
 
     // Build markdown

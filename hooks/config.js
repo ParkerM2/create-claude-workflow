@@ -324,7 +324,12 @@ function deepMerge(target, source) {
       typeof tgtVal === 'object' &&
       !Array.isArray(tgtVal)
     ) {
-      result[key] = deepMerge(tgtVal, srcVal);
+      // Empty source object means "replace with empty" — don't merge
+      if (Object.keys(srcVal).length === 0) {
+        result[key] = {};
+      } else {
+        result[key] = deepMerge(tgtVal, srcVal);
+      }
     } else {
       result[key] = srcVal;
     }
@@ -424,6 +429,8 @@ function getActiveFeature() {
 
       const entries = fs.readdirSync(absProgressDir, { withFileTypes: true });
 
+      const candidates = [];
+
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
 
@@ -442,12 +449,18 @@ function getActiveFeature() {
           const lastEvent = JSON.parse(lastLine);
 
           if (lastEvent.type !== 'session.end') {
-            return entry.name;
+            candidates.push({ name: entry.name, ts: lastEvent.ts || '' });
           }
         } catch {
           // Malformed events file — skip this feature
           continue;
         }
+      }
+
+      // Sort by timestamp descending, return most recent
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => (b.ts > a.ts ? 1 : b.ts < a.ts ? -1 : 0));
+        return candidates[0].name;
       }
     } catch {
       // Progress dir scan failed

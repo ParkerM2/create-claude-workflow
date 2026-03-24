@@ -46,7 +46,7 @@ READS (Path A — design doc exists):
 
 **Skip**: README.md, QA-CHECKLIST-TEMPLATE.md, PROGRESS-FILE-TEMPLATE.md, project rules, architecture file — all consolidated into the design doc.
 
-**Defer**: AGENT-SPAWN-TEMPLATES.md → Phase 6, QA-CHECKLIST-TEMPLATE.md → Phase 6 (only if expansion needed).
+**Defer**: AGENT-SPAWN-TEMPLATES.md → Phase 5, QA-CHECKLIST-TEMPLATE.md → Phase 5 (only if expansion needed).
 
 Use the design doc as your decomposition plan in Phase 3 instead of planning from scratch.
 
@@ -61,15 +61,13 @@ PHASE 1 READS (before planning):
 3. the architecture file                                   — System architecture
 4. prompts/implementing-features/WORKFLOW-MODES.md        — Workflow mode definitions
 
-PHASE 3 READS (when building QA checklists):
+PHASE 3 READS (when building QA checklists and creating progress file):
 5. prompts/implementing-features/README.md                — The full playbook
 6. prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md — QA checklist per task
 7. prompts/implementing-features/QA-CHECKLIST-AUTO-FILL-RULES.md — Auto-fill rules
-
-PHASE 4 READS (when creating progress file):
 8. prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md — Progress tracking format
 
-PHASE 6 READS (when spawning agents):
+PHASE 5 READS (when spawning agents):
 9. prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md  — Spawn templates
 10. prompts/implementing-features/CONTEXT-BUDGET-GUIDE.md  — Context budget guide
 ```
@@ -92,7 +90,7 @@ If workflow mode is `strict`, run pre-flight checks before proceeding (see `PRE-
 - Record the baseline in the progress file
 - If baseline is broken: warn the user and do not proceed until resolved
 
-**Phase 1 transition is automatic** — the `session.start` event (emitted in Phase 4) initializes the FSM in `plan` phase.
+**Phase 1 transition is automatic** — the `session.start` event (emitted in Phase 3 after branch creation) initializes the FSM in `plan` phase.
 
 ---
 
@@ -129,36 +127,9 @@ If a feature directory exists in the progress directory with an `events.jsonl` f
 
 ---
 
-## Phase 3: Plan & Decompose
+## Phase 3: Create Feature Branch & Plan
 
-1. **Understand the feature** — Read requirements, design docs, and all referenced files
-2. **Decompose into tasks** — Each task must be:
-   - Assignable to exactly ONE specialist agent (from `.claude/agents/`)
-   - Scoped to specific files (no two agents editing the same file)
-   - Have clear acceptance criteria
-   - Have a filled QA checklist (from `QA-CHECKLIST-TEMPLATE.md`)
-3. **Map dependencies** — Identify which tasks block which
-4. **Plan waves** — Group tasks by dependency layer:
-   ```
-   Wave 1: Foundation    — types, schemas, database migrations (no blockers)
-   Wave 2: Logic         — services, business logic (depends on Wave 1)
-   Wave 3: Integration   — handlers, state, hooks (depends on Wave 2)
-   Wave 4: Presentation  — components, pages, routes (depends on Wave 3)
-   ```
-5. **Identify parallel opportunities** — Tasks within a wave that touch different files
-
-**After completing Phase 3, emit:** `/claude-workflow:track plan.created "<summary>"`
-This transitions the FSM from `plan` → `setup`.
-
----
-
----
-
-**PHASE CHECK**: Plan complete? → workflow-gate.js blocks spawns until plan.created emitted.
-
----
-
-## Phase 4: Create Feature Branch & Progress File
+### 3a. Create Feature Branch
 
 ```bash
 # Create feature branch from configured base
@@ -168,7 +139,7 @@ git checkout -b <featurePrefix>/<feature-name>
 
 Create the feature's progress directory and initialize tracking:
 1. Create `.claude/progress/<feature-name>/` directory
-2. Emit `session.start` event via `/claude-workflow:track session.start` — this automatically creates `workflow-state.json` (do NOT write it directly)
+2. Emit `session.start` event via `/claude-workflow:track session.start` — this automatically creates `workflow-state.json` (do NOT write it directly). This initializes the FSM in `plan` phase.
 3. The `current.md` file is rendered when `/claude-workflow:track` is called for significant events
 
 The `events.jsonl` file is your **crash-recovery artifact**. Events are appended via `/claude-workflow:track` commands at key checkpoints.
@@ -198,7 +169,45 @@ After creating the progress directory, also initialize unified tracking:
 
 > Note: This uses the unified tracking system from `hooks/tracking.js`. The tracking system coexists with the existing `.claude/progress/` system. For programmatic use, call `initTracking("<feature-name>", { status: "in-progress", branch: "feature/<feature-name>" })` from `hooks/tracking.js`.
 
-**After completing Phase 4 + Phase 5 (branch, team, tasks ready), emit:**
+### 3b. Plan & Decompose
+
+1. **Understand the feature** — Read requirements, design docs, and all referenced files
+2. **Decompose into tasks** — Each task must be:
+   - Assignable to exactly ONE specialist agent (from `.claude/agents/`)
+   - Scoped to specific files (no two agents editing the same file)
+   - Have clear acceptance criteria
+   - Have a filled QA checklist (from `QA-CHECKLIST-TEMPLATE.md`)
+3. **Map dependencies** — Identify which tasks block which
+4. **Plan waves** — Group tasks by dependency layer:
+   ```
+   Wave 1: Foundation    — types, schemas, database migrations (no blockers)
+   Wave 2: Logic         — services, business logic (depends on Wave 1)
+   Wave 3: Integration   — handlers, state, hooks (depends on Wave 2)
+   Wave 4: Presentation  — components, pages, routes (depends on Wave 3)
+   ```
+5. **Identify parallel opportunities** — Tasks within a wave that touch different files
+
+**After completing Phase 3b, emit:** `/claude-workflow:track plan.created "<summary>"`
+This transitions the FSM from `plan` → `setup`.
+
+---
+
+---
+
+**PHASE CHECK**: Plan complete? → workflow-gate.js blocks spawns until plan.created emitted.
+
+---
+
+## Phase 4: Set Up Team & Tasks
+
+```
+1. TeamCreate — team_name: "<feature-name>"
+2. TaskCreate — one per task, with full description + acceptance criteria
+3. TaskUpdate — set addBlockedBy dependencies for each task
+4. Update progress file with task list + dependency graph
+```
+
+**After completing Phase 4 (team and tasks ready), emit:**
 `/claude-workflow:track checkpoint "setup-complete"`
 This transitions the FSM from `setup` → `wave` and sets `setupComplete=true`.
 
@@ -210,24 +219,13 @@ This transitions the FSM from `setup` → `wave` and sets `setupComplete=true`.
 
 ---
 
-## Phase 5: Set Up Team & Tasks
-
-```
-1. TeamCreate — team_name: "<feature-name>"
-2. TaskCreate — one per task, with full description + acceptance criteria
-3. TaskUpdate — set addBlockedBy dependencies for each task
-4. Update progress file with task list + dependency graph
-```
-
----
-
-## Phase 6: Execute Waves (Core Loop)
+## Phase 5: Execute Waves (Core Loop)
 
 Read `AGENT-SPAWN-TEMPLATES.md` NOW (deferred until needed — this reduces initial context consumption).
 
 For each wave, in dependency order:
 
-### 6a. Create Workbranches
+### 5a. Create Workbranches
 
 ```bash
 # Create worktree with workbranch from feature branch HEAD
@@ -237,7 +235,7 @@ git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<featu
 
 Create one worktree per task in this wave.
 
-### 6b. Spawn Agents
+### 5b. Spawn Agents
 
 Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 
@@ -257,7 +255,7 @@ Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 
 **Background execution**: Spawn coding agents with `run_in_background: true`. The Task tool returns a `task_id` for each spawned agent — **save this ID**. Use `TaskOutput` with the saved `task_id` to check agent results when needed.
 
-### 6c. Monitor, Spawn QA, Collect Results
+### 5c. Monitor, Spawn QA, Collect Results
 
 > **Teammates cannot spawn other teammates.** Only the Team Leader spawns QA agents.
 
@@ -270,7 +268,7 @@ Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every agent MUST receive:
 4. On QA FAIL: forward report to coding agent via SendMessage, wait for fixes, re-spawn QA
 5. On QA FAIL (max rounds): escalate to user
 
-### 6d. Merge Completed Workbranches
+### 5d. Merge Completed Workbranches
 
 For each workbranch with QA PASS (one at a time, sequentially):
 
@@ -295,7 +293,7 @@ git branch -d <workPrefix>/<feature-name>/<task-slug>
 
 Update progress file: branch status, merge log, task status.
 
-### 6e. Wave Fence & Next Wave
+### 5e. Wave Fence & Next Wave
 
 After all workbranches in the current wave are merged, run the wave fence check (see `WAVE-FENCE-PROTOCOL.md`):
 - **Strict mode**: full verify — lint, typecheck, test, build must all pass
@@ -319,18 +317,18 @@ When ALL waves are complete:
 
 ---
 
-## Phase 7: Codebase Guardian Check
+## Phase 6: Codebase Guardian Check
 
 When ALL tasks have QA PASS and all workbranches are merged:
 
 1. Spawn Codebase Guardian on `feature/<feature-name>` (see `AGENT-SPAWN-TEMPLATES.md`)
 2. Guardian runs 7 structural integrity checks
-3. If PASS: proceed to Phase 8
+3. If PASS: proceed to Phase 7
 4. If FAIL: fix issues (Guardian may fix trivial ones), re-run Guardian
 
 ---
 
-## Phase 8: Final Verification
+## Phase 7: Final Verification
 
 Run full verification on the merged feature branch:
 
@@ -354,7 +352,7 @@ All must pass. If any fail, investigate and fix before proceeding.
 
 ---
 
-## Phase 9: Completion & Cleanup
+## Phase 8: Completion & Cleanup
 
 1. **Emit session.end** — `/claude-workflow:track session.end "Feature complete"`
 2. **Update design doc** — status: IMPLEMENTED (if applicable)

@@ -16,7 +16,7 @@ const CODING_MARKERS = [
   { pattern: /PHASE 1:.*PLAN/i, label: 'Phase 1' },
   { pattern: /PHASE 2:.*EXECUTE/i, label: 'Phase 2' },
   { pattern: /PHASE 3:.*SELF.REVIEW/i, label: 'Phase 3' },
-  { pattern: /PHASE 4:.*SPAWN QA/i, label: 'Phase 4' },
+  { pattern: /PHASE 4:.*REPORT/i, label: 'Phase 4' },
   { pattern: /ERROR RECOVERY PROTOCOL/i, label: 'Error recovery' },
   { pattern: /Acceptance Criteria/i, label: 'Acceptance criteria' },
   { pattern: /QA Checklist/i, label: 'QA checklist' },

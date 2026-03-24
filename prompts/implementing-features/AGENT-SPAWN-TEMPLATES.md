@@ -589,7 +589,7 @@ Do NOT start checking code until your check plan is written.
 1. Read `the project rules file`
 2. Read `the architecture file`
 3. Read `agents/codebase-guardian.md` — your full protocol
-4. Read `the progress directory/<feature-name>-progress.md` — what changed in this feature
+4. Read `the progress directory/<feature-name>/current.md` — what changed in this feature
 
 > **Defensive check**: Before reading each file, verify it exists. If `the project rules file` or `the architecture file` doesn't exist, note this in your Phase 1 plan and continue — infer what you can from the codebase. Never stop because a reference file is missing.
 
@@ -691,7 +691,7 @@ When starting a new feature, the Team Leader follows this sequence:
  3. CREATE feature branch:
       git checkout -b feature/<feature-name>
  4. CREATE progress file:
-      the progress directory/<feature-name>-progress.md
+      the progress directory/<feature-name>/current.md
  5. CREATE team:
       TeamCreate with team_name
  6. CREATE tasks:
