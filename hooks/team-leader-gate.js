@@ -68,19 +68,24 @@ function block(reason) {
 // ---------------------------------------------------------------------------
 
 function checkMergeGate(command) {
-  // Broader detection: any git command containing merge
   if (!/\bgit\b.*\bmerge\b/i.test(command)) return;
 
-  // Check if it references a work/ branch anywhere
   const config = getWorkflowConfig();
   const workPrefix = (config.branching && config.branching.workPrefix) || 'work';
   const escapedPrefix = workPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  if (!new RegExp('\\b' + escapedPrefix + '\\/').test(command)) return;
 
-  // It's a merge of a work branch — enforce QA gate
+  // Extract the full work branch name from the command
+  const branchMatch = command.match(new RegExp('\\b(' + escapedPrefix + '\\/[^\\s]+)'));
+  if (!branchMatch) return; // not merging a work branch
+
+  const mergingBranch = branchMatch[1];
+
+  // Extract task slug: work/<feature>/<task> → task portion
+  const parts = mergingBranch.split('/');
+  const taskSlug = parts.length >= 3 ? parts.slice(2).join('/') : null;
+
   const feature = getActiveFeature();
   if (!feature) {
-    // FAIL-CLOSED: can't determine feature
     block('Merge gate: Cannot determine active feature. Ensure you are on a feature branch.');
     return;
   }
@@ -89,30 +94,50 @@ function checkMergeGate(command) {
   const featureDir = path.join(getRepoRoot(), progressDir, feature);
   const events = readEventsForFeature(featureDir);
 
-  // FAIL-CLOSED on empty events (was fail-open before)
   if (events.length === 0) {
     block('Merge gate: No events recorded. QA must pass before merging.');
     return;
   }
 
-  // Count unique tasks with qa.passed events
-  const qaPassed = new Set();
-  let mergedCount = 0;
+  // Check if this specific task/branch has qa.passed without a subsequent branch.merged
+  const taskQaPassed = new Set();
+  const taskMerged = new Set();
 
   for (const evt of events) {
-    if (evt.type === 'qa.passed' && evt.data && evt.data.task) {
-      qaPassed.add(String(evt.data.task));
+    if (evt.type === 'qa.passed' && evt.data) {
+      // Track by task ID or by branch reference
+      if (evt.data.task) taskQaPassed.add(String(evt.data.task));
+      if (evt.data.branch) taskQaPassed.add(evt.data.branch);
     }
-    if (evt.type === 'branch.merged') {
-      mergedCount++;
+    if (evt.type === 'branch.merged' && evt.data) {
+      if (evt.data.task) taskMerged.add(String(evt.data.task));
+      if (evt.data.branch) taskMerged.add(evt.data.branch);
+      // Also track by message content which often contains the branch name
+      if (evt.data.message && evt.data.message.includes(mergingBranch)) {
+        taskMerged.add(mergingBranch);
+      }
     }
   }
 
-  // If there are more QA passes than merges, at least one task is ready
-  if (qaPassed.size > mergedCount) return;
+  // Check if this branch or task slug has QA pass and hasn't been merged yet
+  const hasQaPass = taskQaPassed.has(mergingBranch) ||
+                    (taskSlug && taskQaPassed.has(taskSlug));
+  const alreadyMerged = taskMerged.has(mergingBranch) ||
+                        (taskSlug && taskMerged.has(taskSlug));
 
-  // Block — no unmerged QA-passed task
-  block('Merge gate: No unmerged QA-passed task. Wait for qa.passed event before merging.');
+  if (hasQaPass && !alreadyMerged) return; // This specific branch passed QA — allow
+
+  // Fallback: check by task number if slug-based matching didn't work
+  // Extract task number from slug (e.g., "task-1" → "1")
+  if (taskSlug) {
+    const taskNumMatch = taskSlug.match(/(\d+)/);
+    if (taskNumMatch) {
+      const taskNum = taskNumMatch[1];
+      if (taskQaPassed.has(taskNum) && !taskMerged.has(taskNum)) return;
+    }
+  }
+
+  block('Merge gate: Branch "' + mergingBranch + '" does not have a QA pass. Wait for qa.passed event before merging.');
 }
 
 // ---------------------------------------------------------------------------
@@ -120,7 +145,9 @@ function checkMergeGate(command) {
 // ---------------------------------------------------------------------------
 
 function checkShutdownGate(toolInput) {
-  if (toolInput.type !== 'shutdown_request') return;
+  // SendMessage structured messages have type nested in .message
+  const msg = toolInput.message;
+  if (!msg || typeof msg !== 'object' || msg.type !== 'shutdown_request') return;
 
   const feature = getActiveFeature();
   if (!feature) return;

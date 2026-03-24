@@ -198,7 +198,9 @@ function isProcessAlive(pid) {
   try {
     process.kill(pid, 0); // signal 0 = existence check
     return true;
-  } catch {
+  } catch (e) {
+    // EPERM means process exists but we lack permission — it's alive
+    if (e.code === 'EPERM') return true;
     return false;
   }
 }
@@ -240,7 +242,8 @@ function updateWorkflowStateFromEvent(feature, event) {
           guardianPassed: false,
           currentWave: 0,
           totalWaves: 0,
-          waves: {}
+          waves: {},
+          tasks: {}
         });
         break;
 
@@ -248,21 +251,87 @@ function updateWorkflowStateFromEvent(feature, event) {
         updateWorkflowState(feature, { phase: 'setup' });
         break;
 
-      case 'task.started':
-        // No phase transition — informational only
+      case 'task.started': {
+        // Track per-task artifact state: pending → in-progress
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'in-progress',
+            agent: data.agent || null,
+            branch: data.branch || null,
+            startedAt: ts,
+            files: data.files || []
+          });
+          updateWorkflowState(feature, { tasks });
+        }
         break;
+      }
 
-      case 'task.completed':
-        // No phase transition — informational only
+      case 'task.completed': {
+        // Track per-task artifact state: in-progress → completed (awaiting QA)
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'completed',
+            completedAt: ts,
+            files: data.files || (tasks[taskId] && tasks[taskId].files) || []
+          });
+          updateWorkflowState(feature, { tasks });
+        }
         break;
+      }
 
-      case 'qa.passed':
-        // No phase transition — tracked at wave level via checkpoints
+      case 'qa.passed': {
+        // Track per-task artifact state: completed → qa-passed (ready to merge)
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'qa-passed',
+            qaPassedAt: ts,
+            qaRounds: (tasks[taskId] && tasks[taskId].qaRounds || 0) + 1
+          });
+          updateWorkflowState(feature, { tasks });
+        }
         break;
+      }
 
-      case 'branch.merged':
-        // No phase transition — tracked at wave level via checkpoints
+      case 'qa.failed': {
+        // Track per-task artifact state: mark QA failure, keep in completed state
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'qa-failed',
+            lastQaFailedAt: ts,
+            qaRounds: (tasks[taskId] && tasks[taskId].qaRounds || 0) + 1,
+            lastFailReason: data.message || data.reason || null
+          });
+          updateWorkflowState(feature, { tasks });
+        }
         break;
+      }
+
+      case 'branch.merged': {
+        // Track per-task artifact state: qa-passed → merged (final state)
+        const taskId = data.task || data.name;
+        if (taskId) {
+          const current = getWorkflowState(feature) || {};
+          const tasks = Object.assign({}, current.tasks || {});
+          tasks[taskId] = Object.assign({}, tasks[taskId] || {}, {
+            state: 'merged',
+            mergedAt: ts
+          });
+          updateWorkflowState(feature, { tasks });
+        }
+        break;
+      }
 
       case 'checkpoint':
         if (data.message) {
@@ -289,7 +358,10 @@ function updateWorkflowStateFromEvent(feature, event) {
               const current = getWorkflowState(feature) || {};
               const waves = Object.assign({}, current.waves || {});
               waves[String(completedWave)] = 'complete';
-              waves[String(nextWave)] = 'active';
+              const totalWaves = current.totalWaves || 0;
+              if (totalWaves === 0 || completedWave < totalWaves) {
+                waves[String(nextWave)] = 'active';
+              }
               updateWorkflowState(feature, {
                 currentWave: nextWave,
                 waves: waves
@@ -371,7 +443,7 @@ function emitEvent(type, data, options) {
       return;
     }
 
-    const progressDir = getProgressDir();
+    const progressDir = path.join(getRepoRoot(), getProgressDir());
     const featureDir = path.join(progressDir, feature);
 
     // Ensure feature directory exists
@@ -458,8 +530,8 @@ function renderCurrentMd(featureDir) {
     const featureName = events[0].feature || path.basename(featureDir);
 
     // Derive task states from events
-    const tasks = new Map(); // taskId -> { name, status, agent }
-    let overallStatus = 'in-progress';
+    const tasks = new Map(); // taskId -> { name, status, agent, qaStatus, merged }
+    let sessionEnded = false;
     let lastCheckpoint = null;
     const blockers = [];
 
@@ -473,14 +545,16 @@ function renderCurrentMd(featureDir) {
               tasks.set(t.id || t.name, {
                 name: t.name || t.id,
                 status: 'pending',
-                agent: t.agent || null
+                agent: t.agent || null,
+                qaStatus: null,
+                merged: false
               });
             }
           }
           break;
         case 'task.started':
           if (d.task) {
-            const existing = tasks.get(d.task) || { name: d.task, agent: null };
+            const existing = tasks.get(d.task) || { name: d.task, agent: null, qaStatus: null, merged: false };
             existing.status = 'in-progress';
             if (d.agent) existing.agent = d.agent;
             tasks.set(d.task, existing);
@@ -488,19 +562,31 @@ function renderCurrentMd(featureDir) {
           break;
         case 'task.completed':
           if (d.task) {
-            const existing = tasks.get(d.task) || { name: d.task, agent: null };
+            const existing = tasks.get(d.task) || { name: d.task, agent: null, qaStatus: null, merged: false };
             existing.status = 'done';
             tasks.set(d.task, existing);
           }
           break;
         case 'qa.passed':
-          overallStatus = 'qa-passed';
+          if (d.task) {
+            const existing = tasks.get(d.task) || { name: d.task, status: 'done', agent: null, qaStatus: null, merged: false };
+            existing.qaStatus = 'passed';
+            tasks.set(d.task, existing);
+          }
           break;
         case 'qa.failed':
-          overallStatus = 'qa-failed';
+          if (d.task) {
+            const existing = tasks.get(d.task) || { name: d.task, status: 'done', agent: null, qaStatus: null, merged: false };
+            existing.qaStatus = 'failed';
+            tasks.set(d.task, existing);
+          }
           break;
         case 'branch.merged':
-          overallStatus = 'merged';
+          if (d.task) {
+            const existing = tasks.get(d.task) || { name: d.task, status: 'done', agent: null, qaStatus: null, merged: false };
+            existing.merged = true;
+            tasks.set(d.task, existing);
+          }
           break;
         case 'checkpoint':
           lastCheckpoint = { ts: evt.ts, message: d.message || '' };
@@ -509,11 +595,30 @@ function renderCurrentMd(featureDir) {
           blockers.push({ ts: evt.ts, message: d.message || 'Unknown blocker' });
           break;
         case 'session.end':
-          // Latest session ended — keep status as-is
+          sessionEnded = true;
           break;
         default:
           break;
       }
+    }
+
+    // Derive aggregate overallStatus from per-task states
+    let overallStatus;
+    const taskList = Array.from(tasks.values());
+    const mergedCount = taskList.filter(t => t.merged).length;
+    const totalCount = taskList.length;
+    const qaFailedCount = taskList.filter(t => t.qaStatus === 'failed').length;
+
+    if (sessionEnded && totalCount > 0 && mergedCount === totalCount) {
+      overallStatus = 'complete';
+    } else if (qaFailedCount > 0) {
+      overallStatus = `in-progress (${mergedCount}/${totalCount} tasks merged, ${qaFailedCount} qa-failed)`;
+    } else if (totalCount > 0 && mergedCount === totalCount) {
+      overallStatus = 'complete';
+    } else if (totalCount > 0) {
+      overallStatus = `in-progress (${mergedCount}/${totalCount} tasks merged)`;
+    } else {
+      overallStatus = 'in-progress';
     }
 
     // Build markdown

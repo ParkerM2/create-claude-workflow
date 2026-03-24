@@ -9,7 +9,7 @@
 // Respects guards.enforcementGate setting.
 // Fail-CLOSED for state file operations; fail-OPEN for all other errors.
 
-const { getGuardsConfig, getActiveFeature, getWorkflowState, getWorkflowConfig } = require('./config.js');
+const { getGuardsConfig, getActiveFeature, getWorkflowState, getWorkflowConfig, getBranchingConfig, isWorkBranch } = require('./config.js');
 
 // ---------------------------------------------------------------------------
 // Helper: block with reason
@@ -132,10 +132,20 @@ function checkV7AppCodeWriteBlock(toolInput) {
   const state = getWorkflowState(feature);
   if (!state || !state.phase || state.phase === 'done') return;
 
+  // Coding agents work on work/ branches — allow their writes
+  try {
+    const { execSync } = require('child_process');
+    const branch = execSync('git branch --show-current', {
+      encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe']
+    }).trim();
+    const branchConfig = getBranchingConfig();
+    if (isWorkBranch(branch, branchConfig)) return; // coding agent context — allow
+  } catch { /* branch detection failed — continue with block check */ }
+
   const config = getWorkflowConfig();
   const progressDir = (config.progressDir || '.claude/progress').replace(/\\/g, '/');
 
-  if (!filePath.includes(progressDir)) {
+  if (!filePath.includes(progressDir) && !filePath.includes('.claude/tracking')) {
     block('Enforcement gate: Team Leader cannot write files during active workflow. Assign work to coding agents.');
   }
 }

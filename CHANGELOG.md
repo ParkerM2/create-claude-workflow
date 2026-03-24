@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.3.0] — 2026-03-24
+
+### Added
+- **Pre-flight infrastructure audit** (Step 1.0): new Phase 1 pre-checklist validates all 14 hook files, 8 prompt files, 2 skill files, workflow.json integrity, core directories, and Agent Teams capability — in one pass before any workflow logic runs
+- **Per-phase mandatory checklists**: every phase (1–7) now ends with a verification checklist the team leader must iterate through before proceeding — prevents step-skipping
+- **Adversarial QA testing** (AGENT-SPAWN-TEMPLATES.md): QA agents now actively try to break code — edge cases, error paths, security, race conditions, boundary conditions — not just checklist verification
+- **Context exhaustion protocol** (AGENT-SPAWN-TEMPLATES.md): coding agents that run low on context follow a structured handoff — commit WIP, message team leader with completed/remaining steps, fresh agent picks up
+- **Artifact-level task state tracking** (tracker.js): `workflow-state.json` now contains a `tasks` object tracking per-task lifecycle — `in-progress` → `completed` → `qa-passed`/`qa-failed` → `merged` — with timestamps, files, agent, QA round count
+- **Quality gate Stop hook** (hooks/quality-gate.js): auto-detects project toolchain (JS/TS, Python, Go, Makefile) and runs lint/typecheck/test at end of every coding agent turn — warnings injected into agent context on failure
+- **Branch-scenario detection** (Step 1.3): workflow detects whether user is on a feature branch (most common), base branch, or wrong branch — adapts Phase 2 branch creation accordingly instead of always assuming fresh start from base
+- **Agent Teams capability check** (Step 1.0f): validates TeamCreate, Agent, SendMessage, TaskOutput tools are available before workflow begins
+
+### Fixed
+- **`qa.passed` event now mandatory before merge**: Phase 4c explicitly emits `/track qa.passed` — previously undocumented, causing merge gate to block with "Branch does not have a QA pass"
+- **`guardian-passed` checkpoint now mandatory**: Phase 5 explicitly emits `/track checkpoint "guardian-passed"` — previously missing, permanently blocking shutdown/TeamDelete
+- **Phase 8 ordering**: agents now shut down BEFORE `session.end` emission — prevents enforcement-gate from allowing app code writes while agents still running
+- **Coding agents no longer told to "spawn QA"**: removed impossible instruction — teammates cannot spawn teammates, only team leader can
+- **Direct write to tracking `events.jsonl` removed**: Phase 2b now uses hooks/tracking.js auto-initialization instead of Edit/Write — enforcement-gate V1 blocks direct writes to `events.jsonl`
+- **`git branch -D` in stale cleanup replaced with `-d`**: safety-guard destructive guard blocks uppercase `-D`
+- **Redundant Phase 2 eliminated**: crash recovery / existing progress checks folded into Phase 1 Step 1.9
+- **`totalWaves` now set in workflow state**: Phase 2c records wave count, Phase 3 passes it with `setup-complete` — prevents phantom wave creation
+
+### Changed
+- Phases renumbered 1–7 (was 1–8): old Phase 2 (redundant progress check) eliminated
+- Phase 1 restructured: Step 1.0 (infrastructure audit) runs first, remaining steps renumbered 1.1–1.11
+- `workflow-gate.js` prompt validation references updated for new phase numbering
+- Added enforcement-gate V7 workaround notes for Phase 5 (Guardian fixes) and Phase 6 (verification failures)
+- Added branch guard notes for `git push` on feature branches and Guardian commits
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [2.2.0] — 2026-03-23
 
 ### Added
