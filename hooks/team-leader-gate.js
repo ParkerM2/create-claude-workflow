@@ -155,11 +155,36 @@ function checkShutdownGate(toolInput) {
   const state = getWorkflowState(feature);
   if (!state) return;
 
+  // Always allow if guardian has passed
   if (state.guardianPassed) return;
+
+  // Allow shutting down individual coding/QA agent pairs after their task is merged.
+  // The recipient name tells us — if it targets a task-specific agent (coder-task-*, qa-task-*),
+  // check if that task has been merged. If so, allow the shutdown.
+  const recipient = toolInput.to || '';
+  const taskAgentMatch = recipient.match(/^(?:coder|qa)-task-(\d+)$/);
+  if (taskAgentMatch) {
+    const taskNum = taskAgentMatch[1];
+    // If we're in wave phase and this task has been merged, allow shutdown of its agents
+    if (state.phase === 'wave' || state.phase === 'guardian') {
+      const config = getWorkflowConfig();
+      const progressDir = (config.progressDir) || '.claude/progress';
+      const featureDir = path.join(getRepoRoot(), progressDir, feature);
+      const events = readEventsForFeature(featureDir);
+
+      for (const evt of events) {
+        if (evt.type === 'branch.merged' && evt.data) {
+          // Check if this task was merged (by task number or message content)
+          if (String(evt.data.task) === taskNum) return; // task merged — allow shutdown
+          if (evt.data.message && evt.data.message.includes('task-' + taskNum)) return;
+        }
+      }
+    }
+  }
 
   const result = {
     decision: 'block',
-    reason: 'Shutdown gate: Cannot shut down agents before Guardian passes. Let agents complete their full workflow.'
+    reason: 'Shutdown gate: Cannot shut down agents before their task is merged or Guardian passes.'
   };
   process.stdout.write(JSON.stringify(result));
   process.exit(0);

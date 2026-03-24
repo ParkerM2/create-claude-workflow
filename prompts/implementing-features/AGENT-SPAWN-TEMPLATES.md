@@ -182,42 +182,44 @@ Only after ALL self-review checks pass, proceed to Phase 4.
 
 </phase>
 
-<phase name="report-completion" blocking="false">
+<phase name="report-and-qa-loop" blocking="false">
 
-## PHASE 4: REPORT TO TEAM LEADER
+## PHASE 4: REPORT TO QA AGENT & FIX LOOP
 
-> **Important**: Teammates CANNOT spawn other teammates or subagents.
-> Only the Team Leader can spawn QA agents. Your job is to report completion
-> so the Team Leader can spawn QA on your workbranch.
+> **You have a paired QA agent** named `<QA_AGENT_NAME>` (e.g., `qa-task-1`).
+> The Team Leader spawned both of you together. You communicate DIRECTLY with your
+> QA agent — the Team Leader is NOT in the middle of the code↔QA loop.
 
-Send your completion report to the Team Leader via SendMessage. Include:
-- Your Phase 1 plan (so QA can verify you followed it)
-- The list of files you created/modified
-- Your self-review results from Phase 3
-- Any issues or concerns found during self-review
+**Step 1 — Send your completion report to the QA agent:**
 
 ```
 SendMessage:
-  type: "message"
-  recipient: "team-lead"
-  content: |
+  to: "<QA_AGENT_NAME>"
+  message: |
     Task #<N> complete. Self-review PASS. Ready for QA.
 
     Files changed: <list>
     Self-review: All acceptance criteria met, automated checks passed.
     Phase 1 plan: <paste or summarize your plan>
-  summary: "Task #<N> complete, ready for QA"
+  summary: "Task #<N> ready for QA"
 ```
 
-After the Team Leader spawns QA on your workbranch:
-- If QA returns FAIL: The Team Leader will forward the QA report to you via SendMessage.
-  1. Read the FULL QA report
-  2. Re-read your Phase 1 plan (context anchor — prevents drift)
-  3. Fix ONLY the issues QA identified
-  4. Commit fixes
-  5. Send another completion report to the Team Leader for re-QA
+**Step 2 — Wait for QA response.** Your QA agent will review and message you back.
 
-- If QA returns PASS: The Team Leader handles the merge. You are done.
+**Step 3 — On QA FAIL (you will receive a message from the QA agent):**
+  1. Read the FULL QA report from the QA agent's message
+  2. Re-read your Phase 1 plan (context anchor — prevents drift)
+  3. Fix ONLY the issues QA identified — do NOT refactor unrelated code
+  4. Commit fixes:
+     ```bash
+     git add <fixed files>
+     git commit -m "fix: address QA round <N> feedback for Task #<N>"
+     ```
+  5. Send a new completion report to the QA agent (same format as Step 1)
+  6. Wait for next QA response — repeat until QA PASS or 3 rounds exhausted
+
+**Step 4 — On QA PASS:** Your QA agent handles notifying the Team Leader. You are done.
+Wait for a shutdown request from the Team Leader — do NOT exit on your own.
 
 </phase>
 
@@ -227,10 +229,13 @@ After the Team Leader spawns QA on your workbranch:
 
 ## Communication Rules
 
-- Do NOT use SendMessage to contact peer agents. You communicate only with the Team Leader.
-- The Team Leader spawns QA agents — you do NOT spawn QA yourself.
-- Send completion reports to "team-lead" via SendMessage when your work is done.
-- Wait for Team Leader to forward QA results if there are issues to fix.
+- Your primary communication partner is your paired QA agent: `<QA_AGENT_NAME>`.
+- Send completion reports to your QA agent — NOT to the Team Leader.
+- The QA agent sends you fix requests directly — you fix and re-report to the QA agent.
+- The Team Leader is only contacted if: (a) you hit a blocking issue, (b) context exhaustion, (c) the QA agent is unresponsive.
+- Do NOT use SendMessage to contact other coding agents — you communicate with your QA agent and the Team Leader only.
+- Do NOT attempt to spawn any agents — you cannot. Only the Team Leader spawns agents.
+- Wait for a shutdown_request from the Team Leader when everything is done.
 
 </communication-rules>
 
@@ -361,7 +366,7 @@ If you find yourself running low on context (repeated compactions, losing track 
 
 ## QA Review Agent Spawn
 
-The **Team Leader** spawns this AFTER a coding agent reports completion. It runs on the coding agent's workbranch. The coding agent cannot spawn QA itself — only the Team Leader can spawn teammates.
+The **Team Leader** spawns this alongside its paired coding agent. Both agents stay alive for the duration of the task. The QA agent communicates DIRECTLY with the coding agent for the fix loop, and only contacts the Team Leader with the final result (PASS or escalation after 3 FAILs).
 
 ```
 <spawn-parameters>
@@ -381,10 +386,20 @@ Your job is to validate the work done for **Task #<N>: <task name>**.
 You are reviewing on workbranch **work/<feature-name>/<task-slug>**.
 Worktree path: **<worktreeDir>/<feature-name>/<task-slug>** (if worktrees enabled).
 
+**Your paired coding agent is `<CODING_AGENT_NAME>`** (e.g., `coder-task-1`).
+
+> **STARTUP BEHAVIOR:** When you are first spawned, the coding agent may still be working.
+> Begin with Phase 0 (loading rules) and Phase 1 (writing your review plan) immediately —
+> these can be done before the coding agent finishes. Then wait for the coding agent to
+> message you with a completion report before starting Phase 2 (the actual review).
+> If the coding agent has already messaged you by the time you finish Phase 1, proceed
+> directly to Phase 2.
+
 ---
 **MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING**
 Complete each phase fully before starting the next.
-Do NOT start reviewing code until your review plan is written.
+Do NOT start reviewing code until your review plan is written AND
+the coding agent has sent you a completion report.
 
 ---
 
@@ -500,9 +515,15 @@ If your review passes:
 
 </phase>
 
-<phase name="qa-report" blocking="false">
+<phase name="qa-report-and-loop" blocking="false">
 
-## PHASE 4: QA REPORT
+## PHASE 4: QA REPORT & CODE↔QA LOOP
+
+> **You have a paired coding agent** named `<CODING_AGENT_NAME>` (e.g., `coder-task-1`).
+> The Team Leader spawned both of you together. On FAIL, you message the coding agent
+> directly with fix instructions. On PASS, you message the Team Leader.
+
+**Track your current QA round internally** (start at round 1, max 3).
 
 Compile your report referencing your Phase 1 review plan.
 
@@ -515,7 +536,7 @@ Format:
 | Task | #<N> — <task name> |
 | Workbranch | work/<feature-name>/<task-slug> |
 | Reviewer | qa-task-<N> |
-| Round | <1\|2\|3> of 3 |
+| Round | <current round> of 3 |
 | Timestamp | <ISO> |
 | Rules Enforced | <count of specific rules from Phase 1b> |
 
@@ -570,14 +591,76 @@ Format:
 
 **VERDICT: APPROVED / REJECTED**
 
-Send this report to the Team Leader via SendMessage:
-- If PASS: `recipient: "team-lead"`, summary: "QA PASS Task #<N>"
-- If FAIL: `recipient: "team-lead"`, summary: "QA FAIL Task #<N>"
-The Team Leader will forward FAIL reports to the coding agent for fixes, or merge on PASS.
+---
+
+### Routing the Report
+
+**On QA FAIL (round < 3):**
+Send the FULL report directly to the coding agent with specific fix instructions:
+
+```
+SendMessage:
+  to: "<CODING_AGENT_NAME>"
+  message: |
+    QA FAIL — Round <N>/3. Fix these issues:
+
+    <full QA report with fix instructions>
+
+    After fixing, commit your changes and message me back with an updated completion report.
+  summary: "QA FAIL Task #<N> round <N> — fix required"
+```
+
+Then **wait for the coding agent to message you back** with a new completion report.
+When received: re-run your review from Phase 2 (re-read changed files, re-run checks).
+Increment your round counter.
+
+**On QA FAIL (round 3 — max rounds exhausted):**
+Escalate to the Team Leader — the coding agent cannot fix it in the allowed rounds:
+
+```
+SendMessage:
+  to: "<TEAM_LEADER_NAME>"
+  message: |
+    QA FAIL — Task #<N> exhausted 3 QA rounds. Escalation required.
+
+    <full QA report with history of all 3 rounds>
+  summary: "QA ESCALATION Task #<N> — 3 rounds failed"
+```
+
+**On QA PASS:**
+1. Send the report to the Team Leader — this is the signal to merge:
+
+```
+SendMessage:
+  to: "<TEAM_LEADER_NAME>"
+  message: |
+    QA PASS — Task #<N>. Ready to merge.
+
+    <full QA report>
+
+    Files changed: <list>
+    Workbranch: <workPrefix>/<feature-name>/<task-slug>
+  summary: "QA PASS Task #<N> — ready to merge"
+```
+
+2. Wait for a shutdown request from the Team Leader — do NOT exit on your own.
 
 </phase>
 
 </workflow-phases>
+
+<communication-rules>
+
+## Communication Rules
+
+- Your primary communication partner is your paired coding agent: `<CODING_AGENT_NAME>`.
+- On QA FAIL: message the coding agent directly with fix instructions. Do NOT message the Team Leader (unless escalating after round 3).
+- On QA PASS: message the Team Leader with the final report. This is their signal to merge.
+- Do NOT attempt to spawn any agents — you cannot. Only the Team Leader spawns agents.
+- Do NOT modify application code — you are a reviewer. Only commit documentation updates (Phase 3).
+- Wait for a shutdown_request from the Team Leader when everything is done.
+
+</communication-rules>
 
 <error-recovery>
 
@@ -591,6 +674,10 @@ If you encounter an error during review (e.g., a check command fails to run):
 2. Determine if the error is in the reviewed code (report as FAIL) or in your review process (try alternative approach)
 3. Do NOT modify application code — you are a reviewer
 4. If you cannot complete a review step after 2 attempts: report the issue in your QA report and flag it for the Team Leader
+
+If the coding agent becomes unresponsive (no reply after sending QA FAIL):
+1. Wait a reasonable time (the agent may be fixing code)
+2. If still no response: message the Team Leader to investigate
 
 </error-recovery>
 
@@ -765,22 +852,33 @@ When starting a new feature, the Team Leader follows this sequence:
       a. CREATE worktrees from feature/ HEAD:
            git checkout <featurePrefix>/<feature-name>
            git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<feature-name>/<task-slug>
-      b. SPAWN coding agents using the Standard Coding Agent template above
-         (CRITICAL: use the FULL template with all 4 phases + error recovery)
-      c. UPDATE progress file with agent registry
-10. MONITOR agent messages:
-      a. On QA PASS:
+      b. SPAWN AGENT PAIRS (coding + QA) for each task:
+         - Coding agent: name "coder-task-<N>", use Standard Coding Agent template
+           Include in prompt: QA_AGENT_NAME = "qa-task-<N>"
+         - QA agent: name "qa-task-<N>", use QA Review Agent template
+           Include in prompt: CODING_AGENT_NAME = "coder-task-<N>"
+         - Both agents get: team_name, worktree path, TEAM_LEADER_NAME
+         - Coding agent: run_in_background: true (works independently)
+         - QA agent: run_in_background: true (starts loading rules while coder works)
+         (CRITICAL: use the FULL templates — coding agent sends to QA, not team leader)
+      c. UPDATE progress file with agent registry (both agents per task)
+10. WAIT for QA agents to message you with results:
+      The coding↔QA loop happens automatically between the agent pair.
+      The Team Leader does NOT relay messages between them.
+      a. On QA PASS (QA agent messages team leader):
+         - Emit `/claude-workflow:track qa.passed` with task + branch data (REQUIRED for merge gate)
          - UPDATE progress file
          - REBASE from worktree: git -C <worktreeDir>/<feature-name>/<task-slug> rebase <featurePrefix>/<feature-name>
          - MERGE workbranch to feature/ (--no-ff)
+         - Emit `/claude-workflow:track branch.merged` (REQUIRED for merge gate bookkeeping)
          - REMOVE worktree: git worktree remove <worktreeDir>/<feature-name>/<task-slug>
          - DELETE workbranch
+         - SHUT DOWN both agents for this task (SendMessage shutdown_request to coder-task-N and qa-task-N)
          - Check if next-wave tasks are unblocked
          - [ ] Emit `/claude-workflow:track checkpoint "wave-N-complete"` after all wave tasks merged
-      b. On QA FAIL (round < 3):
-         - Agent handles re-work automatically
-      c. On QA FAIL (round 3):
-         - Escalate to user
+      b. On QA ESCALATION (QA agent messages team leader after 3 failed rounds):
+         - Inform user with full QA report history
+         - Ask whether to: (a) manually fix and retry, (b) skip QA, (c) abort
 11. When ALL tasks merged:
       a. SPAWN Codebase Guardian using the Guardian template above
       b. If Guardian PASSES:
@@ -791,7 +889,7 @@ When starting a new feature, the Team Leader follows this sequence:
       c. If Guardian FAILS:
          - Fix or assign fixes
          - Re-run Guardian
-12. SHUT DOWN all agents
+12. SHUT DOWN all remaining agents (Guardian, any stragglers)
 13. DELETE team (TeamDelete)
 
 Note: `<worktreeDir>`, `<featurePrefix>`, `<workPrefix>` come from `<workflow-config>`.

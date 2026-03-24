@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.3.2] — 2026-03-24
+
+### Changed
+- **Persistent agent pairs**: Coding and QA agents are now spawned together and stay alive for the entire task lifecycle. The coding agent messages the QA agent directly (not the team leader). The QA agent messages the coding agent on FAIL and the team leader on PASS. No more fire-and-forget agents or team-leader-as-relay.
+- **Code↔QA loop is autonomous**: The team leader spawns the pair and waits for the final QA PASS signal. The fix loop (up to 3 rounds) runs between the agents without team leader involvement.
+- **QA agents start loading rules while coding agent works**: Both agents spawn simultaneously — QA does Phase 0 + Phase 1 (loading rules, writing review plan) in parallel with the coding agent's implementation work.
+
+### Fixed
+- **Shutdown gate now allows per-task agent cleanup**: Previously, `team-leader-gate.js` blocked ALL shutdown requests until Guardian passed — making it impossible to clean up agent pairs after their task merged. Now recognizes `coder-task-*` and `qa-task-*` naming pattern and allows shutdown after `branch.merged` event for that task.
+- **Coding agents no longer told to report to team leader on completion**: Completion reports go to the paired QA agent, matching the actual communication architecture.
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [2.3.1] — 2026-03-24
 
 ### Fixed

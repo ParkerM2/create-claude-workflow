@@ -531,100 +531,120 @@ git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<featu
 
 Create one worktree per task in this wave.
 
-### 4b. Spawn Coding Agents
+### 4b. Spawn Agent Pairs (Coding + QA)
 
-Use the templates from `AGENT-SPAWN-TEMPLATES.md`. Every coding agent MUST receive:
+For each task in this wave, spawn **both** a coding agent and its paired QA agent together. They communicate directly with each other for the code↔QA loop. The Team Leader only receives the final result.
 
+Use the templates from `AGENT-SPAWN-TEMPLATES.md`. For each task, spawn TWO agents:
+
+**Agent 1 — Coding Agent** (`coder-task-<N>`):
 - Task description + acceptance criteria
 - File scope (what to create/modify)
 - Pre-digested rules (5-10 rules from project rules + architecture that apply to this task)
 - Filled QA checklist (use `QA-CHECKLIST-AUTO-FILL-RULES.md` to pre-select sections by role)
 - Context budget note (see `CONTEXT-BUDGET-GUIDE.md` — estimate before spawning, split if over threshold)
 - Worktree path: `<worktreeDir>/<feature-name>/<task-slug>` — agent must work from this directory
-- Instructions: "Your working directory is `<worktreeDir>/<feature-name>/<task-slug>`. Run all commands from this directory."
+- `QA_AGENT_NAME`: `"qa-task-<N>"` — the coding agent sends completion reports HERE, not to team leader
+
+**Agent 2 — QA Agent** (`qa-task-<N>`):
+- Same task context (description, acceptance criteria, files to review)
+- Same worktree path (QA reviews the same worktree the coder works in)
+- `CODING_AGENT_NAME`: `"coder-task-<N>"` — the QA agent sends fix requests HERE, not to team leader
+- The coding agent's pre-filled QA checklist
 
 **Critical — Agent Communication Instructions:**
 
-Every coding agent prompt MUST include these exact instructions for communicating back to the team leader:
-
+Every coding agent prompt MUST include:
 ```
 COMMUNICATION RULES:
 - You are a member of team "<feature-name>".
-- Your team leader's name is "<TEAM_LEADER_NAME>" (from Step 1.7).
-- When you complete your work, send a completion report via:
-    SendMessage(to: "<TEAM_LEADER_NAME>", message: "<your report>", summary: "Task <N> complete")
-- Do NOT attempt to spawn QA agents or any other agents — you cannot. Only the Team Leader spawns agents.
-- Do NOT use SendMessage to contact other coding agents — communicate only with the Team Leader.
-- If you encounter a blocking issue, message the Team Leader immediately — do not silently fail.
+- Your paired QA agent is "<qa-task-N>".
+- Your team leader's name is "<TEAM_LEADER_NAME>".
+- When you complete your work, send a completion report to your QA agent:
+    SendMessage(to: "qa-task-<N>", message: "<your report>", summary: "Task <N> ready for QA")
+- If QA sends you fix requests, fix the issues and message QA back — NOT the team leader.
+- Only contact the Team Leader for: blocking issues, context exhaustion, or escalation.
+- Do NOT attempt to spawn any agents — you cannot.
 ```
 
-**What coding agents must NOT be told:**
-- ~~"spawn QA when done"~~ — they CANNOT spawn teammates. `workflow-gate.js` will block it.
-- ~~"contact peer agents"~~ — they should only communicate with the team leader.
+Every QA agent prompt MUST include:
+```
+COMMUNICATION RULES:
+- You are a QA reviewer on team "<feature-name>".
+- Your paired coding agent is "<coder-task-N>".
+- Your team leader's name is "<TEAM_LEADER_NAME>".
+- On QA FAIL: message the coding agent directly with fix instructions.
+- On QA PASS: message the Team Leader — this is the merge signal.
+- On QA ESCALATION (3 rounds failed): message the Team Leader.
+- Do NOT attempt to spawn any agents — you cannot.
+```
+
+**What agents must NOT be told:**
+- ~~"spawn QA when done"~~ — they CANNOT spawn teammates.
+- ~~"contact peer coding agents"~~ — they talk to their paired QA agent and the team leader only.
+- ~~"report completion to team leader"~~ — coding agents report to their QA agent, not the team leader.
 
 **Model routing** (see `CONTEXT-BUDGET-GUIDE.md` for cost details):
 - Coding agents: `model: "sonnet"` — focused file-scope work
 - QA agents: `model: "haiku"` — read-only review work
 - Guardian: `model: "sonnet"` — cross-module analysis
 
-**Background execution**: Spawn coding agents with `run_in_background: true` and `team_name: "<feature-name>"`. The Agent tool returns a `task_id` for each spawned agent — **save this ID**. Use `TaskOutput` with the saved `task_id` to check agent results when needed.
+**Background execution**: Spawn BOTH agents with `run_in_background: true` and `team_name: "<feature-name>"`. Save both task IDs. The QA agent starts loading rules and writing its review plan while the coding agent works — this parallelizes startup.
 
-### 4c. Monitor & Spawn QA (Team Leader Responsibility)
+### 4c. Monitor Agent Pairs (Team Leader Responsibility)
 
-> **⚠️ The Team Leader (YOU) owns the entire QA lifecycle.** Coding agents cannot spawn QA agents. They can only report completion back to you via SendMessage. You MUST spawn QA for each completed task.
+> **⚠️ The code↔QA loop runs BETWEEN the agent pair — you are NOT in the middle.**
+> The coding agent messages the QA agent directly. The QA agent messages the coding agent
+> directly on FAIL. You only receive the final result: QA PASS or QA ESCALATION.
 
 **Communication flow:**
 
 ```
-Coding Agent                    Team Leader (you)                QA Agent
-     |                                |                              |
-     |-- SendMessage: "done" -------->|                              |
-     |                                |-- Spawn QA agent ----------->|
-     |                                |                              |-- reviews code
-     |                                |<-- SendMessage: "QA PASS" ---|
-     |                                |                              |
-     |                                |-- /track qa.passed --------->| (emit event!)
-     |                                |-- proceed to merge           |
-     |                                |                              |
-     |                        --- OR if QA FAIL ---                  |
-     |                                |<-- SendMessage: "QA FAIL" ---|
-     |                                |                              |
-     |                                |-- /track qa.failed --------->| (emit event!)
-     |<-- SendMessage: "fix these" ---|                              |
-     |-- fixes code                   |                              |
-     |-- SendMessage: "done" -------->|                              |
-     |                                |-- Spawn NEW QA agent ------->|
+Coding Agent              QA Agent                    Team Leader (you)
+     |                        |                              |
+     |  (both spawned)        |  (both spawned)              |
+     |  (works on code)       |  (loads rules, writes plan)  |
+     |                        |                              |
+     |-- "done, review" ----->|                              |
+     |                        |-- reviews code               |
+     |                        |                              |
+     |              --- if QA FAIL (round < 3) ---           |
+     |<-- "fix these" --------|                              |
+     |-- fixes code           |                              |
+     |-- "done, re-review" -->|                              |
+     |                        |-- re-reviews                 |
+     |              ... loop until PASS or round 3 ...       |
+     |                        |                              |
+     |              --- if QA PASS ---                       |
+     |                        |-- "QA PASS Task #N" -------->|
+     |                        |                              |-- /track qa.passed
+     |                        |                              |-- merge
+     |                        |                              |-- shutdown both agents
+     |                        |                              |
+     |              --- if QA ESCALATION (3 rounds) ---      |
+     |                        |-- "ESCALATION Task #N" ----->|
+     |                        |                              |-- inform user
 ```
 
 **Step-by-step:**
 
-1. **Wait for coding agent completion.** Coding agents send completion messages via SendMessage. You will receive these automatically — do NOT poll worktree directories (the `team-leader-gate.js` worktree polling gate will block `ls`, `cat`, `git log` etc. on worktree paths).
+1. **Wait for QA agent results.** The coding↔QA loop is autonomous. You do NOT relay messages between them. The QA agent will message you when:
+   - **QA PASS**: The task is ready to merge.
+   - **QA ESCALATION**: 3 rounds failed, needs human intervention.
 
-2. **Spawn QA agent for each completed task.** When a coding agent reports complete:
-   - Use the QA template from `AGENT-SPAWN-TEMPLATES.md`
-   - Spawn with `team_name: "<feature-name>"` so the QA agent joins the team
-   - Include in the QA prompt: the coding agent's reported plan, files changed, the pre-filled QA checklist
-   - QA agent prompt MUST include:
-     ```
-     COMMUNICATION RULES:
-     - You are a QA reviewer on team "<feature-name>".
-     - Send your review result to the Team Leader via:
-         SendMessage(to: "<TEAM_LEADER_NAME>", message: "<full report>", summary: "QA PASS Task #<N>" or "QA FAIL Task #<N>")
-     - You CANNOT spawn agents or contact coding agents directly.
-     ```
+   Do NOT poll worktree directories — `team-leader-gate.js` blocks worktree reads.
 
-3. **On QA PASS:**
+2. **On QA PASS (QA agent messages you):**
    - **Emit the tracking event:** `/claude-workflow:track qa.passed` with `task` and `branch` data. **This is REQUIRED** — the `team-leader-gate.js` merge gate checks `events.jsonl` for a `qa.passed` event before allowing any merge. Without this event, the merge will be blocked with: _"Branch does not have a QA pass."_
    - Proceed to merge (Phase 4d).
+   - After merge, **shut down BOTH agents** for this task:
+     ```
+     SendMessage(to: "coder-task-<N>", message: { type: "shutdown_request", reason: "Task merged" })
+     SendMessage(to: "qa-task-<N>", message: { type: "shutdown_request", reason: "Task merged" })
+     ```
 
-4. **On QA FAIL:**
+3. **On QA ESCALATION (QA agent messages you after 3 failed rounds):**
    - **Emit the tracking event:** `/claude-workflow:track qa.failed` with the failure details.
-   - Forward the QA report to the coding agent via `SendMessage(to: "<coding-agent-name>", message: "<QA report with fix instructions>")`.
-   - Wait for the coding agent to send a new completion message after fixes.
-   - Spawn a NEW QA agent (do not reuse the previous one — spawn a fresh instance).
-   - Maximum QA rounds: 3. After 3 failures, escalate to the user.
-
-5. **On QA FAIL (max rounds exceeded):**
    - Inform the user with the full QA report history.
    - Ask whether to: (a) manually fix and retry, (b) skip QA for this task, (c) abort the feature.
 
@@ -678,15 +698,16 @@ When ALL waves are complete:
 ```
 WAVE <N> VERIFICATION:
 [ ] 4a — Worktree created for each task in this wave (git worktree list confirms)
-[ ] 4b — Each coding agent spawned with: team_name, COMMUNICATION RULES block, worktree path, file scope
-[ ] 4b — Each coding agent prompt does NOT contain "spawn QA" instructions
-[ ] 4b — Each coding agent's task_id saved for tracking
-[ ] 4c — For EACH completed task:
-    [ ] Coding agent sent completion via SendMessage (received by team leader)
-    [ ] QA agent spawned BY TEAM LEADER (not by coding agent) with team_name + COMMUNICATION RULES
-    [ ] QA result received via SendMessage
+[ ] 4b — For EACH task, BOTH agents spawned as a pair:
+    [ ] Coding agent (coder-task-<N>) spawned with: team_name, QA_AGENT_NAME, worktree path, file scope
+    [ ] QA agent (qa-task-<N>) spawned with: team_name, CODING_AGENT_NAME, worktree path
+    [ ] Coding agent prompt sends completion to QA agent (NOT team leader)
+    [ ] QA agent prompt sends FAIL to coding agent, PASS to team leader
+    [ ] Neither agent prompt contains "spawn QA" or "report to team leader on completion"
+    [ ] Both agent task_ids saved
+[ ] 4c — For EACH task, QA agent sent final result to team leader:
     [ ] If QA PASS: /track qa.passed emitted with task + branch data
-    [ ] If QA FAIL: /track qa.failed emitted, fix instructions forwarded to coding agent, new QA spawned
+    [ ] If QA ESCALATION: user informed, decision made
 [ ] 4d — For EACH QA-passed task:
     [ ] Rebase completed without conflicts
     [ ] Merge completed with --no-ff
