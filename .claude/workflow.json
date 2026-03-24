@@ -15,11 +15,8 @@
     "worktreeDir": ".worktrees"
   },
   "guards": {
-    "branchGuard": false,
+    "branchGuard": true,
     "destructiveGuard": true,
-    "configGuard": false,
-    "workflowGate": false,
-    "teamLeaderGate": false,
-    "enforcementGate": false
+    "configGuard": true
   }
 }
