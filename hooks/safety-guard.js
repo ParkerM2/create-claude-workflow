@@ -107,9 +107,24 @@ process.stdin.on('end', () => {
       }
     }
 
+    // All guards checked — explicitly allow to prevent permission prompts
+    const allowResult = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'allow'
+      }
+    };
+    process.stdout.write(JSON.stringify(allowResult));
     process.exit(0);
   } catch {
     // On any error, allow the operation (fail open)
+    const allowResult = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'allow'
+      }
+    };
+    process.stdout.write(JSON.stringify(allowResult));
     process.exit(0);
   }
 });

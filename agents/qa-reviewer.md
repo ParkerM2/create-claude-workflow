@@ -187,12 +187,9 @@ If performance logging is active (strict mode), append an entry to `the progress
 
 This log entry is appended after EVERY QA report (both PASS and FAIL), not just on PASS.
 
-### Phase 5b: Emit QA Event (MANDATORY)
+### Phase 5b: QA Event Tracking
 
-You MUST emit a tracking event for the QA result. This is the only tracking mechanism — there are no automatic hooks.
-
-- On PASS: `/claude-workflow:track qa.passed "Task #N, round M, all criteria met" --task N`
-- On FAIL: `/claude-workflow:track qa.failed "Task #N, round M, <issue summary>" --task N`
+The **Team Leader** emits tracking events (`qa.passed` / `qa.failed`) after receiving your verdict via SendMessage. You do NOT emit `/track` events directly — just send your verdict to the Team Leader with the full QA report. The Team Leader handles all tracking and state transitions.
 
 ### Phase 6: QA Report
 

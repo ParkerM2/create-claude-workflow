@@ -5,33 +5,29 @@ description: Full multi-agent feature implementation with branch-per-task isolat
 
 # /new-feature — Team Workflow Orchestrator (v3)
 
-CRITICAL: Execute this workflow step by step. Do NOT skip, combine, or abbreviate any step. Do NOT write application code yourself — spawn coding agents. Do NOT emit qa.passed or guardian-passed without spawning the respective agents first. The proof-gate.js hook WILL block you if you try to cheat — it validates that agents were actually spawned in proof-ledger.jsonl before allowing state transitions.
+CRITICAL: Execute this workflow step by step. Do NOT skip, combine, or abbreviate any step. Do NOT write application code yourself — spawn coding agents. The phase checklists are your enforcement — complete every item before advancing.
 
-## Architecture: Hub-and-Spoke with Proof-of-Work
+## Architecture: Hub-and-Spoke with Parallel Agent Pairs
 
 **Communication model — Team Leader is the hub. Agents do NOT talk to each other.**
 
 ```
-Leader spawns coder -> coder works -> coder messages leader "done"
-Leader spawns QA   -> QA reviews   -> QA messages leader "PASS/FAIL"
-If FAIL: leader messages coder "fix: ..." -> coder fixes -> leader spawns NEW QA
-If PASS: leader emits qa.passed -> merges -> shuts down both agents
+For each task:
+  Leader spawns coder + QA together (parallel)
+  Coder works -> coder messages leader "done"
+  QA prepares review plan while coder works
+  Leader notifies QA that code is ready -> QA reviews -> QA messages leader "PASS/FAIL"
+  If FAIL: leader messages coder "fix: ..." -> coder fixes -> leader spawns NEW QA
+  If PASS: leader emits qa.passed -> merges -> shuts down both agents
 ```
 
-**Proof enforcement — proof-ledger.js (PostToolUse) records what happened. proof-gate.js (PreToolUse) validates proof before allowing transitions.**
-
-| Action | Required Proof (in proof-ledger.jsonl) |
-|--------|---------------------------------------|
-| Emit qa.passed | QA agent was spawned for this task |
-| git merge work/* | qa.passed event exists for this branch |
-| Emit guardian-passed | Guardian agent was spawned |
-| Team leader Edit/Write app code | BLOCKED during active workflow (only progress/tracking files allowed) |
+**Enforcement is checklist-driven.** Each phase has a verification checklist. Complete every item before advancing. The safety-guard.js hook blocks destructive git commands. The state file protection in proof-gate.js prevents direct writes to tracking files.
 
 ---
 
 ## Phase 1: SETUP & VALIDATE
 
-> MANDATORY: Execute every step in order. Each step exists because a hook or gate depends on its output. Skipping any step WILL cause silent failures in later phases.
+> MANDATORY: Execute every step in order. Each step produces outputs that later phases depend on. Skipping any step WILL cause silent failures.
 
 ### Step 1.0: Pre-Flight Infrastructure Check
 
@@ -86,7 +82,13 @@ git branch --list "<workPrefix>/<feature-name>/*"
 ```
 - events.jsonl exists with no session.end: suggest `/resume`
 - events.jsonl exists with session.end: ask user if starting new work
-- Stale workbranches: clean up with `git worktree remove` / `git branch -d`
+- Stale workbranches or worktrees: clean up aggressively before starting:
+  ```bash
+  # Remove stale worktrees for this feature
+  git worktree list --porcelain | grep -A2 "worktree.*<worktreeDir>/<feature-name>" | grep "^worktree " | sed 's/worktree //' | while read wt; do git worktree remove --force "$wt" 2>/dev/null; done
+  # Remove stale work branches for this feature
+  git branch --list "<workPrefix>/<feature-name>/*" | xargs -r git branch -D 2>/dev/null
+  ```
 
 **Then initialize:**
 ```bash
@@ -115,7 +117,7 @@ PHASE 1 VERIFICATION:
 
 ---
 
-**PHASE CHECK**: Before proceeding, confirm all Phase 1 items checked. proof-gate.js blocks agent spawns until session.start has been emitted.
+**PHASE CHECK**: Before proceeding, confirm all Phase 1 items checked.
 
 ---
 
@@ -162,17 +164,23 @@ PHASE 2 VERIFICATION:
 
 ---
 
-**PHASE CHECK**: Before proceeding, confirm all Phase 2 items checked. proof-gate.js blocks agent spawns until plan.created has been emitted.
+**PHASE CHECK**: Before proceeding, confirm all Phase 2 items checked.
 
 ---
 
 ## Phase 3: TEAM SETUP
 
-### Step 3.1: Create Team
+### Step 3.1: Create Team and Discover Your Name
 
 ```
 TeamCreate: team_name = "<feature-name>"
 ```
+
+Immediately after TeamCreate, read the team config to discover your own member name:
+```bash
+cat ~/.claude/teams/<feature-name>/config.json
+```
+Find your entry in the `members` array and store the `name` field as `TEAM_LEADER_NAME`. Use this value in ALL agent spawn prompts to replace `<TEAM_LEADER_NAME>`.
 
 ### Step 3.2: Create Tasks
 
@@ -218,30 +226,37 @@ PHASE 3 VERIFICATION:
 
 ---
 
-**PHASE CHECK**: Before proceeding, confirm all Phase 3 items checked. proof-gate.js blocks agent spawns until setupComplete is true.
+**PHASE CHECK**: Before proceeding, confirm all Phase 3 items checked.
 
 ---
 
 ## Phase 4: EXECUTE WAVES
 
-> MANDATORY: This is the core execution loop. For EACH wave, execute steps 4a through 4g in order. Do NOT skip the QA step. Do NOT merge without QA passing. Do NOT write application code yourself.
+> MANDATORY: This is the core execution loop. For EACH wave, execute steps 4a through 4e in order. Do NOT skip the QA step. Do NOT merge without QA passing. Do NOT write application code yourself.
 
 For each wave (1 to TOTAL_WAVES):
 
 ### Step 4a: Create Worktrees
 
-For each task in this wave:
+Check `useWorktrees` from the config loaded in Step 1.3.
+
+**If `useWorktrees` is true (default):** For each task in this wave:
 ```bash
 git checkout <featurePrefix>/<feature-name>
 git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<feature-name>/<task-slug>
 ```
-If `useWorktrees` is false, create branches instead: `git checkout -b <workPrefix>/<feature-name>/<task-slug>` then switch back to feature branch.
 
-### Step 4b: Spawn Coding Agents
+**If `useWorktrees` is false:** Create branches instead: `git checkout -b <workPrefix>/<feature-name>/<task-slug>` then switch back to feature branch.
 
-> MANDATORY: Use the FULL template from AGENT-SPAWN-TEMPLATES.md. Do NOT abbreviate. Every coding agent MUST receive: task description, file scope, acceptance criteria, pre-digested rules, worktree path, and communication instructions.
+### Step 4b: Spawn Agent Pairs (Coder + QA Together)
 
-For each task, spawn ONE coding agent with: `description: "<summary>"`, `subagent_type: general-purpose`, `model: "sonnet"`, `team_name: "<feature-name>"`, `name: "coder-task-<N>"`, `mode: bypassPermissions`, `run_in_background: true`.
+> MANDATORY: Use the FULL template from AGENT-SPAWN-TEMPLATES.md. Do NOT abbreviate.
+
+For each task, spawn BOTH agents in the SAME message (parallel tool calls):
+
+**Coding agent:** `description: "<summary>"`, `subagent_type: general-purpose`, `model: "sonnet"`, `team_name: "<feature-name>"`, `name: "coder-task-<N>"`, `mode: bypassPermissions`, `run_in_background: true`.
+
+**QA agent:** `description: "QA review Task #<N>"`, `subagent_type: general-purpose`, `model: "haiku"`, `team_name: "<feature-name>"`, `name: "qa-task-<N>"`, `mode: bypassPermissions`, `run_in_background: true`.
 
 Every coding agent prompt MUST include:
 ```
@@ -249,45 +264,38 @@ COMMUNICATION RULES:
 - You are on team "<feature-name>". Your team leader is "<TEAM_LEADER_NAME>".
 - On completion: SendMessage(to: "<TEAM_LEADER_NAME>", message: "Task #<N> complete. Files: <list>. Self-review passed.", summary: "Task #<N> complete")
 - On blocker: message Team Leader immediately.
-- Do NOT communicate with other coding agents. Do NOT spawn agents. Do NOT emit tracking events.
-- Wait for shutdown_request when done.
+- Do NOT communicate with other coding agents or QA agents. Do NOT spawn agents. Do NOT emit tracking events.
+- Wait for further instructions or shutdown_request when done.
 ```
 
-Save each `task_id` for later use with `TaskOutput(task_id=<id>)`.
-
-### Step 4c: WAIT for Coding Agents
-
-**DO NOT POLL WORKTREES.** Wait for coding agents to send completion messages via SendMessage. The agents message you when done.
-
-When a coding agent messages completion:
-1. Note which task completed and the files changed
-2. Proceed to Step 4d for that task
-
-> RECOVERY: If an agent goes idle without messaging, send it a nudge: `SendMessage(to: "coder-task-<N>", message: "Status check — are you done with Task #<N>?")`. If no response after nudge, check TaskOutput for errors. If agent crashed, spawn a replacement on the same worktree.
-
-### Step 4d: Spawn QA Agent (SEQUENTIAL — only after coder finishes)
-
-> MANDATORY: You MUST spawn a real QA agent. proof-gate.js checks proof-ledger.jsonl for a qa-* agent spawn before allowing qa.passed. Skipping QA WILL be blocked.
-
-Spawn QA with: `description: "QA review Task #<N>"`, `model: "haiku"`, `team_name: "<feature-name>"`, `name: "qa-task-<N>"`, `mode: bypassPermissions`, `run_in_background: true`.
-
-QA prompt MUST include: task description, acceptance criteria, files to review (from coder report), worktree path, pre-filled QA checklist from QA-CHECKLIST-TEMPLATE.md.
-
+Every QA agent prompt MUST include: task description, acceptance criteria, expected files, worktree path, pre-filled QA checklist from QA-CHECKLIST-TEMPLATE.md, and:
 ```
 QA COMMUNICATION RULES:
 - You are a QA reviewer on team "<feature-name>". Leader: "<TEAM_LEADER_NAME>".
+- You were spawned at the same time as the coding agent. Prepare your review plan while you wait.
+- The Team Leader will notify you when the code is ready for review.
 - On QA PASS: message Team Leader "QA PASS Task #<N>" with full report.
 - On QA FAIL: message Team Leader "QA FAIL Task #<N>" with issue list.
 - Do NOT message the coding agent directly. Do NOT spawn agents.
 ```
 
-### Step 4e: Handle QA Verdict
+Save each `task_id` for later use with `TaskOutput(task_id=<id>)`.
 
-Wait for the QA agent to message you with PASS or FAIL.
+### Step 4c: Wait for Verdicts and Handle Results
+
+**Wait for coding agents to message completion.** When a coder reports done:
+1. Note which task completed and the files changed
+2. Notify the paired QA agent: `SendMessage(to: "qa-task-<N>", message: "Code ready for review. Files changed: <list>. Coder reports self-review passed.")`
+
+**Wait for QA agents to send verdicts.** The QA agent reviews the committed code and messages you with PASS or FAIL.
+
+> RECOVERY: If an agent goes idle without messaging, send it a nudge. If no response, check TaskOutput for errors. If agent crashed, spawn a replacement on the same worktree.
+
+### Step 4d: Handle QA Verdict
 
 **On QA PASS — execute ALL 5 steps in order:**
 
-1. Emit: `/claude-workflow:track qa.passed "Task #<N>" --task <N> --branch <workPrefix>/<feature-name>/<task-slug>` (REQUIRED — merge gate checks for this)
+1. Emit: `/claude-workflow:track qa.passed "Task #<N>" --task <N> --branch <workPrefix>/<feature-name>/<task-slug>`
 2. Merge:
    ```bash
    git -C <worktreeDir>/<feature-name>/<task-slug> rebase <featurePrefix>/<feature-name>
@@ -330,14 +338,13 @@ When ALL waves complete:
 /claude-workflow:track checkpoint "all-waves-complete"
 ```
 
-### Step 4g: Verification Checklist (per wave)
+### Step 4f: Verification Checklist (per wave)
 
 ```
 WAVE <N> VERIFICATION:
 - [ ] Worktree created for each task
-- [ ] Coding agent spawned for each task (with full template, NOT abbreviated)
-- [ ] Coding agent messaged completion (DO NOT proceed without this)
-- [ ] QA agent spawned for each completed task (proof-gate requires this)
+- [ ] Coder + QA agent pair spawned together for each task (with full template, NOT abbreviated)
+- [ ] Coding agent messaged completion, QA agent notified
 - [ ] QA verdict received: PASS or FAIL handled per protocol
 - [ ] For each PASS: qa.passed emitted, branch merged, branch.merged emitted, worktree cleaned, agents shut down
 - [ ] Wave fence passed (mode-appropriate check)
@@ -358,7 +365,7 @@ PHASE 4 FINAL VERIFICATION:
 
 ---
 
-**PHASE CHECK**: Before proceeding, confirm all Phase 4 items checked. proof-gate.js blocks Guardian spawn until all-waves-complete has been emitted.
+**PHASE CHECK**: Before proceeding, confirm all Phase 4 items checked.
 
 ---
 
@@ -372,9 +379,7 @@ PHASE 4 FINAL VERIFICATION:
 
 ### Step 5b: Spawn Guardian Agent
 
-> MANDATORY: proof-gate.js checks proof-ledger.jsonl for a guardian agent spawn before allowing guardian-passed. Skipping Guardian WILL be blocked (except fast mode).
-
-**Fast mode:** Skip Guardian. Emit guardian-passed directly (proof-gate allows this).
+**Fast mode:** Check the workflow mode from `workflow-state.json`. If mode is `fast`, skip Guardian — emit guardian-passed directly and proceed to Step 5c.
 
 **Strict/standard:** Spawn with `description: "Codebase Guardian"`, `model: "sonnet"`, `team_name: "<feature-name>"`, `name: "guardian"`, `mode: bypassPermissions`, `run_in_background: true`. Guardian runs on the feature branch (NOT in a worktree). Prompt includes: all files changed, project rules, architecture, 7 structural checks, communication rules (message leader with PASS/FAIL).
 
@@ -456,14 +461,13 @@ git branch -d <workPrefix>/<name>/<task>
 
 See `.claude/agents/` for all specialist definitions.
 
-## Quick Reference — Proof Gate Rules
+## Quick Reference — Active Guards
 
-| You Try To... | proof-gate.js Requires... | If Missing... |
-|---------------|--------------------------|---------------|
-| Spawn agent | session.start emitted, setupComplete | Finish Phase 1 and Phase 3 first |
-| Emit qa.passed | QA agent spawned in proof-ledger | Spawn a QA agent first |
-| Merge work branch | qa.passed for this branch | Run QA first |
-| Emit guardian-passed | Guardian spawned in proof-ledger | Spawn Guardian first |
-| Shut down agents | guardianPassed = true | Run Guardian first |
-| TeamDelete | guardianPassed = true | Run Guardian first |
-| Edit app code (as leader) | BLOCKED during active workflow | Spawn a coding agent instead |
+| Guard | What it does | Hook file |
+|-------|-------------|-----------|
+| **State file protection** | Blocks direct Write/Edit to events.jsonl, workflow-state.json, proof-ledger.jsonl | proof-gate.js |
+| **Destructive guard** | Blocks `git push --force`, `rm -rf`, `git reset --hard`, `git branch -D` | safety-guard.js |
+| **Branch guard** | Warns on commits/pushes to protected branches (main, master) | safety-guard.js |
+| **Config guard** | Blocks agents from modifying .claude/ workflow files during execution | config-guard.js |
+
+All other enforcement is checklist-driven. Follow each phase's verification checklist before advancing.

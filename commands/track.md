@@ -81,25 +81,25 @@ Map the event-type to a data payload:
 
 ## Phase 4: Write Event
 
-Write the event to the feature's JSONL log:
+Write the event using the **tracker module** via a Bash node command. Do NOT write directly to events.jsonl with Write/Edit tools — direct writes are blocked by the proof-gate hook. The tracker module handles locking, atomic writes, workflow state updates, and markdown rendering automatically.
 
-1. Read progressDir from `.claude/workflow.json` (default: `.claude/progress`)
-2. Create `<progressDir>/<feature>/` directory if it doesn't exist
-3. Build the event envelope:
-   ```json
-   {
-     "v": 1,
-     "ts": "<ISO timestamp>",
-     "sid": null,
-     "seq": null,
-     "type": "<event-type>",
-     "feature": "<feature>",
-     "agent": null,
-     "pane_id": null,
-     "data": { ... }
-   }
-   ```
-4. Append the JSON line to `<progressDir>/<feature>/events.jsonl`
+Run via Bash:
+
+```bash
+node -e "require('${PLUGIN_ROOT}/hooks/tracker.js').emitEvent('<event-type>', <data-as-json>, {feature: '<feature>'})"
+```
+
+Where:
+- `${PLUGIN_ROOT}` is the plugin root path from the workflow session context
+- `<event-type>` is the dot-namespaced event type (e.g., `session.start`, `task.completed`)
+- `<data-as-json>` is the data object from Phase 3 as a JavaScript object literal
+- `{feature: '<feature>'}` passes the feature name as an option (overrides auto-detection)
+
+The tracker module automatically:
+- Creates the feature directory if needed
+- Appends the event with proper envelope (v, ts, sid, seq)
+- Updates workflow-state.json via the FSM
+- Re-renders current.md and index.md for significant events
 
 ---
 
@@ -110,5 +110,3 @@ Output a brief confirmation:
 ```
 Tracked: <event-type> → .claude/progress/<feature>/events.jsonl
 ```
-
-If this is a significant event (checkpoint, task.completed, qa.passed/failed, session.start/end, blocker.reported), also regenerate `current.md` from the JSONL log.

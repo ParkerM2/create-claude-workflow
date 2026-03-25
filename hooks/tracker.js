@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
-const { getRepoRoot, getBranchingConfig, getEffectiveBranch, getWorkflowState, updateWorkflowState } = require('./config.js');
+const { getRepoRoot, getBranchingConfig, getEffectiveBranch, getWorkflowState, updateWorkflowState, getActiveFeature } = require('./config.js');
 
 // ---------------------------------------------------------------------------
 // Session identity — generated once per module load
@@ -359,7 +359,9 @@ function updateWorkflowStateFromEvent(feature, event) {
               const waves = Object.assign({}, current.waves || {});
               waves[String(completedWave)] = 'complete';
               const totalWaves = current.totalWaves || 0;
-              if (totalWaves === 0 || completedWave < totalWaves) {
+              // Only advance to next wave if we haven't exceeded totalWaves
+              // When totalWaves is 0 (unset), only advance if there are pending tasks
+              if (totalWaves > 0 && completedWave < totalWaves) {
                 waves[String(nextWave)] = 'active';
               }
               updateWorkflowState(feature, {
@@ -437,7 +439,10 @@ function emitEvent(type, data, options) {
   options = options || {};
 
   try {
-    const feature = options.feature || getFeatureFromBranch();
+    // Feature detection: explicit option > branch pattern > progress-dir scan
+    // The getActiveFeature fallback handles worktree-agent-* and claude/* branches
+    // that getFeatureFromBranch doesn't recognize (it only knows work/feature/hotfix/refactor patterns)
+    const feature = options.feature || getFeatureFromBranch() || getActiveFeature();
     if (!feature) {
       // Cannot determine feature — silently skip
       return;

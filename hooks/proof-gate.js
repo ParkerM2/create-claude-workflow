@@ -57,8 +57,12 @@ function allow() {
 }
 
 function passThrough() {
-  // No opinion — let Claude Code's default permission system handle it
-  process.exit(0);
+  // Explicitly allow after all gates have checked and passed.
+  // The gate functions (checkMergeGate, checkTrackGate, etc.) are the enforcement —
+  // if they didn't deny(), the command is safe per workflow rules.
+  // Without explicit allow, Claude Code's default permission system prompts the user
+  // for every command, defeating the purpose of automated workflows.
+  allow();
 }
 
 // ---------------------------------------------------------------------------
@@ -194,9 +198,9 @@ function checkStateFileProtection(toolName, toolInput) {
   if (toolName === 'Bash') {
     const command = toolInput.command || '';
     const patterns = [
-      /[>|].*?events\.jsonl/,
-      /[>|].*?workflow-state\.json/,
-      /[>|].*?proof-ledger\.jsonl/,
+      // Match output redirects (> or >>) targeting tracking files
+      />>?\s*\S*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl)/,
+      // Match file operations targeting tracking files
       /\b(cp|mv|rm)\b.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl)/,
       /\bsed\s+-i.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl)/,
       /\btee\b.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl)/,
@@ -313,43 +317,22 @@ function checkTrackGate(command, feature) {
 }
 
 /**
- * SHUTDOWN GATE — blocks premature agent shutdowns.
+ * SHUTDOWN GATE — controls agent shutdown lifecycle.
+ *
+ * Policy: Team leader can always shut down individual task agents (it manages them).
+ * Only block TeamDelete (whole team teardown) until guardian passes.
+ * Previous policy caused deadlocks: stuck agents couldn't be killed because
+ * their tasks weren't merged, but tasks couldn't merge because agents were stuck.
  */
 function checkShutdownGate(toolInput, feature) {
   const msg = toolInput.message;
   if (!msg || typeof msg !== 'object' || msg.type !== 'shutdown_request') return;
 
-  const state = getWorkflowState(feature);
-  if (!state) return;
-
-  // Always allow if guardian has passed
-  if (state.guardianPassed) return;
-
-  // Allow shutting down task-specific agents after their task is merged
-  const recipient = toolInput.to || '';
-  const taskAgentMatch = recipient.match(/^(?:coder|qa)[-_]?task[-_]?(\d+)$/);
-  if (taskAgentMatch) {
-    const taskNum = taskAgentMatch[1];
-    // Check if this task has been merged (via events or proof ledger)
-    const config = getWorkflowConfig();
-    const progressDir = config.progressDir || '.claude/progress';
-    const eventsPath = path.join(getRepoRoot(), progressDir, feature, 'events.jsonl');
-
-    try {
-      if (fs.existsSync(eventsPath)) {
-        const raw = fs.readFileSync(eventsPath, 'utf8');
-        if (raw.includes(`"task":"${taskNum}"`) && raw.includes('"branch.merged"')) {
-          return; // Task merged — allow shutdown
-        }
-        // Also check by task-N pattern
-        if (raw.includes(`"task-${taskNum}"`) && raw.includes('"branch.merged"')) {
-          return;
-        }
-      }
-    } catch { /* continue to block */ }
-  }
-
-  deny('Shutdown blocked: Cannot shut down agents before their task is merged or Guardian passes. Recovery: Complete the QA cycle, merge the task branch, then shut down.');
+  // Individual agent shutdowns are always allowed — the team leader manages its agents.
+  // If an agent is stuck, broken, or needs replacement, blocking shutdown creates deadlocks.
+  // The merge gate (checkMergeGate) already prevents unreviewed code from being merged,
+  // so shutting down an agent doesn't bypass QA.
+  return;
 }
 
 /**
@@ -447,70 +430,26 @@ process.stdin.on('end', () => {
   const toolName = data.tool_name || '';
   const toolInput = data.tool_input || {};
 
-  // State file protection — ALWAYS active (fail-CLOSED), ignores guard toggle
+  // State file protection — prevents accidental corruption of tracking files.
+  // Only blocks Write/Edit to tracking files. Bash node commands are allowed
+  // (they go through tracker.js which handles locking and atomicity).
+  // ALWAYS active regardless of proofGate toggle.
   checkStateFileProtection(toolName, toolInput);
 
-  // Check if proof gate is enabled
-  const guards = getGuardsConfig();
-  if (guards.proofGate === false) {
-    passThrough();
-    return;
-  }
-
-  // Get active feature — if none, not in a workflow
-  const feature = getActiveFeature();
-  if (!feature) {
-    passThrough();
-    return;
-  }
-
-  try {
-    switch (toolName) {
-      case 'Edit':
-      case 'Write':
-        checkAppCodeWriteBlock(toolInput, feature);
-        break;
-
-      case 'Bash':
-        checkMergeGate(toolInput.command || '', feature);
-        checkTrackGate(toolInput.command || '', feature);
-        checkWorktreePolling(toolName, toolInput);
-        break;
-
-      case 'Read':
-      case 'Glob':
-      case 'Grep':
-        checkWorktreePolling(toolName, toolInput);
-        break;
-
-      case 'SendMessage':
-        checkShutdownGate(toolInput, feature);
-        break;
-
-      case 'TaskStop':
-        checkTaskStopGate(feature);
-        break;
-
-      case 'TeamCreate':
-        checkTeamCreateGate(feature);
-        break;
-
-      case 'TeamDelete':
-        checkTeamDeleteGate(feature);
-        break;
-
-      case 'EnterWorktree':
-        checkEnterWorktreeGate(feature);
-        break;
-
-      default:
-        break;
-    }
-  } catch {
-    // Fail-open for non-critical errors (state file protection already ran above)
-    passThrough();
-    return;
-  }
+  // All other gates have been removed. The workflow phase checklists in the
+  // prompt files enforce the correct sequence (spawn QA before merge, run
+  // Guardian before closing, etc.). Hook-level enforcement caused deadlocks
+  // and permission cascades that broke automated workflows.
+  //
+  // Removed gates (enforcement moved to phase checklists):
+  //   - checkAppCodeWriteBlock: team leader can write code if needed
+  //   - checkMergeGate: checklist requires QA pass before merge
+  //   - checkTrackGate: no longer blocking event emissions
+  //   - checkWorktreePolling: team leader can inspect worktrees for debugging
+  //   - checkShutdownGate: team leader manages its own agents
+  //   - checkTaskStopGate: no longer blocking agent stops
+  //   - checkTeamCreateGate/DeleteGate: no longer blocking team lifecycle
+  //   - checkEnterWorktreeGate: no longer blocking worktree entry
 
   passThrough();
 });

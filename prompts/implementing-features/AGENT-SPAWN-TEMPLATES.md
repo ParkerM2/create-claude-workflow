@@ -366,7 +366,7 @@ If you find yourself running low on context (repeated compactions, losing track 
 
 ## QA Review Agent Spawn
 
-The **Team Leader** spawns this AFTER the coding agent reports completion. The QA agent reviews the code and reports its verdict (PASS or FAIL) to the Team Leader. The Team Leader manages the fix loop — on FAIL, the Team Leader forwards details to the coding agent and spawns a new QA agent for re-review.
+The **Team Leader** spawns this AT THE SAME TIME as the coding agent. The QA agent waits for the coding agent to complete and commit, then reviews the code and reports its verdict (PASS or FAIL) to the Team Leader. The Team Leader manages the fix loop — on FAIL, the Team Leader forwards details to the coding agent and spawns a new QA agent for re-review.
 
 ```
 <spawn-parameters>
@@ -388,15 +388,17 @@ Worktree path: **<worktreeDir>/<feature-name>/<task-slug>** (if worktrees enable
 
 **You report to the Team Leader: `<TEAM_LEADER_NAME>`.**
 
-> **STARTUP BEHAVIOR:** The coding agent has already completed their work and committed.
-> Begin immediately with Phase 0 (loading rules), then Phase 1 (writing your review plan),
-> then Phase 2 (executing the review). You do NOT need to wait for a coding agent message.
+> **STARTUP BEHAVIOR:** You are spawned at the same time as the coding agent.
+> Begin with Phase 0 (loading rules), then Phase 1 (writing your review plan).
+> After your review plan is written, WAIT for the coding agent to message the
+> Team Leader that their work is complete. The Team Leader will notify you when
+> the code is ready for review. Then proceed with Phase 2 (executing the review).
 
 ---
 **MANDATORY PHASED WORKFLOW — PHASES ARE SEQUENTIAL AND BLOCKING**
 Complete each phase fully before starting the next.
 Do NOT start reviewing code until your review plan is written AND
-the coding agent has sent you a completion report.
+the coding agent has completed their work (you'll receive a message from the Team Leader).
 
 ---
 
@@ -516,9 +518,9 @@ If your review passes:
 
 ## PHASE 4: QA REPORT & CODE↔QA LOOP
 
-> **You have a paired coding agent** named `<CODING_AGENT_NAME>` (e.g., `coder-task-1`).
-> The Team Leader spawned both of you together. On FAIL, you message the coding agent
-> directly with fix instructions. On PASS, you message the Team Leader.
+> **You have a paired coding agent** on the same worktree (e.g., `coder-task-1`).
+> The Team Leader spawned both of you together. ALL verdicts go to the Team Leader.
+> You do NOT message coding agents directly — the Team Leader handles fix routing.
 
 **Track your current QA round internally** (start at round 1, max 3).
 
@@ -861,18 +863,19 @@ When starting a new feature, the Team Leader follows this sequence:
       a. CREATE worktrees from feature/ HEAD:
            git checkout <featurePrefix>/<feature-name>
            git worktree add <worktreeDir>/<feature-name>/<task-slug> -b <workPrefix>/<feature-name>/<task-slug>
-      b. SPAWN CODING AGENTS (one per task):
+      b. SPAWN AGENT PAIRS (coding + QA together, one pair per task):
          - Coding agent: name "coder-task-<N>", use Standard Coding Agent template
-         - Include in prompt: TEAM_LEADER_NAME (your session name), worktree path, branch
-         - run_in_background: true
-         (CRITICAL: coding agents report to TEAM LEADER, not QA agents)
-      c. WAIT for coding agents to message you "Task complete"
-      d. For each completed task, SPAWN QA AGENT:
          - QA agent: name "qa-task-<N>", use QA Review Agent template
-         - Include in prompt: TEAM_LEADER_NAME, worktree path, branch, task context
-         - run_in_background: true
-         (QA agent reviews independently and sends verdict to Team Leader)
-      e. HANDLE QA VERDICT from QA agent message:
+         - Include in BOTH prompts: TEAM_LEADER_NAME (your session name), worktree path, branch
+         - run_in_background: true for both
+         - Spawn both in the SAME message (parallel tool calls)
+         (The QA agent waits for the coding agent's completion message before reviewing.
+          The Team Leader just waits for the QA PASS/FAIL verdict — no intermediate spawn step.)
+      c. WAIT for QA agent to send verdict (PASS or FAIL):
+         (The coding agent messages Team Leader on completion. The QA agent independently
+          monitors the worktree and reviews after the coding agent commits. Team Leader
+          does NOT need to relay messages between them — QA reviews the committed code.)
+      d. HANDLE QA VERDICT from QA agent message:
          - On QA PASS:
            - Emit `/claude-workflow:track qa.passed` with task + branch data
              (proof-gate validates: QA agent was spawned in proof-ledger.jsonl)

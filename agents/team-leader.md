@@ -184,7 +184,7 @@ For each task, you MUST use the FULL Standard Coding Agent template from `AGENT-
 NEVER spawn an agent with a minimal prompt. ALWAYS use the full template.
 
 ### Step 8: Monitor
-Wait for agents to complete. Use `TaskOutput` with saved `task_id` values to check agent results (do NOT construct IDs manually — use the exact ID returned by the Task tool). Agents handle their own QA cycle internally (coding agent spawns QA sub-agent, handles retries up to max rounds). On QA PASS: merge the workbranch. On QA FAIL after max rounds: escalate to the user with the QA report.
+Wait for agents to complete. For each task, you spawned a coding agent and a QA agent together. The coding agent works on the task and messages you when done. When a coding agent reports completion, notify its paired QA agent that the code is ready for review. The QA agent reviews and sends you a PASS or FAIL verdict. On QA PASS: merge the workbranch. On QA FAIL (round < 3): forward failure details to the coding agent, wait for fix, then spawn a fresh QA agent for re-review. On QA FAIL after max rounds: escalate to the user with the QA report.
 
 </task-decomposition>
 

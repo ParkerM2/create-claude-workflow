@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.1.0] — 2026-03-24
+
+### Added
+- **Parallel agent pairs**: Coder + QA agents spawn together in the same message. QA prepares review plan while coder works, eliminating sequential spawn latency.
+- **Team leader name discovery**: Step 3.1 now reads team config after TeamCreate to resolve `TEAM_LEADER_NAME` for agent spawn prompts.
+- **Stale worktree cleanup**: Step 1.4 aggressively cleans leftover worktrees and branches from crashed prior runs before initializing.
+- **`getActiveFeature()` fallback in tracker.js**: `emitEvent()` now falls back to progress-dir scan when branch detection fails, fixing silent event loss on `worktree-agent-*` / `claude/*` / `agent-*` branches.
+
+### Changed
+- **Checklist-driven enforcement**: All proof-gate enforcement gates removed (merge gate, track gate, app code write block, shutdown gate, worktree polling, team lifecycle gates). Workflow sequence enforced by phase verification checklists instead of hook-level blocks. Eliminates deadlocks and permission cascades.
+- **Hub-only QA communication**: QA agent communication model unified — all verdicts go to Team Leader. Removed contradicting "message coder directly" instruction.
+- **`/track` write path**: Uses `tracker.js` module via node command instead of direct file writes. Bypasses state file protection correctly while maintaining locking and atomicity.
+- **Hooks output explicit `allow`**: `proof-gate.js`, `safety-guard.js`, and `config-guard.js` now output `permissionDecision: "allow"` instead of silent exit. Prevents permission prompts during automated workflows.
+- **QA tracking responsibility**: Team Leader emits `qa.passed`/`qa.failed` events after receiving QA verdict. QA agent no longer emits tracking events directly.
+
+### Fixed
+- **Permission prompt cascade**: Every non-blocked command prompted the user because hooks used silent `process.exit(0)` (passthrough) instead of explicit allow. All three PreToolUse hooks now output `permissionDecision: "allow"` when no violation is found.
+- **Agent deadlocks**: Shutdown gate blocked killing stuck agents because tasks weren't merged, but tasks couldn't merge because agents were stuck. Shutdown gate removed — team leader manages agent lifecycle directly.
+- **State file protection false positives**: Regex `[>|].*?events.jsonl` matched pipe-read commands like `grep events.jsonl | wc`. Tightened to only match output redirects (`>>?`).
+- **Wave counter infinite loop**: `totalWaves` defaulting to 0 caused waves to advance indefinitely. Now requires `totalWaves > 0` before advancing.
+- **Cross-file spawn model contradiction**: `new-feature.md` said sequential QA spawn, `AGENT-SPAWN-TEMPLATES.md` said parallel. Unified to parallel.
+
+### Removed
+- **proof-ledger.js PostToolUse hook**: Removed from hooks.json. Was recording agent spawns to proof-ledger.jsonl but nothing reads the data after gate removal. File kept on disk for potential re-enablement.
+- All `proof-gate.js` references from `new-feature.md` command prompts.
+- Proof Gate Rules quick reference table (replaced with Active Guards table).
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [3.0.0] — 2026-03-24
 
 ### BREAKING: Proof-of-Work Architecture

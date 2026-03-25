@@ -17,6 +17,13 @@ process.stdin.on('end', () => {
     // Check if config guard is enabled
     const guards = getGuardsConfig();
     if (!guards.configGuard) {
+      const allowResult = {
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'allow'
+        }
+      };
+      process.stdout.write(JSON.stringify(allowResult));
       process.exit(0);
     }
 
@@ -45,9 +52,24 @@ process.stdin.on('end', () => {
       }
     }
 
+    // All checks passed — explicitly allow to prevent permission prompts
+    const allowResult = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'allow'
+      }
+    };
+    process.stdout.write(JSON.stringify(allowResult));
     process.exit(0);
   } catch {
     // On any error, allow the operation (fail open)
+    const allowResult = {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'allow'
+      }
+    };
+    process.stdout.write(JSON.stringify(allowResult));
     process.exit(0);
   }
 });
