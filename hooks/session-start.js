@@ -68,10 +68,47 @@ const configBlock = [
   '</workflow-config>'
 ].join('\n');
 
+// Check if a workflow is actively running (sentinel file exists)
+// If so, inject a reminder that this session is a team-leader orchestrating agents
+let activeWorkflowNotice = '';
+try {
+  const { isSentinelActive, readSentinel } = require('./config.js');
+  if (isSentinelActive()) {
+    const sentinel = readSentinel();
+    if (sentinel) {
+      activeWorkflowNotice = [
+        '',
+        '<active-workflow-notice>',
+        '⚠️  A MULTI-AGENT WORKFLOW IS CURRENTLY ACTIVE.',
+        '',
+        `Feature: ${sentinel.feature}`,
+        `Ticket: ${sentinel.ticket || 'unknown'}`,
+        `Started: ${sentinel.startedAt}`,
+        `Mode: ${sentinel.mode || 'strict'}`,
+        '',
+        'You are the TEAM LEADER for this workflow.',
+        'You do NOT write application code — you orchestrate agents who do.',
+        '',
+        'If you just started or resumed this session:',
+        '1. Read agents/team-leader.md for your full protocol',
+        '2. Read .claude/progress/' + (sentinel.feature || '<feature>') + '/workflow-state.json for current phase',
+        '3. Read the team config to find your agents',
+        '4. Continue from your current phase — do NOT restart',
+        '',
+        'If agents are working (phase = "wave"):',
+        '- WAIT for agent messages — they arrive as new conversation turns',
+        '- Do NOT write code, do NOT start new tasks',
+        '- When agents message you, handle per the workflow protocol',
+        '</active-workflow-notice>'
+      ].join('\n');
+    }
+  }
+} catch { /* sentinel check failed — skip notice */ }
+
 const output = {
   hookSpecificOutput: {
     hookEventName: 'SessionStart',
-    additionalContext: configBlock + '\n\n' + skillContent
+    additionalContext: configBlock + '\n\n' + skillContent + activeWorkflowNotice
   }
 };
 
