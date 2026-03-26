@@ -30,145 +30,40 @@
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/safety-guard.js",
             "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [
+          },
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/config-guard.js",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/workflow-enforcer.js",
             "timeout": 10000
           }
         ]
       },
       {
-        "matcher": "Write",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/config-guard.js",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/workflow-enforcer.js",
             "timeout": 10000
           }
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "TaskStop|TeamDelete",
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/workflow-enforcer.js",
             "timeout": 10000
           }
         ]
       },
       {
-        "matcher": "Edit",
+        "matcher": "TeamCreate|Agent",
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "Glob",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "Grep",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "SendMessage",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "TaskStop",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "TeamCreate",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "TeamDelete",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "EnterWorktree",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/proof-gate.js",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/tracking-emitter.js",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/init-gate.js",
             "timeout": 10000
           }
         ]

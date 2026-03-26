@@ -485,6 +485,113 @@ function getActiveFeature() {
 }
 
 // ---------------------------------------------------------------------------
+// Sentinel file helpers
+// ---------------------------------------------------------------------------
+
+const SENTINEL_FILENAME = '.workflow-active';
+
+/**
+ * Check if the workflow sentinel file exists.
+ * Fast check via fs.existsSync — ~0.1ms.
+ *
+ * @returns {boolean}
+ */
+function isSentinelActive() {
+  try {
+    const sentinelPath = path.join(getRepoRoot(), '.claude', SENTINEL_FILENAME);
+    return fs.existsSync(sentinelPath);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Read and parse the sentinel file.
+ * Returns the parsed JSON object or null if absent/invalid.
+ * Detects stale sentinels (>24h old with dead process).
+ *
+ * @returns {object|null}
+ */
+function readSentinel() {
+  try {
+    const sentinelPath = path.join(getRepoRoot(), '.claude', SENTINEL_FILENAME);
+    if (!fs.existsSync(sentinelPath)) return null;
+
+    const raw = fs.readFileSync(sentinelPath, 'utf8');
+    const sentinel = JSON.parse(raw);
+
+    // Stale detection: >24h old AND process dead
+    if (sentinel.startedAt && sentinel.pid) {
+      const age = Date.now() - new Date(sentinel.startedAt).getTime();
+      if (age > 24 * 60 * 60 * 1000) {
+        try {
+          process.kill(sentinel.pid, 0);
+        } catch {
+          // Process dead + over 24h = stale
+          return null;
+        }
+      }
+    }
+
+    return sentinel;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Write the sentinel file atomically.
+ *
+ * @param {object} data - Sentinel data (ticket, feature, startedAt, sessionId, pid, mode)
+ */
+function writeSentinel(data) {
+  try {
+    const claudeDir = path.join(getRepoRoot(), '.claude');
+    fs.mkdirSync(claudeDir, { recursive: true });
+    const sentinelPath = path.join(claudeDir, SENTINEL_FILENAME);
+    const tmpPath = sentinelPath + '.tmp';
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
+    fs.renameSync(tmpPath, sentinelPath);
+  } catch {
+    // Best effort
+  }
+}
+
+/**
+ * Remove the sentinel file.
+ */
+function removeSentinel() {
+  try {
+    const sentinelPath = path.join(getRepoRoot(), '.claude', SENTINEL_FILENAME);
+    if (fs.existsSync(sentinelPath)) {
+      fs.unlinkSync(sentinelPath);
+    }
+  } catch {
+    // Best effort
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Ticket module integration
+// ---------------------------------------------------------------------------
+
+let _ticketModule = null;
+
+/**
+ * Lazily load and return the ticket module.
+ * Returns null if the module is not available.
+ */
+function getTicketModule() {
+  if (_ticketModule !== null) return _ticketModule;
+  try {
+    _ticketModule = require('./ticket.js');
+  } catch {
+    _ticketModule = false; // Mark as unavailable
+  }
+  return _ticketModule || null;
+}
+
+// ---------------------------------------------------------------------------
 // Exports
 // ---------------------------------------------------------------------------
 
@@ -501,5 +608,12 @@ module.exports = {
   getEffectiveBranch,
   getWorkflowState,
   updateWorkflowState,
-  getActiveFeature
+  getActiveFeature,
+  // Sentinel helpers
+  isSentinelActive,
+  readSentinel,
+  writeSentinel,
+  removeSentinel,
+  // Ticket integration
+  getTicketModule
 };

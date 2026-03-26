@@ -486,6 +486,125 @@ Save to the progress directory as `<feature-name>-design.md`.
 
 ---
 
+## Phase 7.5: Generate Task Handoff Files
+
+After generating the design document, create per-agent task handoff files that `/team-go` will consume.
+
+### 7.5a: Detect Ticket
+
+Detect or assign a ticket ID for this feature:
+
+1. Check git branch for ticket pattern: `extractTicketFromBranch()` (from `hooks/ticket.js`)
+2. If found: use the extracted ticket (e.g., `ES-11850`)
+3. If not found: ask the user for a ticket ID, or generate one (e.g., `PLAN-<N>` with incrementing counter)
+
+### 7.5b: Create Ticket Directory
+
+```bash
+# Create ticket directory structure
+mkdir -p .claude/progress/<ticket>/tasks
+mkdir -p .claude/progress/<ticket>/plans
+```
+
+Move or copy the design document to `.claude/progress/<ticket>/plans/<feature-name>-design.md`.
+
+### 7.5c: Generate Task Files
+
+For each task defined in Phase 4a, write a task handoff file at `.claude/progress/<ticket>/tasks/task-<N>.md`.
+
+Each file follows the task handoff schema:
+
+```markdown
+---
+taskNumber: <N>
+taskName: "<task name>"
+taskSlug: "<url-safe-slug>"
+agentRole: "<agent role>"
+agentDefinition: "<path to agent .md or null>"
+wave: <wave number>
+blockedBy: [<task numbers>]
+blocks: [<task numbers>]
+estimatedTokens: <context estimate>
+complexity: "<LOW|MEDIUM|HIGH>"
+status: "pending"
+workbranch: null
+worktreePath: null
+teamLeaderName: null
+teamName: null
+---
+
+# Task #<N>: <task name>
+
+## Description
+<2-5 sentences from Phase 4a task description>
+
+## Acceptance Criteria
+- [ ] <criteria from Phase 4a>
+- [ ] Automated checks pass (lint, typecheck, test, build)
+
+## Files to Create
+- <exact paths from Phase 4a>
+
+## Files to Modify
+- <exact paths from Phase 4a>
+
+## Files to Read for Context
+- <paths from Phase 4a>
+
+## Rules That Apply
+<pre-digested rules from Phase 4a>
+
+## Implementation Notes
+<guidance from Phase 4a>
+
+## QA Checklist Sections
+<sections from Phase 4a auto-fill>
+```
+
+### 7.5d: Record in History
+
+For each task file created, add a history entry:
+
+```javascript
+addHistoryEntry(ticket, {
+  type: "task-handoff",
+  source: "/new-plan",
+  message: "Generated task file for Task #<N>: <name>",
+  data: { taskNumber: N, taskSlug: "<slug>", filePath: "<path>" }
+});
+```
+
+### 7.5e: Update Design Doc
+
+Append a reference to the design document:
+
+```markdown
+## Task Handoff Files
+
+Per-agent task files generated at `.claude/progress/<ticket>/tasks/`:
+- task-1.md — <task name>
+- task-2.md — <task name>
+- ...
+
+To execute this plan, run: `/team-go`
+```
+
+### 7.5f: Verification
+
+```
+PHASE 7.5 VERIFICATION:
+- [ ] Ticket detected or assigned
+- [ ] Ticket directory created with tasks/ and plans/ subdirectories
+- [ ] One task file per task, all following the handoff schema
+- [ ] YAML frontmatter has all required fields (runtime fields as null)
+- [ ] All body sections present (even if short)
+- [ ] No file ownership overlaps between tasks
+- [ ] History entries recorded for each task file
+- [ ] Design doc updated with task file references
+```
+
+---
+
 ## Phase 8: Handoff
 
 After saving the design document, present a summary to the user:
@@ -517,11 +636,13 @@ After saving the design document, present a summary to the user:
 
 To implement this feature, run:
 
-    /new-feature "<feature name>"
+    /team-go
 
-The Team Leader will read the design document and
-use it as the decomposition plan — skipping the
-analysis work because /new-plan already did it.
+The Team Leader will read the task files and
+design document, spawn agents with thin prompts,
+and execute the plan — no inline decomposition needed.
+
+(Legacy alternative: `/new-feature "<feature name>"` — uses inline decomposition instead of task files.)
 ```
 
 ### Updating /new-feature to Use the Design Doc
