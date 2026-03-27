@@ -1,16 +1,17 @@
 ---
+name: new-plan
 description: "Deep technical planning — analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering"
 ---
 
-# /new-plan — Deep Technical Planning for /new-feature
+# /new-plan — Deep Technical Planning for /agent-team
 
-> Invoke this skill to produce an in-depth technical plan for a feature before handing it off to `/new-feature`. Uses brainstorming, codebase analysis, and architectural thinking to create a design document that the Team Leader can execute directly — no interpretation needed.
+> Invoke this skill to produce an in-depth technical plan for a feature before handing it off to `/agent-team`. Uses brainstorming, codebase analysis, and architectural thinking to create a design document that the Team Leader can execute directly — no interpretation needed.
 
 ---
 
 ## When to Use
 
-- Before running `/new-feature` on a complex or ambiguous feature
+- Before running `/agent-team` on a complex or ambiguous feature
 - When you have a feature idea but need to refine requirements and design
 - When you want the Team Leader to receive a ready-made decomposition plan
 - When the feature touches unfamiliar parts of the codebase and needs deep analysis first
@@ -18,7 +19,7 @@ description: "Deep technical planning — analyzes codebase, designs architectur
 
 ## When NOT to Use
 
-- The feature is small and well-defined (just run `/new-feature` directly)
+- The feature is small and well-defined (just run `/agent-team` directly)
 - You already have a complete design document
 
 ---
@@ -364,7 +365,7 @@ For each identified risk:
 
 ## Phase 7: Generate Design Document
 
-Compile everything into a single design document saved to disk. This is the artifact that `/new-feature` will consume.
+Compile everything into a single design document saved to disk. This is the artifact that `/agent-team` will consume.
 
 ### Optional: Initialize Unified Tracking
 
@@ -385,7 +386,7 @@ If the feature name is known at planning time, you may optionally initialize uni
 3. Create empty `.claude/tracking/<feature-name>/events.jsonl`
 4. Create `.claude/tracking/<feature-name>/agents/` directory
 
-> Note: This is optional during planning. The tracking system (`hooks/tracking.js`) will be fully initialized by `/new-feature` when implementation begins. For programmatic use, call `initTracking("<feature-name>", { status: "pending", plan: "<design-doc-path>" })`. This coexists with the existing `.claude/progress/` system.
+> Note: This is optional during planning. The tracking system (`hooks/tracking.js`) will be fully initialized by `/agent-team` when implementation begins. For programmatic use, call `initTracking("<feature-name>", { status: "pending", plan: "<design-doc-path>" })`. This coexists with the existing `.claude/progress/` system.
 
 ### Output Location
 
@@ -488,7 +489,7 @@ Save to the progress directory as `<feature-name>-design.md`.
 
 ## Phase 7.5: Generate Task Handoff Files
 
-After generating the design document, create per-agent task handoff files that `/team-go` will consume.
+After generating the design document, create per-agent task handoff files that `/agent-team` will consume.
 
 ### 7.5a: Detect Ticket
 
@@ -586,7 +587,7 @@ Per-agent task files generated at `.claude/progress/<ticket>/tasks/`:
 - task-2.md — <task name>
 - ...
 
-To execute this plan, run: `/team-go`
+To execute this plan, run: `/agent-team`
 ```
 
 ### 7.5f: Verification
@@ -636,18 +637,17 @@ After saving the design document, present a summary to the user:
 
 To implement this feature, run:
 
-    /team-go
+    /agent-team
 
 The Team Leader will read the task files and
 design document, spawn agents with thin prompts,
 and execute the plan — no inline decomposition needed.
 
-(Legacy alternative: `/new-feature "<feature name>"` — uses inline decomposition instead of task files.)
 ```
 
-### Updating /new-feature to Use the Design Doc
+### How /agent-team Uses the Design Doc
 
-The design document is automatically discovered by `/new-feature` Phase 1:
+The design document is automatically discovered by `/agent-team` Phase 2:
 
 > "If a design document or spec exists for this feature, read it too."
 

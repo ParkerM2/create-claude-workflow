@@ -5,6 +5,11 @@
 // Blocks TeamCreate and Agent (spawn) tool calls until agents/team-leader.md
 // has been read in this session. Uses a temp-file marker with 24-hour TTL.
 //
+// Detection: When TeamCreate/Agent is called, if no marker exists we check
+// whether agents/team-leader.md was recently accessed (atime within the last
+// 5 minutes). A recent atime implies the file was read by the session, so we
+// create the marker and allow. Otherwise we block and instruct the user.
+//
 // Fail-open: any error → exit 0 (allow)
 // Registered for: TeamCreate, Agent
 
@@ -77,6 +82,33 @@ function createMarker() {
 }
 
 // ---------------------------------------------------------------------------
+// Atime-based detection: check whether team-leader.md was recently read
+// ---------------------------------------------------------------------------
+
+const ATIME_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Look for agents/team-leader.md relative to cwd. If the file exists and its
+ * atime is within the last ATIME_WINDOW_MS, it was likely read in the current
+ * session — create the marker and return true. Returns false otherwise.
+ */
+function checkAtimeAndMark() {
+  try {
+    const tlPath = path.join(process.cwd(), 'agents', 'team-leader.md');
+    if (!fs.existsSync(tlPath)) return false;
+    const stat = fs.statSync(tlPath);
+    const age = Date.now() - stat.atimeMs;
+    if (age < ATIME_WINDOW_MS) {
+      createMarker();
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main: read stdin, dispatch
 // ---------------------------------------------------------------------------
 
@@ -87,26 +119,6 @@ process.stdin.on('end', () => {
   try {
     const data = JSON.parse(input);
     const toolName = data.tool_name || '';
-    const toolInput = data.tool_input || {};
-
-    // PostToolUse check: if Read targeted team-leader.md, create marker
-    // (This hook is registered for PreToolUse, but we check if this is
-    //  a Read that already happened by looking at the tool result)
-    // Actually, for PreToolUse we check BEFORE the tool runs.
-    // The marker gets created when we detect Read of team-leader.md in
-    // the proof-ledger or via a separate PostToolUse registration.
-    // For simplicity, we check if the Read tool is targeting team-leader.md
-    // and allow it (plus create the marker for subsequent calls).
-
-    // If this is a Read tool targeting team-leader.md — always allow + mark
-    if (toolName === 'Read') {
-      const filePath = (toolInput.file_path || '').replace(/\\/g, '/');
-      if (filePath.includes('agents/team-leader.md')) {
-        createMarker();
-      }
-      allow();
-      return;
-    }
 
     // Only gate TeamCreate and Agent tools
     if (toolName !== 'TeamCreate' && toolName !== 'Agent') {
@@ -114,13 +126,19 @@ process.stdin.on('end', () => {
       return;
     }
 
-    // Check if team-leader.md has been read (marker exists and fresh)
+    // 1. Fast path: marker already exists and is fresh
     if (isMarkerValid()) {
       allow();
       return;
     }
 
-    // Block — team-leader.md not read yet
+    // 2. No marker yet — check if team-leader.md was recently accessed (read)
+    if (checkAtimeAndMark()) {
+      allow();
+      return;
+    }
+
+    // 3. Block — team-leader.md not read yet
     deny('Read agents/team-leader.md before spawning agents. This ensures the Team Leader identity and coordination rules are loaded. Recovery: Use the Read tool to read agents/team-leader.md, then retry.');
 
   } catch {

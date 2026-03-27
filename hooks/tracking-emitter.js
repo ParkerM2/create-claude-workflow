@@ -3,8 +3,12 @@
 
 // Hook-based agent event emitter for unified tracking.
 // Handles: TeammateIdle, TaskCompleted, PreToolUse (Task tool), PostToolUse, Stop
-// Reads JSON payload from stdin, dispatches by hook_type.
+// Reads JSON payload from stdin, dispatches by hook_event_name.
 // Exits silently (exit 0) if no active tracking context is found.
+//
+// The stdin payload field for event type is "hook_event_name" (snake_case).
+// Source: https://code.claude.com/docs/en/hooks — "Input" section,
+// common fields table: hook_event_name is "Name of the event that fired".
 
 const fs = require('fs');
 const path = require('path');
@@ -162,7 +166,9 @@ function main() {
       process.exit(0);
     }
 
-    const hook_type = payload.hook_type || payload.hookEventName || '';
+    // Claude Code passes "hook_event_name" (snake_case) in the stdin JSON payload.
+    // See: https://code.claude.com/docs/en/hooks — common input fields table.
+    const hook_event_name = payload.hook_event_name || '';
 
     // Resolve active feature
     const featureId = resolveFeatureId();
@@ -171,9 +177,9 @@ function main() {
       process.exit(0);
     }
 
-    // Dispatch by hook_type
+    // Dispatch by hook_event_name
     try {
-      switch (hook_type) {
+      switch (hook_event_name) {
         case 'TeammateIdle':
           handleTeammateIdle(payload, featureId);
           break;

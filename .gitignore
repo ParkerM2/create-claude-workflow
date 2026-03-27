@@ -4,3 +4,10 @@ dist/
 .env
 .DS_Store
 Thumbs.db
+
+# Dev-only artifacts (not shipped with plugin)
+research/
+WORKFLOW-REDESIGN-PROPOSAL.md
+.claude/settings.local.json
+.claude/tracking/
+.claude/progress/

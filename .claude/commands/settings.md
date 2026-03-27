@@ -1,4 +1,5 @@
 ---
+name: settings
 description: "Workflow settings hub — guard permissions, agent audit, and performance audit"
 ---
 

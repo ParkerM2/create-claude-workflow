@@ -124,7 +124,7 @@ function getHistory(ticket, progressDir, repoRoot) {
  * @param {string} ticket - Ticket ID
  * @param {object} entry - History entry to append
  * @param {string} entry.type - Entry type (e.g., "session.start", "task-handoff", "qa.passed")
- * @param {string} [entry.source] - What created this entry (e.g., "/new-plan", "/team-go")
+ * @param {string} [entry.source] - What created this entry (e.g., "/new-plan", "/agent-team")
  * @param {string} [entry.message] - Human-readable description
  * @param {object} [entry.data] - Additional structured data
  * @param {string} [progressDir] - Base progress directory

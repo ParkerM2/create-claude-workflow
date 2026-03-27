@@ -1,4 +1,5 @@
 ---
+name: status
 description: "Quick progress summary — shows completion percentage, task states, branch status, and active blockers"
 ---
 
@@ -34,7 +35,7 @@ If no progress files exist:
 ```
 No active features found in .claude/progress/.
 
-To start a new feature:  /new-feature "description"
+To start a new feature:  /new-plan "description" then /agent-team
 ```
 
 Stop here.

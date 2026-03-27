@@ -1,4 +1,5 @@
 ---
+name: resume
 description: "Crash recovery — scans progress files, detects errors and blockers, auto-resumes or presents options to user"
 ---
 
@@ -10,7 +11,7 @@ description: "Crash recovery — scans progress files, detects errors and blocke
 
 ## When to Use
 
-- Your terminal closed or timed out during `/new-feature`
+- Your terminal closed or timed out during `/agent-team`
 - You want to continue a feature started in a previous session
 - You're unsure if a feature was completed or left in-progress
 
@@ -18,10 +19,13 @@ description: "Crash recovery — scans progress files, detects errors and blocke
 
 ## Phase 1: Scan for In-Progress Features
 
-Scan the progress directory for feature directories with JSONL event logs:
+Scan for in-progress work from both `/agent-team` sessions (task files) and legacy sessions (JSONL events):
 
 ```bash
-# List all feature progress directories
+# Check for /agent-team task files (v4 workflow)
+ls the progress directory/*/tasks/task-*.md 2>/dev/null
+
+# Check for legacy JSONL event logs
 ls the progress directory/*/events.jsonl 2>/dev/null
 
 # Check for active workbranches
@@ -37,7 +41,9 @@ ls ~/.claude/teams/ 2>/dev/null
 git worktree list
 ```
 
-For each feature directory with events.jsonl, read the events to determine state.
+For `/agent-team` sessions: if task files exist at `.claude/progress/<ticket>/tasks/`, read the task files and `workflow-state.json` to determine state.
+
+For legacy sessions: if `events.jsonl` exists, read the events to determine state.
 
 If `current.md` exists, read it for a quick summary. Otherwise, scan events.jsonl to extract:
 - Feature name (from event envelope)
@@ -56,7 +62,7 @@ If `current.md` exists, read it for a quick summary. Otherwise, scan events.json
 No in-progress features found in the progress directory.
 
 To start a new feature, run:
-  /new-feature "your feature description"
+  /agent-team "your feature description"
 ```
 
 Stop here.
@@ -80,7 +86,7 @@ Resume this feature?
 
 Use AskUserQuestion:
 - "Yes, resume" — proceed to Phase 3
-- "No, start fresh" — suggest `/new-feature`
+- "No, start fresh" — suggest `/agent-team`
 
 ### Multiple in-progress features found
 
@@ -102,7 +108,7 @@ Use AskUserQuestion with multiSelect: false to let the user pick one.
 All features in the progress directory are marked COMPLETE.
 
 To start a new feature, run:
-  /new-feature "your feature description"
+  /agent-team "your feature description"
 ```
 
 Stop here.
@@ -200,15 +206,16 @@ If the team no longer exists but tasks remain:
 
 ### 4b. Load Context
 
-Read the same files as `/new-feature` Phase 1:
+Read the same files as `/agent-team` Phase 1:
 
 ```
 1. the project rules file
 2. the architecture file
 3. prompts/implementing-features/README.md
-4. prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md
-5. prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md
-6. prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md
+4. prompts/implementing-features/THIN-SPAWN-TEMPLATE.md
+5. prompts/implementing-features/AGENT-WORKFLOW-PHASES.md
+6. prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md
+7. prompts/implementing-features/PROGRESS-FILE-TEMPLATE.md
 ```
 
 Also read the workflow mode from the progress file (if recorded) and load:
@@ -238,4 +245,4 @@ Add a recovery note:
 - State on recovery: <brief description of git/team state>
 ```
 
-Then follow the `/new-feature` workflow from the appropriate phase (Phase 6, 7, 8, or 9).
+Then follow the `/agent-team` workflow from the appropriate phase (Phase 2, 3, 4, or 5).

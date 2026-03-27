@@ -1,9 +1,9 @@
 ---
-name: team-go
+name: agent-team
 description: "Execute a pre-planned feature using Agent Teams — reads task files from /new-plan, spawns agents with thin prompts, enforces workflow via hooks"
 ---
 
-# /team-go — Execute Pre-Planned Feature
+# /agent-team — Execute Pre-Planned Feature
 
 CRITICAL: Execute this workflow step by step. Do NOT skip, combine, or abbreviate any step. Do NOT write application code yourself — spawn coding agents. Enforcement is hook-driven via `workflow-enforcer.js`.
 

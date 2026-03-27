@@ -97,7 +97,7 @@ Measure each file that agents read during Phase 0 initialization.
 | YELLOW | 15–20 KB |
 | GREEN | < 15 KB |
 
-Files to check: project rules file, architecture file, README.md (playbook), agent-specific `.md`, `AGENT-SPAWN-TEMPLATES.md`, QA checklist template.
+Files to check: project rules file, architecture file, README.md (playbook), agent-specific `.md`, `THIN-SPAWN-TEMPLATE.md`, QA checklist template.
 
 ### Check 2: Phase 0 Read Count
 
@@ -163,7 +163,7 @@ Measure each file in `commands/*.md` (loaded into context when the user invokes 
 
 ### Check 8: Spawn Template Size
 
-Measure `AGENT-SPAWN-TEMPLATES.md` (read by Team Leader for every agent spawn).
+Measure `THIN-SPAWN-TEMPLATE.md` (read by Team Leader for every agent spawn).
 
 | Severity | Threshold |
 |----------|-----------|

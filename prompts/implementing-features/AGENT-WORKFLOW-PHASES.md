@@ -1,6 +1,6 @@
 # Agent Workflow Phases
 
-> Universal workflow phases for coding agents spawned by `/team-go`. Every coding agent MUST complete each phase sequentially — skipping phases is a CRITICAL VIOLATION.
+> Universal workflow phases for coding agents spawned by `/agent-team`. Every coding agent MUST complete each phase sequentially — skipping phases is a CRITICAL VIOLATION.
 
 ---
 

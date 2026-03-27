@@ -160,10 +160,7 @@ This catches issues that only appear when all changes are combined.
 
 <progress-tracking>
 
-After completing your report, you MUST emit a tracking event. This is the only tracking mechanism — there are no automatic hooks.
-
-- On PASS: `/claude-workflow:track checkpoint "guardian-passed"`
-- On FAIL: `/claude-workflow:track error.encountered "guardian-failed: <summary of issues>"`
+Send your verdict to the Team Leader via SendMessage. The Team Leader handles all tracking event emission. Do NOT emit `/track` events directly.
 
 </progress-tracking>
 

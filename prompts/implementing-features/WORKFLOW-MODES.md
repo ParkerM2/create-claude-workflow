@@ -38,10 +38,10 @@ If no mode is specified, the default is `strict`.
 
 ### Per-Invocation Override
 
-When invoking `/new-feature`, the user can specify a mode:
+When invoking `/agent-team`, the user can specify a mode:
 
 ```
-/new-feature "Add user settings" — mode: fast
+/agent-team — mode: fast
 ```
 
 The per-invocation mode overrides the project default for that feature only.

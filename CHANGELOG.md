@@ -1,5 +1,55 @@
 # Changelog
 
+## [4.0.0] — 2026-03-26
+
+### Added
+- `/agent-team` command — pre-planned feature execution with thin spawn templates
+- `/setup-workflow` command — first-time project setup and configuration
+- `/connect-atlassian` command — Jira + Confluence MCP server integration
+- `workflow-enforcer.js` — consolidated enforcement hook replacing 5 legacy gates
+- `init-gate.js` — team-lead identity verification gate
+- `tracking-emitter.js` — unified event tracking across all hook events
+- `teammate-quality.js` — TeammateIdle quality gate (exit code 2 = keep working)
+- `task-validator.js` — TaskCompleted validation gate
+- `ticket.js` — ticket extraction and directory management module
+- `tracking.js` — .claude/tracking/ progress system
+- `AGENT-WORKFLOW-PHASES.md` — agent-side workflow phases (0-4)
+- `THIN-SPAWN-TEMPLATE.md` — ~500 token thin spawn templates
+- Sentinel-based conditional enforcement (.claude/.workflow-active)
+- Pre-built task file architecture via `/new-plan` Phase 7.5
+- Ticket-based progress tracking (ES-{N} format)
+- Agent identity survival across context compaction
+- State file protection fails closed (workflow-enforcer.js)
+- Sentinel file protected from deletion
+
+### Removed
+- `/new-feature` command (replaced by `/agent-team`)
+- `AGENT-SPAWN-TEMPLATES.md` (replaced by `THIN-SPAWN-TEMPLATE.md`)
+- `proof-gate.js` — dead code, all gates were commented out
+- `enforcement-gate.js` — replaced by workflow-enforcer.js
+- `team-leader-gate.js` — replaced by workflow-enforcer.js
+- `workflow-gate.js` — replaced by workflow-enforcer.js
+- `quality-gate.js` — replaced by teammate-quality.js
+- `activity-logger.js` — orphan, never registered
+
+### Fixed
+- Hook output format standardized (all PreToolUse hooks use hookSpecificOutput)
+- tracking-emitter.js event dispatch field name corrected (hook_event_name)
+- init-gate.js Read detection made reachable (atime-based)
+- workflow-enforcer.js sentinel path uses getRepoRoot() not process.cwd()
+- proof-ledger.js re-registered in hooks.json
+- config-guard.js re-registered in hooks.json
+- QA reviewer identity corrected ("spawned by Team Leader")
+- Guardian tracking contradiction resolved (Team Leader handles tracking)
+- All command frontmatters have `name` field
+- README updated with current commands, hooks, and project structure
+
+### Changed
+- Architecture: 6 fragmented gate files → 2 consolidated hooks + 1 init gate
+- Agent spawning: 3,500-token inline prompts → ~500-token thin templates + task files on disk
+- Enforcement: always-on hooks → sentinel-conditional (skip when no workflow active)
+- Progress tracking: feature-name directories → ticket-based (ES-{N}) directories
+
 ## [3.1.0] — 2026-03-24
 
 ### Added
@@ -347,7 +397,7 @@ Complete rewrite of the enforcement system. Replaces 6 gate files with 4 proof-a
 /plugin update claude-workflow@claude-workflow-marketplace
 ```
 
-## [2.0.0] — 2026-02-14
+## [2.0.0-pre] — 2026-02-14
 
 ### Changed
 - Migrated from npm scaffolder to Claude Code plugin system

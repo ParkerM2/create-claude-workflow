@@ -26,7 +26,8 @@
 For the QA Checklist Template, see: [`QA-CHECKLIST-TEMPLATE.md`](./QA-CHECKLIST-TEMPLATE.md)
 For the Phase Gate Protocol, see: [`PHASE-GATE-PROTOCOL.md`](./PHASE-GATE-PROTOCOL.md)
 For the Progress File Template, see: [`PROGRESS-FILE-TEMPLATE.md`](./PROGRESS-FILE-TEMPLATE.md)
-For Agent Spawn Templates, see: [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
+For Thin Spawn Templates, see: [`THIN-SPAWN-TEMPLATE.md`](./THIN-SPAWN-TEMPLATE.md)
+For Agent Workflow Phases, see: [`AGENT-WORKFLOW-PHASES.md`](./AGENT-WORKFLOW-PHASES.md)
 For Workflow Modes, see: [`WORKFLOW-MODES.md`](./WORKFLOW-MODES.md)
 For Wave Fence Protocol, see: [`WAVE-FENCE-PROTOCOL.md`](./WAVE-FENCE-PROTOCOL.md)
 For Pre-Flight Checks, see: [`PRE-FLIGHT-CHECKS.md`](./PRE-FLIGHT-CHECKS.md)
@@ -280,11 +281,11 @@ Parallel-safe tasks (can run simultaneously if they touch different files):
 
 Agent compliance is enforced by PreToolUse hooks — not text instructions alone.
 
-- **workflow-gate.js** validates every coding agent spawn contains the full template (8+ of 11 structural markers, min 2000 chars). Abbreviated prompts are blocked.
-- **enforcement-gate.js** blocks the Team Leader from writing application code, tampering with state files, or inspecting worktrees.
-- **team-leader-gate.js** blocks merges without QA, worktree polling, and premature shutdowns.
+- **workflow-enforcer.js** validates agent spawn prompts and enforces phase gates (setupComplete, guardian phase).
+- **init-gate.js** blocks the Team Leader from writing application code, tampering with state files, or inspecting worktrees.
+- **safety-guard.js** blocks destructive commands and enforces branch protection.
 
-Agents receive the mandatory 4-phase workflow (Load Rules → Write Plan → Execute → Self-Review + Spawn QA) via spawn templates in [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md). The Team Leader copies the template, fills in variables, and sends it. See `team-leader.md` Coordination Rules table for the full hook-to-rule mapping.
+Agents receive the mandatory 5-phase workflow (Phase 0-4) via thin spawn templates in [`THIN-SPAWN-TEMPLATE.md`](./THIN-SPAWN-TEMPLATE.md). The Team Leader fills in the template variables and sends a ~500 token prompt. Each agent reads its task file from disk for full details. See `team-leader.md` Coordination Rules table for the full hook-to-rule mapping.
 
 ### 6.5 Defensive Defaults
 
@@ -453,7 +454,7 @@ The Codebase Guardian runs on the fully-merged feature branch and checks:
 | **Modifies files** | Docs only                         | May fix trivial structural issues         |
 | **Required**       | Yes, per task                     | Yes, once per feature                     |
 
-### Spawn template: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
+### Spawn template: See [`THIN-SPAWN-TEMPLATE.md`](./THIN-SPAWN-TEMPLATE.md)
 
 ---
 
@@ -489,7 +490,7 @@ The Visual QA Agent:
 | **Output**   | Structural report     | Screenshots + flow report       |
 | **Required** | Yes                   | Yes (can skip if app won't run) |
 
-### Spawn template: See [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPLATES.md)
+### Spawn template: See [`THIN-SPAWN-TEMPLATE.md`](./THIN-SPAWN-TEMPLATE.md)
 
 ---
 
@@ -607,6 +608,6 @@ The workflow is enforced by a 9-gate state machine defined in [`PHASE-GATE-PROTO
 - **Gate 7** (All Waves Complete): Must pass before spawning Guardian
 - **Gate 8** (Guardian Passed): Must pass before completion
 
-**Enforcement:** The `workflow-gate.js` hook blocks Task tool calls when prerequisite gates haven't passed. The `compact-reinject.js` hook re-injects the protocol and current workflow state after context compaction.
+**Enforcement:** The `workflow-enforcer.js` hook blocks Task tool calls when prerequisite gates haven't passed. The `compact-reinject.js` hook re-injects the protocol and current workflow state after context compaction.
 
 All other gates are verified by reading the state file. The Team Leader updates the state file after each gate transition.

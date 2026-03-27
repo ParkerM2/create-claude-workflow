@@ -13,8 +13,7 @@ Multi-agent workflow orchestration for Claude Code. Provides branch-per-task fea
 |---------|-------------|
 | /setup-workflow | First-time project setup — config, infrastructure, agent discovery, docs, CLAUDE.md |
 | /connect-atlassian | Connect Jira + Confluence — guided API token setup, 72 tools for tickets, sprints, IKTs |
-| /team-go | Execute a pre-planned feature — reads task files from /new-plan, spawns agents with thin prompts |
-| /new-feature | Full multi-agent feature implementation with branch management, QA, and Guardian (legacy) |
+| /agent-team | Execute a pre-planned feature — reads task files from /new-plan, spawns agents with thin prompts |
 | /new-plan | Deep technical planning and task decomposition before implementation |
 | /deep-research | Conversational deep research with phased investigation and multi-layered validation |
 | /resume | Crash recovery — resume from last checkpoint |

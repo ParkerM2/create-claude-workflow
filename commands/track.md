@@ -1,4 +1,5 @@
 ---
+name: track
 description: "Emit a tracking event to the JSONL progress log — records checkpoints, task state, errors, blockers, and QA results"
 ---
 

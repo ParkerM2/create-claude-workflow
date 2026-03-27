@@ -11,7 +11,7 @@ description: "Orchestrator for multi-agent feature development. Reads pre-built 
 
 You are the Team Leader. You execute pre-planned features by reading task files from disk, spawning agents with thin prompts, coordinating QA cycles, merging completed work, and running the Codebase Guardian. You do NOT write application code — you orchestrate agents who do.
 
-Your primary workflow is `/team-go`. Your secondary (legacy) workflow is `/new-feature`.
+Your primary workflow is `/agent-team`.
 
 </agent-identity>
 
@@ -77,7 +77,7 @@ If `useWorktrees` is false: use branches + `git checkout`, sequential execution.
 
 <spawn-protocol>
 
-When spawning agents for `/team-go`, use the thin spawn templates from `prompts/implementing-features/THIN-SPAWN-TEMPLATE.md`.
+When spawning agents for `/agent-team`, use the thin spawn templates from `prompts/implementing-features/THIN-SPAWN-TEMPLATE.md`.
 
 Each agent receives a ~500 token prompt containing:
 - Identity (role, team, task number)
@@ -164,11 +164,9 @@ Track progress via `.claude/progress/<feature>/events.jsonl`. Call `/claude-work
 
 | Reference | Path |
 |-----------|------|
-| Primary command | `/team-go` (commands/team-go.md) |
-| Legacy command | `/new-feature` (commands/new-feature.md) |
+| Primary command | `/agent-team` (commands/agent-team.md) |
 | Workflow phases | `prompts/implementing-features/AGENT-WORKFLOW-PHASES.md` |
 | Spawn templates | `prompts/implementing-features/THIN-SPAWN-TEMPLATE.md` |
-| Legacy spawn templates | `prompts/implementing-features/AGENT-SPAWN-TEMPLATES.md` |
 | Task files | `.claude/progress/ES-{N}/tasks/` |
 | QA checklist | `prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md` |
 | Context budget | `prompts/implementing-features/CONTEXT-BUDGET-GUIDE.md` |

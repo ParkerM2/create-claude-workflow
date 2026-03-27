@@ -1,6 +1,6 @@
 # Thin Spawn Templates
 
-> Reference templates for the Team Leader when spawning agents via `/team-go`. Each template is ~500 tokens or less. The agent reads its task file from disk for all details.
+> Reference templates for the Team Leader when spawning agents via `/agent-team`. Each template is ~500 tokens or less. The agent reads its task file from disk for all details.
 
 ---
 

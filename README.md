@@ -44,16 +44,18 @@ git clone https://github.com/ParkerM2/create-claude-workflow.git
 ## Quick Start
 
 1. Open any project in Claude Code
-2. Run `/workflow-setup` to configure project paths (project rules file, architecture file, progress directory)
-3. Run `/new-feature "Add user authentication"`
+2. Run `/setup-workflow` to configure project paths (project rules file, architecture file, progress directory)
+3. Run `/agent-team` to execute a pre-planned feature
 4. The plugin handles: planning, branching, agent spawning, QA, merge, and cleanup
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `/new-feature` | Full multi-agent feature implementation with branch-per-task isolation, QA cycles, and Codebase Guardian verification |
+| `/agent-team` | Execute a pre-planned feature -- reads task files from /new-plan, spawns agents with thin prompts |
 | `/new-plan` | Deep technical planning -- analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering |
+| `/setup-workflow` | First-time project setup -- config, infrastructure, agent discovery, docs, CLAUDE.md |
+| `/connect-atlassian` | Connect Jira + Confluence -- guided API token setup for Atlassian integration |
 | `/deep-research` | Conversational deep research -- phased investigation with user checkpoints, iterative cross-referencing, and multi-layered validation |
 | `/resume` | Crash recovery -- scans progress files, detects errors and blockers, auto-resumes or presents options to user |
 | `/settings` | Workflow settings hub -- guard permissions, agent audit, and performance audit |
@@ -72,7 +74,7 @@ The plugin ships with three built-in agents. Additional agents can be defined ma
 
 ## Configuration
 
-Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-setup` to create or update it.
+Per-project configuration is stored in `.claude/workflow.json`. Run `/setup-workflow` to create or update it.
 
 ```json
 {
@@ -91,8 +93,7 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
   "guards": {
     "branchGuard": true,
     "destructiveGuard": true,
-    "configGuard": true,
-    "workflowGate": true
+    "configGuard": true
   }
 }
 ```
@@ -112,7 +113,6 @@ Per-project configuration is stored in `.claude/workflow.json`. Run `/workflow-s
 | `guards.branchGuard` | `true` | Enable/disable branch protection hook |
 | `guards.destructiveGuard` | `true` | Enable/disable destructive command blocking |
 | `guards.configGuard` | `true` | Enable/disable workflow file protection |
-| `guards.workflowGate` | `true` | Enable/disable phase gate enforcement (blocks agent spawning before prerequisites pass) |
 
 ## Workflow Modes
 
@@ -128,7 +128,7 @@ Three modes control how much ceremony the workflow applies. Set in your project 
 | Wave fence | Full verify | Quick verify | No fence |
 | Context budget check | Yes | Yes | No |
 
-Override per-invocation: `/new-feature "Add auth" -- mode: fast`
+Override per-invocation: `/agent-team -- mode: fast`
 
 ## How It Works
 
@@ -154,15 +154,20 @@ Branch prefixes, base branch, enforcement mode, and worktree usage are all confi
 
 ## Enforcement Hooks
 
-Eight hooks run automatically to protect against common mistakes:
+Ten hooks run automatically to protect against common mistakes:
 
 | Hook | Trigger | Protection |
 |------|---------|------------|
-| `session-start` | Session start/resume | Loads workflow context, branching config, and active feature status |
+| `session-start` | Session start/resume/compact | Loads workflow context, branching config, and active feature status |
 | `compact-reinject` | After context compaction | Re-injects Phase Gate Protocol and workflow state after compaction |
 | `safety-guard` | Before Bash commands | Blocks destructive operations (`rm -rf`, `git reset --hard`, etc.) |
+| `workflow-enforcer` | Before Bash/Edit/Write/TaskStop | Enforces workflow phase rules and task lifecycle |
+| `init-gate` | Before TeamCreate/Agent | Blocks agent spawning when prerequisite setup hasn't completed |
 | `config-guard` | Before Edit/Write | Prevents modification of workflow config files |
-| `workflow-gate` | Before Task tool calls | Blocks agent spawning when prerequisite phase gates haven't passed |
+| `tracking-emitter` | After tool use / TeammateIdle / TaskCompleted / Stop | Emits JSONL tracking events for workflow observability |
+| `teammate-quality` | TeammateIdle | Runs quality checks on teammate output when idle |
+| `task-validator` | TaskCompleted | Validates task output meets acceptance criteria |
+| `proof-ledger` | After tool use | Records proof-of-work entries for audit trail |
 
 ## Project Structure
 
@@ -182,8 +187,10 @@ claude-workflow/
 │           ├── events.jsonl     # Append-only event log
 │           └── current.md       # Active task state
 ├── commands/                    # Slash commands (loaded on /invoke)
-│   ├── new-feature.md          # Full multi-agent implementation
+│   ├── agent-team.md              # Execute pre-planned feature with thin spawns
 │   ├── new-plan.md             # Deep technical planning
+│   ├── setup-workflow.md       # First-time project setup
+│   ├── connect-atlassian.md    # Jira + Confluence integration
 │   ├── deep-research.md        # Conversational deep research
 │   ├── resume.md               # Crash recovery
 │   ├── settings.md             # Guard permissions + audits hub
@@ -195,15 +202,24 @@ claude-workflow/
 │   └── codebase-guardian.md
 ├── prompts/                     # Reference docs and templates
 │   ├── implementing-features/   # Playbook, QA templates, workflow modes
+│   │   ├── AGENT-WORKFLOW-PHASES.md
+│   │   └── THIN-SPAWN-TEMPLATE.md
 │   └── settings/                # Sub-flows for /settings (guards, audits)
 ├── hooks/                       # Enforcement hooks
 │   ├── hooks.json
 │   ├── config.js               # Shared config reader (repo root, branching)
 │   ├── session-start.js
-│   ├── safety-guard.js          # Combined branch + destructive guard
-│   ├── config-guard.js
-│   ├── workflow-gate.js         # Phase gate enforcement (blocks premature agent spawning)
 │   ├── compact-reinject.js      # Re-injects phase gates after context compaction
+│   ├── safety-guard.js          # Combined branch + destructive guard
+│   ├── workflow-enforcer.js     # Workflow phase rules and task lifecycle
+│   ├── init-gate.js             # Blocks premature agent spawning
+│   ├── config-guard.js
+│   ├── tracking-emitter.js      # JSONL tracking event emitter
+│   ├── tracking.js
+│   ├── teammate-quality.js      # Teammate output quality checks
+│   ├── task-validator.js        # Task completion validation
+│   ├── proof-ledger.js          # Proof-of-work audit trail
+│   ├── ticket.js
 │   └── tracker.js
 ├── skills/                      # Internal skills
 │   ├── workflow-setup/

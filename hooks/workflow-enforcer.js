@@ -41,20 +41,10 @@ function allow() {
 }
 
 // ---------------------------------------------------------------------------
-// Sentinel helpers
+// Sentinel helper — imported from config.js (single source of truth)
 // ---------------------------------------------------------------------------
 
-const SENTINEL_PATH = path.join(process.cwd(), '.claude', '.workflow-active');
-
-function readSentinel() {
-  try {
-    if (!fs.existsSync(SENTINEL_PATH)) return null;
-    const raw = fs.readFileSync(SENTINEL_PATH, 'utf8');
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
+const { readSentinel } = require('./config.js');
 
 // ---------------------------------------------------------------------------
 // Exempt path check
@@ -100,7 +90,8 @@ function checkStateFileProtection(toolName, toolInput) {
     const filePath = (toolInput.file_path || toolInput.path || '').replace(/\\/g, '/');
     if (/events\.jsonl$/i.test(filePath) ||
         /workflow-state\.json$/i.test(filePath) ||
-        /proof-ledger\.jsonl$/i.test(filePath)) {
+        /proof-ledger\.jsonl$/i.test(filePath) ||
+        /\.workflow-active$/i.test(filePath)) {
       deny('State file protection: Direct modification of tracking files is blocked. Use /claude-workflow:track to emit events. Recovery: Use the /claude-workflow:track command instead.');
     }
   }
@@ -108,10 +99,10 @@ function checkStateFileProtection(toolName, toolInput) {
   if (toolName === 'Bash') {
     const command = toolInput.command || '';
     const patterns = [
-      />>?\s*\S*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl)/,
-      /\b(cp|mv|rm)\b.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl)/,
-      /\bsed\s+-i.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl)/,
-      /\btee\b.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl)/,
+      />>?\s*\S*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl|\.workflow-active)/,
+      /\b(cp|mv|rm)\b.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl|\.workflow-active)/,
+      /\bsed\s+-i.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl|\.workflow-active)/,
+      /\btee\b.*?(events\.jsonl|workflow-state\.json|proof-ledger\.jsonl|\.workflow-active)/,
     ];
     for (const p of patterns) {
       if (p.test(command)) {
@@ -323,7 +314,12 @@ process.stdin.on('end', () => {
   const toolInput = data.tool_input || {};
 
   // Layer 0: State file protection — ALWAYS active
-  checkStateFileProtection(toolName, toolInput);
+  // State file protection fails CLOSED per research topic-3 section 7.7 — all other gates fail open
+  try {
+    checkStateFileProtection(toolName, toolInput);
+  } catch (err) {
+    deny('State file protection check failed — blocking for safety. Recovery: Check hooks/config.js and hooks/workflow-enforcer.js for errors.');
+  }
 
   // Check sentinel — fast path: absent → allow everything
   const sentinel = readSentinel();

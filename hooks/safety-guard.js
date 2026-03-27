@@ -12,6 +12,9 @@
 //   Prevents commits/pushes on protected and feature branches.
 //
 // Both guards can be toggled independently via .claude/workflow.json guards section.
+//
+// Output format: hookSpecificOutput with permissionDecision (allow/deny).
+// Reference: https://github.com/anthropics/claude-code/blob/main/plugins/plugin-dev/skills/hook-development/SKILL.md
 
 const {
   getBranchingConfig,
@@ -21,6 +24,34 @@ const {
   isWorkBranch,
   getEffectiveBranch
 } = require('./config.js');
+
+// ---------------------------------------------------------------------------
+// Output helpers — Format A (hookSpecificOutput wrapper)
+// Matches workflow-enforcer.js and init-gate.js for consistency.
+// ---------------------------------------------------------------------------
+
+function deny(reason) {
+  const output = {
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: reason
+    }
+  };
+  process.stdout.write(JSON.stringify(output));
+  process.exit(0);
+}
+
+function allow() {
+  const output = {
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'allow'
+    }
+  };
+  process.stdout.write(JSON.stringify(output));
+  process.exit(0);
+}
 
 let input = '';
 process.stdin.setEncoding('utf8');
@@ -44,12 +75,7 @@ process.stdin.on('end', () => {
 
       for (const { pattern, name } of blocklist) {
         if (pattern.test(command)) {
-          const result = {
-            decision: 'block',
-            reason: `Safety guard: "${name}" is blocked. This command can cause irreversible data loss. If you need this, ask the user to run it manually.`,
-          };
-          process.stdout.write(JSON.stringify(result));
-          process.exit(0);
+          deny(`Safety guard: "${name}" is blocked. This command can cause irreversible data loss. If you need this, ask the user to run it manually.`);
           return;
         }
       }
@@ -82,7 +108,7 @@ process.stdin.on('end', () => {
                   `To change, edit .claude/workflow.json branching.enforce or tell Claude to adjust.`;
 
                 if (config.enforce === 'block') {
-                  process.stdout.write(JSON.stringify({ decision: 'block', reason: msg }));
+                  deny(msg);
                 } else {
                   process.stderr.write(`\u26A0 ${msg}\n`);
                 }
@@ -96,7 +122,7 @@ process.stdin.on('end', () => {
                   `To change, edit .claude/workflow.json branching.enforce or tell Claude to adjust.`;
 
                 if (config.enforce === 'block') {
-                  process.stdout.write(JSON.stringify({ decision: 'block', reason: msg }));
+                  deny(msg);
                 } else {
                   process.stderr.write(`\u26A0 ${msg}\n`);
                 }
@@ -108,23 +134,9 @@ process.stdin.on('end', () => {
     }
 
     // All guards checked — explicitly allow to prevent permission prompts
-    const allowResult = {
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'allow'
-      }
-    };
-    process.stdout.write(JSON.stringify(allowResult));
-    process.exit(0);
+    allow();
   } catch {
     // On any error, allow the operation (fail open)
-    const allowResult = {
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'allow'
-      }
-    };
-    process.stdout.write(JSON.stringify(allowResult));
-    process.exit(0);
+    allow();
   }
 });

@@ -1,16 +1,17 @@
 ---
+name: new-plan
 description: "Deep technical planning — analyzes codebase, designs architecture, decomposes into agent-ready tasks with wave ordering"
 ---
 
-# /new-plan — Deep Technical Planning for /new-feature
+# /new-plan — Deep Technical Planning for /agent-team
 
-> Invoke this skill to produce an in-depth technical plan for a feature before handing it off to `/new-feature`. Uses brainstorming, codebase analysis, and architectural thinking to create a design document that the Team Leader can execute directly — no interpretation needed.
+> Invoke this skill to produce an in-depth technical plan for a feature before handing it off to `/agent-team`. Uses brainstorming, codebase analysis, and architectural thinking to create a design document that the Team Leader can execute directly — no interpretation needed.
 
 ---
 
 ## When to Use
 
-- Before running `/new-feature` on a complex or ambiguous feature
+- Before running `/agent-team` on a complex or ambiguous feature
 - When you have a feature idea but need to refine requirements and design
 - When you want the Team Leader to receive a ready-made decomposition plan
 - When the feature touches unfamiliar parts of the codebase and needs deep analysis first
@@ -18,7 +19,7 @@ description: "Deep technical planning — analyzes codebase, designs architectur
 
 ## When NOT to Use
 
-- The feature is small and well-defined (just run `/new-feature` directly)
+- The feature is small and well-defined (just run `/agent-team` directly)
 - You already have a complete design document
 
 ---
@@ -364,7 +365,7 @@ For each identified risk:
 
 ## Phase 7: Generate Design Document
 
-Compile everything into a single design document saved to disk. This is the artifact that `/new-feature` will consume.
+Compile everything into a single design document saved to disk. This is the artifact that `/agent-team` will consume.
 
 ### Optional: Initialize Unified Tracking
 
@@ -385,7 +386,7 @@ If the feature name is known at planning time, you may optionally initialize uni
 3. Create empty `.claude/tracking/<feature-name>/events.jsonl`
 4. Create `.claude/tracking/<feature-name>/agents/` directory
 
-> Note: This is optional during planning. The tracking system (`hooks/tracking.js`) will be fully initialized by `/new-feature` when implementation begins. For programmatic use, call `initTracking("<feature-name>", { status: "pending", plan: "<design-doc-path>" })`. This coexists with the existing `.claude/progress/` system.
+> Note: This is optional during planning. The tracking system (`hooks/tracking.js`) will be fully initialized by `/agent-team` when implementation begins. For programmatic use, call `initTracking("<feature-name>", { status: "pending", plan: "<design-doc-path>" })`. This coexists with the existing `.claude/progress/` system.
 
 ### Output Location
 
@@ -486,6 +487,125 @@ Save to the progress directory as `<feature-name>-design.md`.
 
 ---
 
+## Phase 7.5: Generate Task Handoff Files
+
+After generating the design document, create per-agent task handoff files that `/agent-team` will consume.
+
+### 7.5a: Detect Ticket
+
+Detect or assign a ticket ID for this feature:
+
+1. Check git branch for ticket pattern: `extractTicketFromBranch()` (from `hooks/ticket.js`)
+2. If found: use the extracted ticket (e.g., `ES-11850`)
+3. If not found: ask the user for a ticket ID, or generate one (e.g., `PLAN-<N>` with incrementing counter)
+
+### 7.5b: Create Ticket Directory
+
+```bash
+# Create ticket directory structure
+mkdir -p .claude/progress/<ticket>/tasks
+mkdir -p .claude/progress/<ticket>/plans
+```
+
+Move or copy the design document to `.claude/progress/<ticket>/plans/<feature-name>-design.md`.
+
+### 7.5c: Generate Task Files
+
+For each task defined in Phase 4a, write a task handoff file at `.claude/progress/<ticket>/tasks/task-<N>.md`.
+
+Each file follows the task handoff schema:
+
+```markdown
+---
+taskNumber: <N>
+taskName: "<task name>"
+taskSlug: "<url-safe-slug>"
+agentRole: "<agent role>"
+agentDefinition: "<path to agent .md or null>"
+wave: <wave number>
+blockedBy: [<task numbers>]
+blocks: [<task numbers>]
+estimatedTokens: <context estimate>
+complexity: "<LOW|MEDIUM|HIGH>"
+status: "pending"
+workbranch: null
+worktreePath: null
+teamLeaderName: null
+teamName: null
+---
+
+# Task #<N>: <task name>
+
+## Description
+<2-5 sentences from Phase 4a task description>
+
+## Acceptance Criteria
+- [ ] <criteria from Phase 4a>
+- [ ] Automated checks pass (lint, typecheck, test, build)
+
+## Files to Create
+- <exact paths from Phase 4a>
+
+## Files to Modify
+- <exact paths from Phase 4a>
+
+## Files to Read for Context
+- <paths from Phase 4a>
+
+## Rules That Apply
+<pre-digested rules from Phase 4a>
+
+## Implementation Notes
+<guidance from Phase 4a>
+
+## QA Checklist Sections
+<sections from Phase 4a auto-fill>
+```
+
+### 7.5d: Record in History
+
+For each task file created, add a history entry:
+
+```javascript
+addHistoryEntry(ticket, {
+  type: "task-handoff",
+  source: "/new-plan",
+  message: "Generated task file for Task #<N>: <name>",
+  data: { taskNumber: N, taskSlug: "<slug>", filePath: "<path>" }
+});
+```
+
+### 7.5e: Update Design Doc
+
+Append a reference to the design document:
+
+```markdown
+## Task Handoff Files
+
+Per-agent task files generated at `.claude/progress/<ticket>/tasks/`:
+- task-1.md — <task name>
+- task-2.md — <task name>
+- ...
+
+To execute this plan, run: `/agent-team`
+```
+
+### 7.5f: Verification
+
+```
+PHASE 7.5 VERIFICATION:
+- [ ] Ticket detected or assigned
+- [ ] Ticket directory created with tasks/ and plans/ subdirectories
+- [ ] One task file per task, all following the handoff schema
+- [ ] YAML frontmatter has all required fields (runtime fields as null)
+- [ ] All body sections present (even if short)
+- [ ] No file ownership overlaps between tasks
+- [ ] History entries recorded for each task file
+- [ ] Design doc updated with task file references
+```
+
+---
+
 ## Phase 8: Handoff
 
 After saving the design document, present a summary to the user:
@@ -517,16 +637,17 @@ After saving the design document, present a summary to the user:
 
 To implement this feature, run:
 
-    /new-feature "<feature name>"
+    /agent-team
 
-The Team Leader will read the design document and
-use it as the decomposition plan — skipping the
-analysis work because /new-plan already did it.
+The Team Leader will read the task files and
+design document, spawn agents with thin prompts,
+and execute the plan — no inline decomposition needed.
+
 ```
 
-### Updating /new-feature to Use the Design Doc
+### How /agent-team Uses the Design Doc
 
-The design document is automatically discovered by `/new-feature` Phase 1:
+The design document is automatically discovered by `/agent-team` Phase 2:
 
 > "If a design document or spec exists for this feature, read it too."
 

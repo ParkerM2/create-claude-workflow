@@ -32,13 +32,9 @@ const GUARDS_DEFAULTS = {
   destructiveGuard: true,
   configGuard: true,
   // v3 proof-of-work gates
-  proofGate: true,       // single gate replacing workflowGate + teamLeaderGate + enforcementGate
+  proofGate: true,       // single gate replacing legacy workflow/teamLeader/enforcement gates
   qualityGate: true,     // TeammateIdle quality enforcement (lint/typecheck/test)
-  taskValidator: true,   // TaskCompleted validation (uncommitted changes check)
-  // Legacy gates (kept for backward compatibility, default OFF in v3)
-  workflowGate: false,
-  teamLeaderGate: false,
-  enforcementGate: false
+  taskValidator: true    // TaskCompleted validation (uncommitted changes check)
 };
 
 // ---------------------------------------------------------------------------

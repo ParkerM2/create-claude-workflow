@@ -133,7 +133,7 @@ The pre-flight results are recorded in the progress file so crash recovery sessi
 
 ## Post-Feature Comparison
 
-After the feature is complete (Phase 8 of `/new-feature`), compare against the pre-flight baseline:
+After the feature is complete (Phase 5 of `/agent-team`), compare against the pre-flight baseline:
 
 - **Tests**: Should have the same count or more (new tests added)
 - **Lint/typecheck**: Should still be clean (no regressions)

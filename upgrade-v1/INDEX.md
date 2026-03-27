@@ -38,31 +38,31 @@ These drove the implementation. Read them to understand design intent and constr
 
 | File | Defines | Audit Against |
 |------|---------|---------------|
-| `research/team-go-plan/specs/team-go-command-spec.md` | Full `/team-go` behavior | `commands/team-go.md` |
-| `research/team-go-plan/specs/task-handoff-schema.md` | Task file YAML + body format | `commands/new-plan.md` Phase 7.5 |
-| `research/team-go-plan/specs/sentinel-file-spec.md` | `.workflow-active` lifecycle | `hooks/workflow-enforcer.js`, `hooks/config.js` |
-| `research/team-go-plan/specs/enforcement-rules.md` | All gates and recovery actions | `hooks/workflow-enforcer.js` |
+| `research/agent-team-plan/specs/agent-team-command-spec.md` | Full `/agent-team` behavior | `commands/agent-team.md` |
+| `research/agent-team-plan/specs/task-handoff-schema.md` | Task file YAML + body format | `commands/new-plan.md` Phase 7.5 |
+| `research/agent-team-plan/specs/sentinel-file-spec.md` | `.workflow-active` lifecycle | `hooks/workflow-enforcer.js`, `hooks/config.js` |
+| `research/agent-team-plan/specs/enforcement-rules.md` | All gates and recovery actions | `hooks/workflow-enforcer.js` |
 
 ### Task Handoff Files (10 tasks, 4 waves)
 
 | File | Task | Implemented In |
 |------|------|---------------|
-| `research/team-go-plan/tasks/task-01-workflow-phases.md` | Extract AGENT-WORKFLOW-PHASES.md | `prompts/implementing-features/AGENT-WORKFLOW-PHASES.md` |
-| `research/team-go-plan/tasks/task-02-thin-spawn-template.md` | Create THIN-SPAWN-TEMPLATE.md | `prompts/implementing-features/THIN-SPAWN-TEMPLATE.md` |
-| `research/team-go-plan/tasks/task-03-ticket-module.md` | Create ticket.js | `hooks/ticket.js` |
-| `research/team-go-plan/tasks/task-04-team-go-command.md` | Write team-go.md | `commands/team-go.md` |
-| `research/team-go-plan/tasks/task-05-workflow-enforcer.md` | Create workflow-enforcer.js | `hooks/workflow-enforcer.js` |
-| `research/team-go-plan/tasks/task-06-init-gate.md` | Create init-gate.js | `hooks/init-gate.js` |
-| `research/team-go-plan/tasks/task-07-new-plan-update.md` | Update new-plan.md | `commands/new-plan.md` |
-| `research/team-go-plan/tasks/task-08-hooks-integration.md` | Update hooks.json + config.js | `hooks/hooks.json`, `hooks/config.js` |
-| `research/team-go-plan/tasks/task-09-team-leader-update.md` | Update team-leader.md | `agents/team-leader.md` |
-| `research/team-go-plan/tasks/task-10-integration-test.md` | Integration test checklist | This index |
+| `research/agent-team-plan/tasks/task-01-workflow-phases.md` | Extract AGENT-WORKFLOW-PHASES.md | `prompts/implementing-features/AGENT-WORKFLOW-PHASES.md` |
+| `research/agent-team-plan/tasks/task-02-thin-spawn-template.md` | Create THIN-SPAWN-TEMPLATE.md | `prompts/implementing-features/THIN-SPAWN-TEMPLATE.md` |
+| `research/agent-team-plan/tasks/task-03-ticket-module.md` | Create ticket.js | `hooks/ticket.js` |
+| `research/agent-team-plan/tasks/task-04-agent-team-command.md` | Write agent-team.md | `commands/agent-team.md` |
+| `research/agent-team-plan/tasks/task-05-workflow-enforcer.md` | Create workflow-enforcer.js | `hooks/workflow-enforcer.js` |
+| `research/agent-team-plan/tasks/task-06-init-gate.md` | Create init-gate.js | `hooks/init-gate.js` |
+| `research/agent-team-plan/tasks/task-07-new-plan-update.md` | Update new-plan.md | `commands/new-plan.md` |
+| `research/agent-team-plan/tasks/task-08-hooks-integration.md` | Update hooks.json + config.js | `hooks/hooks.json`, `hooks/config.js` |
+| `research/agent-team-plan/tasks/task-09-team-leader-update.md` | Update team-leader.md | `agents/team-leader.md` |
+| `research/agent-team-plan/tasks/task-10-integration-test.md` | Integration test checklist | This index |
 
 ### Master Plan
 
 | File | Purpose |
 |------|---------|
-| `research/team-go-plan/PLAN.md` | 10-task breakdown, dependency graph, wave ordering |
+| `research/agent-team-plan/PLAN.md` | 10-task breakdown, dependency graph, wave ordering |
 
 ---
 
@@ -70,17 +70,17 @@ These drove the implementation. Read them to understand design intent and constr
 
 | Command | File | Lines | Source Spec | Acceptance Criteria Location |
 |---------|------|-------|------------|------------------------------|
-| `/team-go` | `commands/team-go.md` | 403 | `specs/team-go-command-spec.md` | `tasks/task-04-team-go-command.md` |
+| `/agent-team` | `commands/agent-team.md` | 403 | `specs/agent-team-command-spec.md` | `tasks/task-04-agent-team-command.md` |
 | `/setup-workflow` | `commands/setup-workflow.md` | 165 | Session plan `temporal-spinning-ripple.md` | Phase checklist within the file |
 | `/connect-atlassian` | `commands/connect-atlassian.md` | 229 | Jira research agents (session) | Step checklist within the file |
 
 ### Audit Checks — Commands
 
-- [ ] `/team-go` phases match spec (5 phases: Setup, Load Plan, Team Setup, Execute Waves, Guardian & Finalize)
-- [ ] `/team-go` references correct file paths (`THIN-SPAWN-TEMPLATE.md`, `AGENT-WORKFLOW-PHASES.md`, `ticket.js`)
-- [ ] `/team-go` has verification checklist per phase
-- [ ] `/team-go` sentinel lifecycle: created Phase 1, removed Phase 5
-- [ ] `/team-go` lists `/team-go` as primary (not `/new-feature`)
+- [ ] `/agent-team` phases match spec (5 phases: Setup, Load Plan, Team Setup, Execute Waves, Guardian & Finalize)
+- [ ] `/agent-team` references correct file paths (`THIN-SPAWN-TEMPLATE.md`, `AGENT-WORKFLOW-PHASES.md`, `ticket.js`)
+- [ ] `/agent-team` has verification checklist per phase
+- [ ] `/agent-team` sentinel lifecycle: created Phase 1, removed Phase 5
+- [ ] `/agent-team` lists `/agent-team` as primary (not `/new-feature`)
 - [ ] `/setup-workflow` is a lean checklist (~165 lines), not inlined content
 - [ ] `/setup-workflow` references `commands/connect-atlassian.md` (not inline Atlassian flow)
 - [ ] `/setup-workflow` references `skills/workflow-setup/SKILL.md` for config questions
@@ -157,7 +157,7 @@ These drove the implementation. Read them to understand design intent and constr
 
 - [ ] `new-plan.md` Phase 7.5 exists between Phase 7 and Phase 8
 - [ ] `new-plan.md` Phase 7.5 generates task files matching `specs/task-handoff-schema.md`
-- [ ] `new-plan.md` handoff references `/team-go` (not just `/new-feature`)
+- [ ] `new-plan.md` handoff references `/agent-team` (not just `/new-feature`)
 - [ ] `hooks.json` registers `workflow-enforcer.js` for Bash, Edit|Write, TaskStop|TeamDelete
 - [ ] `hooks.json` registers `init-gate.js` for TeamCreate|Agent
 - [ ] `hooks.json` keeps `safety-guard.js` on Bash (always active)
@@ -167,13 +167,13 @@ These drove the implementation. Read them to understand design intent and constr
 - [ ] `config.js` sentinel stale detection: >24hr + dead PID = null
 - [ ] `config.js` all existing exports preserved (16 total + 5 new = 21)
 - [ ] `team-leader.md` has agent-identity block
-- [ ] `team-leader.md` has all 11 coordination rules matching `team-go.md` header
-- [ ] `team-leader.md` references `/team-go` as primary command
+- [ ] `team-leader.md` has all 11 coordination rules matching `agent-team.md` header
+- [ ] `team-leader.md` references `/agent-team` as primary command
 - [ ] `team-leader.md` references `THIN-SPAWN-TEMPLATE.md` and `AGENT-WORKFLOW-PHASES.md`
 - [ ] `team-leader.md` contains error recovery and context recovery sections
-- [ ] `team-leader.md` does NOT contain phase-by-phase workflow (that's in team-go.md)
+- [ ] `team-leader.md` does NOT contain phase-by-phase workflow (that's in agent-team.md)
 - [ ] `.claude/agents/team-leader.md` is identical to `agents/team-leader.md`
-- [ ] `using-workflow/SKILL.md` lists `/setup-workflow`, `/connect-atlassian`, `/team-go`
+- [ ] `using-workflow/SKILL.md` lists `/setup-workflow`, `/connect-atlassian`, `/agent-team`
 
 ---
 
@@ -197,14 +197,14 @@ These drove the implementation. Read them to understand design intent and constr
 These verify that references between files are correct and nothing is stale.
 
 - [ ] Placeholder tokens in `AGENT-WORKFLOW-PHASES.md` match tokens in `THIN-SPAWN-TEMPLATE.md`
-- [ ] Placeholder tokens in `THIN-SPAWN-TEMPLATE.md` match substitution in `team-go.md` Phase 4b
+- [ ] Placeholder tokens in `THIN-SPAWN-TEMPLATE.md` match substitution in `agent-team.md` Phase 4b
 - [ ] Task handoff schema fields in `specs/task-handoff-schema.md` match what `new-plan.md` Phase 7.5 generates
-- [ ] Task handoff schema fields match what `team-go.md` Phase 2 reads
-- [ ] Sentinel schema in `specs/sentinel-file-spec.md` matches what `team-go.md` Phase 1.5 writes
+- [ ] Task handoff schema fields match what `agent-team.md` Phase 2 reads
+- [ ] Sentinel schema in `specs/sentinel-file-spec.md` matches what `agent-team.md` Phase 1.5 writes
 - [ ] Sentinel schema matches what `workflow-enforcer.js` reads
 - [ ] Sentinel helpers in `config.js` match what `specs/sentinel-file-spec.md` defines
-- [ ] All 11 rules in `team-leader.md` match all 11 rules in `team-go.md`
-- [ ] `team-go.md` pre-flight lists same hook files as `hooks.json` registers
+- [ ] All 11 rules in `team-leader.md` match all 11 rules in `agent-team.md`
+- [ ] `agent-team.md` pre-flight lists same hook files as `hooks.json` registers
 - [ ] `setup-workflow.md` hook verification list matches `hooks.json` registrations
 - [ ] `setup-workflow.md` prompt file count (17) matches actual count in `prompts/implementing-features/`
 - [ ] `connect-atlassian.md` env var names match sooperset/mcp-atlassian documentation

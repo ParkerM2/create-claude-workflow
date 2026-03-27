@@ -1,4 +1,5 @@
 ---
+name: deep-research
 description: "Conversational deep research — phased investigation with user checkpoints, iterative cross-referencing, and multi-layered validation. Produces a research report with sources and analysis."
 ---
 
@@ -14,12 +15,12 @@ description: "Conversational deep research — phased investigation with user ch
 - Investigating how other tools/frameworks solve a problem you're facing
 - Understanding the current codebase deeply before planning changes
 - Comparing multiple approaches with trade-offs before choosing one
-- Gathering context that will inform a future `/new-plan` or `/new-feature`
+- Gathering context that will inform a future `/new-plan` or `/agent-team`
 - Any question where "just try it" is too risky and you need data first
 
 ## When NOT to Use
 
-- You already know what to build — use `/new-plan` or `/new-feature` directly
+- You already know what to build — use `/new-plan` or `/agent-team` directly
 - Simple factual question — just ask directly without invoking a skill
 
 ---
@@ -500,7 +501,7 @@ Report saved to: `.claude/progress/<topic>-research.md`
 
 ### Next Steps
 - To plan implementation: `/new-plan` (reference this research report)
-- To implement directly: `/new-feature` (if the path is clear)
+- To implement directly: `/agent-team` (if the path is clear)
 - To research further: ask follow-up questions in this session
 
 **Want me to refine anything in the report?**
@@ -572,5 +573,5 @@ Never present raw agent output directly to the user.
 | After Research | Use |
 |---------------|-----|
 | Ready to plan implementation | `/new-plan` — reference the research report as input |
-| Ready to implement directly | `/new-feature` — for well-scoped changes |
+| Ready to implement directly | `/agent-team` — for well-scoped changes |
 | Want to continue researching | Stay in this session and ask follow-up questions |
