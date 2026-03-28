@@ -1,5 +1,38 @@
 # Changelog
 
+## [4.0.1] — 2026-03-27
+
+### Added
+- `/start-day` command — morning briefing with yesterday's recap, missed notifications (Slack/Jira/GitHub), sprint ticket layout, and smart prioritization
+- `/sprint-tickets` command — full sprint board view with statuses, comments, health metrics, and filtering
+- `/start-sprint` command — agent team orchestration that fetches sprint tickets, spawns parallel research agents, assesses difficulty (1-5), auto-generates plans for Level 1-3, flags Level 4-5 for human review
+- `/link-ticket` command (P0) — automatic PR ↔ Jira ticket linking with status auto-sync on PR events
+- `/assign-reviewers` command (P0) — intelligent code review assignment with expertise matching and load balancing
+- `/audit-dependencies` command (P0) — CVE scanning across 6+ package managers with auto-ticket creation
+- `/incident-postmortem` command (P0) — blameless postmortem generation with prevention ticket pipeline and pattern detection
+- `/retro-prep` command (P1) — sprint retrospective data gathering automation (velocity, PRs, bugs, blocked work, incidents)
+- `/generate-changelog` command (P1) — release notes automation from merged PRs grouped by type
+- `/find-blockers` command (P1) — stalled ticket detection with blocker extraction and escalation
+- `/analyze-coverage` command (P1) — test coverage gap detection with coverage delta and enforcement
+- `/alert-to-ticket` command (P1) — monitoring alert to Jira ticket automation with incident linking
+- `/critical-path` command (P1) — sprint dependency graph analysis with critical path identification
+- `/extract-context` command (P2) — ticket knowledge persistence capturing decisions, blockers, and tech decisions
+- `/start-pairing` command (P2) — pair programming session management with auto-extracted learnings and handoff notes
+- Sprint commands research report (`.claude/docs/sprint-commands-research-report.md`)
+
+### Fixed
+- Sprint ticket filtering: enforced `jira_get_sprint_issues(sprintId)` over `jira_get_board_issues(boardId)` to prevent backlog leakage into sprint views
+- `/sprint-tickets` and `/start-sprint` now use strict active-sprint scoping with explicit prohibition of board-level queries
+
+### Changed
+- Plugin description updated to reflect 24 workflow commands
+- Marketplace metadata updated to version 4.0.1
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [4.0.0] — 2026-03-26
 
 ### Added
