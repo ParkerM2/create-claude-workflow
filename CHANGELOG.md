@@ -1,5 +1,20 @@
 # Changelog
 
+## [4.0.2] — 2026-03-28
+
+### Added
+- Worktree CLAUDE.md injection: Step 4a now generates a `CLAUDE.md` in each agent worktree containing the full agent protocol + task requirements, auto-loaded at session start — bypasses file-read discretion entirely
+- Thinner spawn templates (~250 tokens down from ~500) since agent definitions are pre-loaded via CLAUDE.md
+
+### Changed
+- Coding and QA spawn templates reference "CLAUDE.md (already loaded)" instead of listing files to read
+- Guardian template unchanged (runs on feature branch, not worktree)
+
+### Update
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [4.0.1] — 2026-03-27
 
 ### Added
