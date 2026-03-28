@@ -233,7 +233,7 @@ PHASE 3 VERIFICATION:
 
 For each wave (1 to `TOTAL_WAVES`):
 
-### Step 4a: Create Worktrees
+### Step 4a: Create Worktrees + Inject Agent CLAUDE.md
 
 If `useWorktrees` is true:
 ```bash
@@ -242,6 +242,38 @@ git worktree add <worktreeDir>/<ticket>/<task-slug> -b <workPrefix>/<ticket>/<ta
 ```
 
 If `useWorktrees` is false: create branches instead.
+
+**Immediately after creating each worktree**, generate a `CLAUDE.md` in the worktree root. This file is auto-loaded by Claude at session start — the agent gets its instructions without needing to read any files.
+
+For each task's worktree, write `<worktreeDir>/<ticket>/<task-slug>/CLAUDE.md` with this structure:
+
+```markdown
+# Task #{taskNumber}: {taskName}
+
+You are **{agentRole}** on team "{teamName}". Workbranch: `{workbranch}`.
+
+## Agent Protocol
+
+<paste full contents of agents/{agentRole}.md here — minus the YAML frontmatter>
+
+## Task Requirements
+
+<paste the task file body from .claude/progress/<ticket>/tasks/task-{N}.md — acceptance criteria, file scope, rules, implementation notes>
+
+## Workflow Phases
+
+Read `prompts/implementing-features/AGENT-WORKFLOW-PHASES.md` and follow Phases 1-4.
+
+## Communication
+
+- Report ONLY to "{TEAM_LEADER_NAME}" via SendMessage.
+- Do NOT message other agents. Do NOT spawn agents. Do NOT emit tracking events.
+- On completion: SendMessage(to: "{TEAM_LEADER_NAME}", message: "Task #{taskNumber} complete. Files: <list>. Self-review passed.", summary: "Task #{taskNumber} done")
+- On blocker: message leader immediately.
+- Wait for shutdown_request when done.
+```
+
+> **Why**: Claude always loads `CLAUDE.md` from the working directory at session start. By making the agent definition the project rules file, the agent receives its full protocol, task details, and communication rules automatically — no file reads to skip. The coding agent and QA agent share the same worktree, so when QA is spawned later (or in parallel), it gets the same CLAUDE.md. Since both roles are defined in their respective agent files, generate the CLAUDE.md using the **coding agent's** definition for the initial spawn. If a QA-only worktree is needed, use `agents/qa-reviewer.md` instead.
 
 ### Step 4b: Spawn Agent Pairs (Thin Prompts)
 

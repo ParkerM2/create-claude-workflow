@@ -1,10 +1,10 @@
 # Thin Spawn Templates
 
-> Reference templates for the Team Leader when spawning agents via `/agent-team`. Each template is ~500 tokens or less. The agent reads its task file from disk for all details.
+> Reference templates for the Team Leader when spawning agents via `/agent-team`. Each template is ~200-300 tokens. The agent's full protocol is pre-loaded via `CLAUDE.md` in the worktree (see Step 4a). The spawn prompt only needs identity, coordination, and a nudge to follow CLAUDE.md.
 
 ---
 
-## Coding Agent Spawn Template (~500 tokens)
+## Coding Agent Spawn Template (~250 tokens)
 
 ```
 <spawn-parameters>
@@ -24,15 +24,10 @@ You are the {agentRole} on team "{teamName}".
 Task #{taskNumber}: {taskName}.
 Team leader: "{TEAM_LEADER_NAME}".
 Workbranch: {workbranch}.
-Worktree: {worktreePath}.
+Working directory: {worktreePath}.
 
-PHASE 0 — READ THESE FILES FIRST (in order):
-1. Your task file: {taskFilePath}
-2. Workflow phases: prompts/implementing-features/AGENT-WORKFLOW-PHASES.md
-3. Your agent definition: {agentDefinition}
-4. Project rules file (if it exists)
-
-Then proceed through Phases 1-4 per the workflow phases file.
+Your full protocol, task requirements, and acceptance criteria are in CLAUDE.md (already loaded).
+Read `prompts/implementing-features/AGENT-WORKFLOW-PHASES.md`, then proceed through Phases 1-4.
 
 COMMUNICATION (non-negotiable):
 - Report ONLY to "{TEAM_LEADER_NAME}" via SendMessage.
@@ -44,7 +39,7 @@ COMMUNICATION (non-negotiable):
 
 ---
 
-## QA Agent Spawn Template (~400 tokens)
+## QA Agent Spawn Template (~200 tokens)
 
 ```
 <spawn-parameters>
@@ -64,15 +59,12 @@ You are the QA Reviewer for Task #{taskNumber} on team "{teamName}".
 Team leader: "{TEAM_LEADER_NAME}".
 Review target: {workbranch} in {worktreePath}.
 
-READ FIRST:
-1. Task file: {taskFilePath} (contains acceptance criteria)
-2. QA checklist: prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md
-3. Your agent definition: agents/qa-reviewer.md
+Your full QA protocol and the task's acceptance criteria are in CLAUDE.md (already loaded).
+Also read: `prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md`.
 
 WORKFLOW:
 - Prepare your review plan while the coder works.
 - The Team Leader will notify you when code is ready for review.
-- Review code against acceptance criteria and QA checklist.
 - On PASS: SendMessage(to: "{TEAM_LEADER_NAME}", message: "QA PASS Task #{taskNumber}. <full report>", summary: "QA PASS Task #{taskNumber}")
 - On FAIL: SendMessage(to: "{TEAM_LEADER_NAME}", message: "QA FAIL Task #{taskNumber}. Issues: <list>", summary: "QA FAIL Task #{taskNumber}")
 
@@ -83,7 +75,9 @@ COMMUNICATION (non-negotiable):
 
 ---
 
-## Guardian Agent Spawn Template (~400 tokens)
+## Guardian Agent Spawn Template (~200 tokens)
+
+> Note: The Guardian runs on the feature branch (NOT in a worktree), so it does NOT get an auto-injected CLAUDE.md. It must still read its agent file directly.
 
 ```
 <spawn-parameters>
