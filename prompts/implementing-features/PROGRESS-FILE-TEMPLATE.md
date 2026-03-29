@@ -1,6 +1,8 @@
 # Progress File Template — current.md
 
-> This is the template for `.claude/progress/<feature>/current.md` — the human-readable summary auto-rendered from `events.jsonl`.
+> This is the template for `.claude/progress/<ticket>/runs/<NNN>-<slug>/current.md` — the human-readable summary auto-rendered from `events.jsonl`.
+>
+> See `PROGRESS-DIRECTORY-SPEC.md` for the full ticket-scoped directory layout.
 
 ---
 

@@ -35,15 +35,28 @@ Detect whether a previous session was interrupted before completing normally.
 
 ### Scan for Feature Directories
 
-Look for active feature progress directories:
+Look for active ticket progress directories and their latest runs:
 
 ```bash
+# List ticket directories
 ls .claude/progress/
-# Expected: one directory per feature
-# Example: auth-system/  payment-flow/  user-dashboard/
+# Expected: one directory per ticket
+# Example: ES-11850/  ES-13025/  ES-13271/
+
+# For each ticket, find the latest run
+for ticket in .claude/progress/ES-*/; do
+  LATEST=$(ls "$ticket/runs/" 2>/dev/null | sort | tail -1)
+  if [ -n "$LATEST" ]; then
+    echo "$ticket/runs/$LATEST"
+  fi
+done
+
+# Legacy: also check for flat directories (pre-migration)
+# These have events.jsonl directly under the directory
 ```
 
-Each directory should contain an `events.jsonl` file.
+Each run directory should contain an `events.jsonl` file.
+See `PROGRESS-DIRECTORY-SPEC.md` for the full directory layout.
 
 ### Check for Missing `session.end`
 
