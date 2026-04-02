@@ -127,11 +127,12 @@ These tokens are substituted by the Team Leader at spawn time:
 | `{taskNumber}` | Task file YAML: `taskNumber` |
 | `{taskName}` | Task file YAML: `taskName` |
 | `{taskSlug}` | Task file YAML: `taskSlug` |
-| `{taskFilePath}` | `.claude/progress/{ticket}/tasks/task-{N}.md` |
+| `{taskFilePath}` | `.claude/progress/{ticket}/runs/{runId}/tasks/task-{N}.md` |
 | `{agentRole}` | Task file YAML: `agentRole` |
 | `{agentDefinition}` | Task file YAML: `agentDefinition` (or null) |
 | `{workbranch}` | `work/{ticket}/{taskSlug}` |
 | `{worktreePath}` | `{worktreeDir}/{ticket}/{taskSlug}` |
 | `{featureName}` | Ticket + description (e.g., `ES-11850-user-auth`) |
 | `{featureBranch}` | `{featurePrefix}/{featureName}` or `{featureName}` |
-| `{progressFilePath}` | `.claude/progress/{ticket}/current.md` |
+| `{runId}` | Run directory name (e.g., `001-modal-refactor`) |
+| `{progressFilePath}` | `.claude/progress/{ticket}/runs/{runId}/current.md` |

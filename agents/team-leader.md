@@ -96,7 +96,8 @@ The agent reads its task file from disk for all details: description, acceptance
 |------|---------|
 | `THIN-SPAWN-TEMPLATE.md` | Spawn prompt templates (coding, QA, Guardian) |
 | `AGENT-WORKFLOW-PHASES.md` | What agents follow (Phases 0-4) |
-| `.claude/progress/ES-{N}/tasks/task-{N}.md` | Per-agent task handoff files |
+| `PROGRESS-DIRECTORY-SPEC.md` | Ticket-scoped progress directory structure |
+| `.claude/progress/ES-{N}/runs/{NNN}-{slug}/tasks/task-{M}.md` | Per-agent task handoff files |
 
 </spawn-protocol>
 
@@ -127,13 +128,15 @@ When you encounter ANY problem during orchestration:
 
 If your context was compacted:
 
-1. Read `.claude/progress/<feature>/workflow-state.json` — current phase and state
-2. Read task files: `ls .claude/progress/<ticket>/tasks/task-*.md`
-3. Determine current phase from state file
-4. Check active worktrees: `git worktree list`
-5. Check active workbranches: `git branch --list "work/<ticket>/*"`
-6. Read progress: `.claude/progress/<feature>/current.md`
-7. Continue from current phase — do NOT restart
+1. Find the active run: `ls .claude/progress/<ticket>/runs/ | sort | tail -1`
+2. Read `.claude/progress/<ticket>/runs/<latest>/workflow-state.json` — current phase and state
+3. Read task files: `ls .claude/progress/<ticket>/runs/<latest>/tasks/task-*.md`
+4. Determine current phase from state file
+5. Check active worktrees: `git worktree list`
+6. Check active workbranches: `git branch --list "work/<ticket>/*"`
+7. Read progress: `.claude/progress/<ticket>/runs/<latest>/current.md`
+8. Check for prior runs: `ls .claude/progress/<ticket>/runs/` — reference previous research if relevant
+9. Continue from current phase — do NOT restart
 
 The workflow state file survives compaction because it's on disk.
 
@@ -143,7 +146,7 @@ The workflow state file survives compaction because it's on disk.
 
 <progress-tracking>
 
-Track progress via `.claude/progress/<feature>/events.jsonl`. Call `/claude-workflow:track` at each checkpoint:
+Track progress via `.claude/progress/<ticket>/runs/<NNN>-<slug>/events.jsonl`. Call `/claude-workflow:track` at each checkpoint:
 
 | When | Command |
 |------|---------|
@@ -167,7 +170,8 @@ Track progress via `.claude/progress/<feature>/events.jsonl`. Call `/claude-work
 | Primary command | `/agent-team` (commands/agent-team.md) |
 | Workflow phases | `prompts/implementing-features/AGENT-WORKFLOW-PHASES.md` |
 | Spawn templates | `prompts/implementing-features/THIN-SPAWN-TEMPLATE.md` |
-| Task files | `.claude/progress/ES-{N}/tasks/` |
+| Progress directory spec | `prompts/implementing-features/PROGRESS-DIRECTORY-SPEC.md` |
+| Task files | `.claude/progress/ES-{N}/runs/{NNN}-{slug}/tasks/` |
 | QA checklist | `prompts/implementing-features/QA-CHECKLIST-TEMPLATE.md` |
 | Context budget | `prompts/implementing-features/CONTEXT-BUDGET-GUIDE.md` |
 | Workflow modes | `prompts/implementing-features/WORKFLOW-MODES.md` |
