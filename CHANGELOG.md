@@ -1,5 +1,47 @@
 # Changelog
 
+## [4.1.0] — 2026-04-02
+
+### Added
+
+- `/agent-team` refactored to checklist + per-step skill architecture — replaces
+  the 436-line inline orchestration document with a 62-line checklist that
+  invokes one focused skill per step. Each skill gates on a stamp file written
+  by the previous step, making step-skipping structurally impossible rather
+  than relying on behavioral directives.
+- `wf-preflight` skill — verifies infrastructure, git state, config, and task
+  files; writes the preflight stamp
+- `wf-plan` skill — parses task files, validates structure (no overlaps, no
+  cycles, budget checks), builds wave plan; writes plan stamp
+- `wf-setup` skill — TeamCreate, runtime values injected into task files,
+  worktrees created, CLAUDE.md injected per worktree; writes setup stamp
+- `wf-spawn` skill — spawns coder + QA agent pairs for the current wave in a
+  single parallel message; writes wave-N-spawned stamp
+- `wf-qa-gate` skill — waits for verdicts, runs QA cycles (up to 3 rounds with
+  escalation), merges passing tasks, runs wave fence; writes wave-N-complete stamp
+- `wf-guardian` skill — spawns Codebase Guardian on the feature branch, handles
+  verdict with up to 3 fix rounds; writes guardian-passed stamp
+- `wf-finalize` skill — shuts down agents, cleans worktrees, pushes branch,
+  creates PR, TeamDelete, session.end; terminal step
+- `/utility-setup` skill — standalone skill for adding utility awareness to
+  projects that already have a `workflow.json`
+- Utility Awareness step added to `/workflow-setup` (Step 5, optional) —
+  installs a SessionStart hook that injects a `<utility-index>` block into
+  every session (including agent worktrees), a UserPromptSubmit hook that
+  emits keyword-matched skill hints, and a `codebase-nav` skill template
+
+### Changed
+
+- Artifact gate pattern: all `/agent-team` state now persists to
+  `.claude/.workflow-state/` stamp files — survives context compaction and
+  enables clean crash recovery without re-running completed steps
+
+### Update
+
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [4.0.2] — 2026-03-28
 
 ### Added
