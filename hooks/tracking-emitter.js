@@ -1,62 +1,126 @@
 #!/usr/bin/env node
 'use strict';
 
-// Hook-based agent event emitter for unified tracking.
-// Handles: TeammateIdle, TaskCompleted, PreToolUse (Task tool), PostToolUse, Stop
-// Reads JSON payload from stdin, dispatches by hook_event_name.
-// Exits silently (exit 0) if no active tracking context is found.
+// Hook-based agent event emitter — System B progress tracking.
+// Handles: TeammateIdle, TaskCompleted, PreToolUse (Task tool),
+//          PostToolUse (tool.use + proof.* events), Stop
 //
-// The stdin payload field for event type is "hook_event_name" (snake_case).
-// Source: https://code.claude.com/docs/en/hooks — "Input" section,
-// common fields table: hook_event_name is "Name of the event that fired".
+// Reads JSON payload from stdin, dispatches by hook_event_name.
+// Exits silently (exit 0) always — never blocks the user's workflow.
+//
+// Context resolution:
+//   1. Reads <repoRoot>/.claude/.current-context.json
+//   2. If absent/unreadable: exit 0 silently
+//   3. Routes events to <repoRoot>/progress/<ticket|runSlug>/events.jsonl
+//
+// Event schema (one JSON line per event):
+//   { v, ts, ticket, run, phase, seq, milestone, agent, event, data }
 
 const fs = require('fs');
 const path = require('path');
-const { getActiveFeature, getRepoRoot } = require('./config.js');
-const { updateManifest, emitTrackingEvent, emitAgentEvent, listTrackedFeatures, getManifest } = require('./tracking.js');
+const { getRepoRoot } = require('./config.js');
 
 // ---------------------------------------------------------------------------
-// Feature resolution
+// Milestone event set
+// ---------------------------------------------------------------------------
+
+const MILESTONE_EVENTS = new Set([
+  'run.started',
+  'agent.spawned',
+  'qa.passed',
+  'qa.failed',
+  'branch.merged',
+  'wave.complete',
+  'guardian.passed',
+  'run.complete',
+  'run.failed',
+  'permission.required'
+]);
+
+// ---------------------------------------------------------------------------
+// Context resolution
 // ---------------------------------------------------------------------------
 
 /**
- * Resolve the active feature ID.
- * 1. Try getActiveFeature() from config (branch-based + progress-dir scan)
- * 2. Scan .claude/tracking/ for most recent in-progress feature
- * 3. Return null if nothing found
+ * Read .claude/.current-context.json from repo root.
+ * Returns parsed object or null if absent/unreadable.
+ * Shape: { ticket: string|null, phase: string, runSlug: string|null }
  */
-function resolveFeatureId() {
-  // Try primary detection (branch + progress dir)
-  const fromConfig = getActiveFeature();
-  if (fromConfig) return fromConfig;
-
-  // Fallback: scan .claude/tracking/ for most recent in-progress feature
+function readCurrentContext() {
   try {
-    const trackingDir = path.join(getRepoRoot(), '.claude', 'tracking');
-    if (!fs.existsSync(trackingDir)) return null;
-
-    const features = listTrackedFeatures();
-    if (features.length === 0) return null;
-
-    // Find features with status !== 'done', sorted by manifest created desc
-    let best = null;
-    let bestTime = null;
-
-    for (const featureId of features) {
-      const manifest = getManifest(featureId);
-      if (!manifest) continue;
-      if (manifest.status === 'done') continue;
-
-      const created = manifest.created ? new Date(manifest.created).getTime() : 0;
-      if (bestTime === null || created > bestTime) {
-        bestTime = created;
-        best = featureId;
-      }
-    }
-
-    return best;
+    const contextPath = path.join(getRepoRoot(), '.claude', '.current-context.json');
+    const raw = fs.readFileSync(contextPath, 'utf8');
+    return JSON.parse(raw);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Resolve the events.jsonl path for a given context.
+ * Uses ticket if set, otherwise runSlug as the folder name.
+ * Returns null if neither is available.
+ */
+function resolveEventsPath(ctx) {
+  const folder = ctx.ticket || ctx.runSlug || null;
+  if (!folder) return null;
+  return path.join(getRepoRoot(), 'progress', folder, 'events.jsonl');
+}
+
+// ---------------------------------------------------------------------------
+// Sequence counter
+// ---------------------------------------------------------------------------
+
+/**
+ * Read the last seq from events.jsonl and return next seq.
+ * Returns 1 if file is absent or empty.
+ */
+function nextSeq(eventsPath) {
+  try {
+    if (!fs.existsSync(eventsPath)) return 1;
+    const raw = fs.readFileSync(eventsPath, 'utf8');
+    const lines = raw.split('\n').filter(Boolean);
+    if (lines.length === 0) return 1;
+    const last = JSON.parse(lines[lines.length - 1]);
+    return (typeof last.seq === 'number' ? last.seq : 0) + 1;
+  } catch {
+    return 1;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Event appender
+// ---------------------------------------------------------------------------
+
+/**
+ * Append a single event to events.jsonl.
+ * Creates the parent directory if needed.
+ * All errors caught silently.
+ */
+function appendEvent(eventsPath, ctx, eventFields) {
+  try {
+    const dir = path.dirname(eventsPath);
+    fs.mkdirSync(dir, { recursive: true });
+
+    const seq = nextSeq(eventsPath);
+    const isMilestone = MILESTONE_EVENTS.has(eventFields.event);
+
+    const record = {
+      v: 1,
+      ts: new Date().toISOString(),
+      ticket: ctx.ticket || null,
+      run: ctx.runSlug || null,
+      phase: ctx.phase || null,
+      seq,
+      milestone: isMilestone,
+      agent: eventFields.agent || null,
+      event: eventFields.event,
+      data: eventFields.data || {}
+    };
+
+    fs.appendFileSync(eventsPath, JSON.stringify(record) + '\n');
+  } catch {
+    // Best-effort — never crash
   }
 }
 
@@ -64,78 +128,79 @@ function resolveFeatureId() {
 // Hook dispatchers
 // ---------------------------------------------------------------------------
 
-function handleTeammateIdle(payload, featureId) {
-  const teammate_name = payload.teammate_name || payload.agent_name || 'unknown';
-  const team_name = payload.team_name || payload.team || null;
-
-  updateManifest(featureId, {
-    agents: {
-      [teammate_name]: { status: 'idle' }
-    }
-  });
-
-  emitAgentEvent(featureId, teammate_name, {
-    type: 'agent.idle',
-    data: { team: team_name }
+function handleTeammateIdle(payload, ctx, eventsPath) {
+  appendEvent(eventsPath, ctx, {
+    event: 'agent.idle',
+    agent: payload.teammate_name || 'unknown',
+    data: { team: payload.team_name || null }
   });
 }
 
-function handleTaskCompleted(payload, featureId) {
-  const task_id = payload.task_id || null;
-  const task_subject = payload.task_subject || payload.subject || null;
-  const teammate_name = payload.teammate_name || payload.agent_name || null;
-  const team_name = payload.team_name || payload.team || null;
-
-  emitTrackingEvent(featureId, {
-    type: 'task.completed',
+function handleTaskCompleted(payload, ctx, eventsPath) {
+  appendEvent(eventsPath, ctx, {
+    event: 'task.validated',
+    agent: payload.teammate_name || null,
     data: {
-      taskId: task_id,
-      subject: task_subject,
-      teammate: teammate_name,
-      team: team_name
+      taskId: payload.task_id || null,
+      subject: payload.task_subject || payload.subject || null
     }
   });
 }
 
-function handlePreToolUse(payload, featureId) {
-  const tool_name = payload.tool_name || payload.tool || '';
-  if (tool_name !== 'Task') return;
+function handlePreToolUse(payload, ctx, eventsPath) {
+  const toolName = payload.tool_name || payload.tool || '';
 
-  const tool_input = payload.tool_input || {};
-  const name = tool_input.name || tool_input.agent_name || 'unknown';
-  const team_name = tool_input.team_name || tool_input.team || null;
+  if (toolName === 'Task') {
+    const toolInput = payload.tool_input || {};
+    // Tracking event: agent.spawned (milestone)
+    appendEvent(eventsPath, ctx, {
+      event: 'agent.spawned',
+      agent: toolInput.name || 'unknown',
+      data: { team: toolInput.team_name || null }
+    });
 
-  updateManifest(featureId, {
-    agents: {
-      [name]: {
-        status: 'running',
-        started: new Date().toISOString()
+    // Proof event: proof.agent_spawned (non-milestone)
+    appendEvent(eventsPath, ctx, {
+      event: 'proof.agent_spawned',
+      agent: toolInput.name || 'unknown',
+      data: {
+        name: toolInput.name || null,
+        description: toolInput.description || null,
+        team: toolInput.team_name || null
       }
-    }
-  });
-
-  emitTrackingEvent(featureId, {
-    type: 'agent.spawned',
-    data: { name, team: team_name }
-  });
+    });
+  }
 }
 
-function handlePostToolUse(payload, featureId) {
-  const tool_name = payload.tool_name || payload.tool || 'unknown';
-  // Best-effort: get agent name from payload if available
-  const agentName = payload.agent_name || payload.teammate_name || 'unknown';
+function handlePostToolUse(payload, ctx, eventsPath) {
+  const toolName = payload.tool_name || payload.tool || 'unknown';
+  const agentName = payload.agent_name || payload.teammate_name || null;
 
-  emitAgentEvent(featureId, agentName, {
-    type: 'agent.result',
-    data: { tool: tool_name }
+  // tool.use event for all PostToolUse
+  appendEvent(eventsPath, ctx, {
+    event: 'tool.use',
+    agent: agentName,
+    data: { tool: toolName, success: true }
   });
+
+  // Proof events for Edit/Write tools
+  if (toolName === 'Edit' || toolName === 'Write') {
+    const toolInput = payload.tool_input || {};
+    appendEvent(eventsPath, ctx, {
+      event: 'proof.file_written',
+      agent: agentName,
+      data: {
+        file: toolInput.file_path || null,
+        tool: toolName
+      }
+    });
+  }
 }
 
-function handleStop(payload, featureId) {
-  const agentName = payload.agent_name || payload.teammate_name || 'unknown';
-
-  emitAgentEvent(featureId, agentName, {
-    type: 'agent.turn.completed',
+function handleStop(payload, ctx, eventsPath) {
+  appendEvent(eventsPath, ctx, {
+    event: 'agent.turn.completed',
+    agent: payload.agent_name || null,
     data: {}
   });
 }
@@ -156,7 +221,6 @@ function main() {
   process.stdin.on('end', () => {
     let payload = {};
 
-    // Parse JSON payload from stdin
     try {
       if (raw.trim()) {
         payload = JSON.parse(raw);
@@ -166,34 +230,35 @@ function main() {
       process.exit(0);
     }
 
-    // Claude Code passes "hook_event_name" (snake_case) in the stdin JSON payload.
-    // See: https://code.claude.com/docs/en/hooks — common input fields table.
-    const hook_event_name = payload.hook_event_name || '';
-
-    // Resolve active feature
-    const featureId = resolveFeatureId();
-    if (!featureId) {
-      // No active tracking context — no-op
+    // Resolve context — exit silently if none
+    const ctx = readCurrentContext();
+    if (!ctx) {
       process.exit(0);
     }
 
-    // Dispatch by hook_event_name
+    const eventsPath = resolveEventsPath(ctx);
+    if (!eventsPath) {
+      process.exit(0);
+    }
+
+    const hookEventName = payload.hook_event_name || '';
+
     try {
-      switch (hook_event_name) {
+      switch (hookEventName) {
         case 'TeammateIdle':
-          handleTeammateIdle(payload, featureId);
+          handleTeammateIdle(payload, ctx, eventsPath);
           break;
         case 'TaskCompleted':
-          handleTaskCompleted(payload, featureId);
+          handleTaskCompleted(payload, ctx, eventsPath);
           break;
         case 'PreToolUse':
-          handlePreToolUse(payload, featureId);
+          handlePreToolUse(payload, ctx, eventsPath);
           break;
         case 'PostToolUse':
-          handlePostToolUse(payload, featureId);
+          handlePostToolUse(payload, ctx, eventsPath);
           break;
         case 'Stop':
-          handleStop(payload, featureId);
+          handleStop(payload, ctx, eventsPath);
           break;
         default:
           // Unknown hook type — no-op

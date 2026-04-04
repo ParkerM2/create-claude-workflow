@@ -92,25 +92,70 @@ EOF
   --base <baseBranch>
 ```
 
-### 6. TeamDelete
+### 6. Compile & Write Run Report
+
+Read `./progress/<TICKET>/events.jsonl` and compile metrics from it.
+
+**From `agent.spawned` events** — extract per-agent rows:
+- `agent`: agent name
+- `model`: model field from event data (if present)
+- `role`: role field from event data (if present)
+- `start`: timestamp of the `agent.spawned` event (HH:MM)
+- `duration`: difference between `agent.spawned` and the matching `agent.completed` event
+- `input` / `output` / `cache_read` / `cache_write`: token fields from event data (if present, else `—`)
+- `skills`: skills field from event data (if present, else `—`)
+
+**From all events** — extract milestone-only timeline entries:
+- Include: `session.start`, `checkpoint.*`, `wave.start`, `wave.complete`, `agent.spawned`, `agent.completed`, `guardian.passed`, `session.end`
+- Format each as: `- HH:MM event.type`
+
+Load `RUN_SLUG` from `.claude/.current-context.json` (the `runSlug` field). Load `featureBranch`, `TICKET`, and PR number (if created in Step 5) from state files.
+
+Write `./progress/<TICKET>/tasks/<RUN_SLUG>/report.md`:
+
+```xml
+<run-header ticket="<TICKET>" run="<RUN_SLUG>" status="complete"
+            date="<YYYY-MM-DD>" duration="<Xh Ym>" branch="<featureBranch>" pr="<#N or pending>" />
+
+<run-summary>
+2-3 sentence summary of what was built, key decisions, and any notable issues encountered.
+</run-summary>
+
+<agent-metrics>
+| Agent | Model | Role | Start | Duration | Input | Output | Cache R | Cache W | Skills |
+|-------|-------|------|-------|----------|-------|--------|---------|---------|--------|
+(one row per agent from agent.spawned events)
+</agent-metrics>
+
+<run-timeline>
+(milestone events only, one per line: - `HH:MM` event.type)
+</run-timeline>
+
+<run-totals input="<Nk>" output="<Nk>" cache-read="<Nk>" cache-write="<Nk>"
+            wall-time="<Xh Ym>" agents="<N>" tasks="<N>" waves="<N>" />
+```
+
+### 7. TeamDelete
 
 ```
 TeamDelete: team_name = "<TICKET>"
 ```
 
-### 7. Emit session.end
+### 8. Emit session.end
 
 ```
 /claude-workflow:track session.end "Feature complete"
 ```
 
-### 8. Clean Stamp Files
+### 9. Clean Up
 
 ```bash
+rm -f .claude/.current-context.json
+rm -f .claude/.workflow-active
 rm -rf .claude/.workflow-state/
 ```
 
-### 9. Report to User
+### 10. Report to User
 
 Provide a completion summary:
 

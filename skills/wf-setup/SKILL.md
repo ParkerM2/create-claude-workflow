@@ -118,7 +118,41 @@ and follow Phases 1–4.
 - Wait for shutdown_request when done.
 ```
 
-### 7. Write Sentinel & Stamp
+### 7. Create Run Folder & Update Context
+
+Determine the next sequential run number by counting existing task folders under `./progress/<TICKET>/tasks/`:
+
+```bash
+ls -d .claude/progress/<TICKET>/tasks/[0-9][0-9][0-9]-* 2>/dev/null | wc -l
+```
+
+Increment by 1 and zero-pad to 3 digits (e.g., `001`, `002`). Combine with the feature slug (kebab-case) to form `RUN_SLUG` (e.g., `001-auth-refactor`).
+
+Create the run folder:
+
+```bash
+mkdir -p .claude/progress/<TICKET>/tasks/<RUN_SLUG>
+```
+
+Move any staged research files from `./progress/<TICKET>/research/` into the run folder (if the directory exists and contains files):
+
+```bash
+if [ -d .claude/progress/<TICKET>/research ] && [ "$(ls -A .claude/progress/<TICKET>/research 2>/dev/null)" ]; then
+  mv .claude/progress/<TICKET>/research/* .claude/progress/<TICKET>/tasks/<RUN_SLUG>/
+fi
+```
+
+Update the routing key with the resolved `runSlug`:
+
+```bash
+cat > .claude/.current-context.json << EOF
+{ "ticket": "<TICKET>", "phase": "agent-team", "runSlug": "<RUN_SLUG>" }
+EOF
+```
+
+Store `RUN_SLUG` — it is needed by `wf-finalize` to write the run report.
+
+### 8. Write Sentinel & Stamp
 
 Write `.claude/.workflow-active`:
 
