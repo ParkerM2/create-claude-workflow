@@ -105,6 +105,18 @@ EOF
 
 Emit: `/claude-workflow:track session.start "<FEATURE_NAME>"`
 
+### 8. Write Current Context
+
+Write the routing key so the progress tracking system knows where to emit events:
+
+```bash
+cat > .claude/.current-context.json << EOF
+{ "ticket": "<TICKET>", "phase": "agent-team", "runSlug": null }
+EOF
+```
+
+`runSlug` is `null` here — it will be filled in by `wf-setup` once the run folder is created.
+
 ---
 
 ## Done

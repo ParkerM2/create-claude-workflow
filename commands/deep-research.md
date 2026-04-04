@@ -55,6 +55,20 @@ Phase 4: Synthesize       → Final validation pass, compile report
 
 ---
 
+## Context Tracking
+
+At the very start of this command, before any research work begins, write the routing key:
+
+```bash
+cat > .claude/.current-context.json << EOF
+{ "ticket": "<ticket-id or null>", "phase": "research", "runSlug": null }
+EOF
+```
+
+Replace `<ticket-id or null>` with the ticket ID if one is known from the branch or conversation, or `null` if this is unticketed research.
+
+---
+
 ## Phase 1: Scope
 
 ### 1a. Understand the Research Question
@@ -575,3 +589,13 @@ Never present raw agent output directly to the user.
 | Ready to plan implementation | `/new-plan` — reference the research report as input |
 | Ready to implement directly | `/agent-team` — for well-scoped changes |
 | Want to continue researching | Stay in this session and ask follow-up questions |
+
+---
+
+## Cleanup
+
+After all output is complete and the report has been saved, delete the routing key:
+
+```bash
+rm -f .claude/.current-context.json
+```

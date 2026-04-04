@@ -24,6 +24,20 @@ description: "Deep technical planning — analyzes codebase, designs architectur
 
 ---
 
+## Context Tracking
+
+At the very start of this command, before any planning work begins, write the routing key:
+
+```bash
+cat > .claude/.current-context.json << EOF
+{ "ticket": "<ticket-id or null>", "phase": "plan", "runSlug": null }
+EOF
+```
+
+Replace `<ticket-id or null>` with the ticket ID if one is known from the branch or conversation, or `null` if this is unticketed planning.
+
+---
+
 ## Phase 1: Gather Requirements
 
 ### 1a. Source the Feature Description
@@ -669,6 +683,16 @@ The Team Leader MUST NOT:
 - Ignore the design doc and re-plan from scratch
 - Change the architectural approach without user approval
 - Skip tasks or merge tasks without updating the plan
+
+---
+
+## Cleanup
+
+After the handoff summary has been presented to the user and all output is complete, delete the routing key:
+
+```bash
+rm -f .claude/.current-context.json
+```
 
 ---
 
