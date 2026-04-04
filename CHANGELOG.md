@@ -1,5 +1,25 @@
 # Changelog
 
+## [4.2.0] — 2026-04-04
+
+### Changed
+
+- **System B JSONL progress tracking** — rewrites `tracking-emitter.js` to route
+  events via `.current-context.json` → append-only JSONL in `./progress/<ticket>/`
+  instead of the old manifest system; absorbs `proof-ledger.js` as `proof.*` events
+- **Hooks cleanup** — removes `config-guard.js` (covered by `workflow-enforcer`)
+  and `proof-ledger.js` (merged into tracking-emitter); leaner hook surface
+- **5 skills updated** — `deep-research`, `new-plan`, `wf-preflight`, `wf-setup`,
+  and `wf-finalize` now write/delete `.current-context.json` at command boundaries;
+  `wf-setup` seals numbered run folders; `wf-finalize` compiles the event log into
+  an XML-wrapped `report.md`
+
+### Update
+
+```
+/plugin update claude-workflow@claude-workflow-marketplace
+```
+
 ## [4.1.0] — 2026-04-02
 
 ### Added
